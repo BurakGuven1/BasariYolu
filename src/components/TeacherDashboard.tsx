@@ -164,7 +164,7 @@ export default function TeacherDashboard() {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
-        <div className="mb-8 flex justify-between items-start">
+        <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Öğretmen Paneli</h1>
             <p className="text-gray-600">
@@ -184,7 +184,7 @@ export default function TeacherDashboard() {
         </div>
 
         {/* Stats */}
-        <div className="grid md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-lg p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
@@ -240,7 +240,7 @@ export default function TeacherDashboard() {
 
         {/* Classes */}
         <div className="bg-white rounded-lg p-6 shadow-sm">
-          <div className="flex justify-between items-center mb-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-6">
             <h3 className="text-lg font-semibold">Sınıflarım</h3>
             <button
               onClick={() => setShowCreateClass(true)}
@@ -274,7 +274,7 @@ export default function TeacherDashboard() {
                   
                   return (
                 <div key={cls.id} className="border rounded-lg p-6 hover:shadow-md transition-shadow">
-                  <div className="flex justify-between items-start mb-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start mb-4">
                     <div>
                       <h4 className="font-semibold text-lg">{cls.class_name}</h4>
                       {cls.description && (
@@ -288,17 +288,17 @@ export default function TeacherDashboard() {
                   </div>
 
                   <div className="space-y-2 mb-4">
-                    <div className="flex justify-between text-sm">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:justify-between text-sm">
                       <span>Öğrenci:</span>
                       <span className="font-medium">{cls.current_students || 0}/{cls.student_capacity}</span>
                     </div>
-                    <div className="flex justify-between text-sm">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:justify-between text-sm">
                       <span>Paket:</span>
                       <span className="font-medium">
                         {PACKAGE_OPTIONS.find(p => p.type === cls.package_type)?.name}
                       </span>
                     </div>
-                    <div className="flex justify-between text-sm">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:justify-between text-sm">
                       <span>Aylık Tutar:</span>
                       <span className="font-medium text-green-600">
                         {calculateClassPrice(cls.current_students || 0, cls.package_type).monthlyPrice.toLocaleString()}₺
@@ -330,7 +330,7 @@ export default function TeacherDashboard() {
                       <div className="text-xs text-gray-600 mb-2">İçerikler:</div>
                       <div className="space-y-1">
                         {assignments.slice(0, 3).map((assignment: any) => (
-                          <div key={assignment.id} className="text-xs bg-blue-50 p-2 rounded flex justify-between items-center">
+                          <div key={assignment.id} className="text-xs bg-blue-50 p-2 rounded flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
                             <div>
                               <div className="font-medium text-blue-800">📝 {assignment.title}</div>
                               <div className="text-blue-600">{assignment.subject} - {new Date(assignment.due_date).toLocaleDateString('tr-TR')}</div>
@@ -466,7 +466,7 @@ export default function TeacherDashboard() {
                   onChange={(e) => setClassFormData(prev => ({ ...prev, student_capacity: parseInt(e.target.value) }))}
                   className="w-full"
                 />
-                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <div className="flex flex-col gap-1 sm:flex-row sm:justify-between text-xs text-gray-500 mt-1">
                   <span>5 öğrenci</span>
                   <span>40 öğrenci</span>
                 </div>
@@ -492,19 +492,19 @@ export default function TeacherDashboard() {
 
               <div className="bg-blue-50 p-3 rounded-lg">
                 <div className="text-sm">
-                  <div className="flex justify-between mb-2">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:justify-between mb-2">
                     <span className="font-medium text-blue-800">Sınıf Limiti:</span>
                     <span className="text-blue-700">
                       {classes.filter(cls => cls.status !== 'completed').length}/2 aktif sınıf
                     </span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
                     <span>Aylık Toplam:</span>
                     <span className="font-semibold">
                       {calculateClassPrice(classFormData.student_capacity, classFormData.package_type).monthlyPrice.toLocaleString()}₺
                     </span>
                   </div>
-                  <div className="flex justify-between">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
                     <span>Toplam Tutar:</span>
                     <span className="font-semibold text-green-600">
                       {calculateClassPrice(classFormData.student_capacity, classFormData.package_type).totalPrice.toLocaleString()}₺

@@ -392,7 +392,7 @@ const chartData = filteredExamResults
 
   const renderOverview = () => (
     <div className="space-y-6">
-      <div className="grid md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-white rounded-lg p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
@@ -477,9 +477,9 @@ const chartData = filteredExamResults
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
   <div className="bg-white rounded-lg p-6 shadow-sm">
-    <div className="flex justify-between items-center mb-4">
+    <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-4">
       <h3 className="text-lg font-semibold">Deneme İlerlemesi</h3>
       <select
         value={chartFilter}
@@ -561,7 +561,7 @@ const chartData = filteredExamResults
 
   const renderExams = () => (
     <div className="bg-white rounded-lg p-6 shadow-sm">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-6">
         <h3 className="text-lg font-semibold">Deneme Sonuçları</h3>
         <button 
           onClick={() => setShowExamForm(true)}
@@ -586,7 +586,7 @@ const chartData = filteredExamResults
         ) : (
           examResults.slice(0, 5).map((exam, index) => (
           <div key={index} className="border rounded-lg p-4 relative">
-            <div className="flex justify-between items-start mb-3 pr-8">
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start mb-3 pr-8">
               <div>
                 <h4 className="font-semibold">{exam.exam_name}</h4>
                 <p className="text-sm text-gray-600">{new Date(exam.exam_date).toLocaleDateString('tr-TR')}</p>
@@ -647,7 +647,7 @@ const chartData = filteredExamResults
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="mb-8 flex justify-between items-start">
+        <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Öğrenci Paneli</h1>
             <p className="text-gray-600">
@@ -682,7 +682,7 @@ const chartData = filteredExamResults
         {/* Payment Notice */}
         {showPaymentNotice && (
           <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <div className="flex justify-between items-start">
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start">
               <div>
                 <h3 className="text-yellow-800 font-medium">Ödeme Bildirimi</h3>
                 <p className="text-yellow-700 text-sm mt-1">
@@ -732,7 +732,7 @@ const chartData = filteredExamResults
         {activeTab === 'analysis' && renderAnalysis()}
         {activeTab === 'classes' && (
           <div className="bg-white rounded-lg p-6 shadow-sm">
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-6">
               <h3 className="text-lg font-semibold">Sınıflarım</h3>
               <div className="flex space-x-2">
                 <button
@@ -779,7 +779,7 @@ const chartData = filteredExamResults
               ) : (
                 studentClasses.map((classData) => (
                   <div key={classData.id} className="border rounded-lg p-4">
-                    <div className="flex justify-between items-start mb-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start mb-4">
                       <div>
                         <h4 className="font-semibold">{classData.classes?.class_name}</h4>
                         <p className="text-sm text-gray-600">
@@ -870,7 +870,7 @@ const chartData = filteredExamResults
         )}
         {activeTab === 'homeworks' && (
           <div className="bg-white rounded-lg p-6 shadow-sm">
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-6">
               <h3 className="text-lg font-semibold">Ödev Takibi</h3>
               <button 
                 onClick={() => setShowHomeworkForm(true)}
@@ -890,7 +890,7 @@ const chartData = filteredExamResults
                       <p className="text-gray-700 font-medium mb-2">Sınıf Ödevleri:</p>
                       {classAssignments.slice(0, 3).map((assignment) => (
                         <div key={assignment.id} className="p-3 bg-blue-50 rounded-lg mb-2">
-                          <div className="flex justify-between items-start">
+                          <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start">
                             <div>
                               <p className="font-medium text-blue-900">{assignment.title}</p>
                               <p className="text-sm text-blue-700">{assignment.subject}</p>
@@ -1034,7 +1034,7 @@ const chartData = filteredExamResults
         {showExamTopics && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl max-w-7xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
+              <div className="sticky top-0 bg-white border-b px-6 py-4 flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
                 <h2 className="text-xl font-bold">TYT-AYT Çıkmış Konular Analizi</h2>
                 <button
                   onClick={() => setShowExamTopics(false)}

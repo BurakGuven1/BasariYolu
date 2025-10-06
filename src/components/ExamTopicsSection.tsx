@@ -229,7 +229,7 @@ export default function ExamTopicsSection({ user, hasClassViewerSession = false,
 
         {/* Controls */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-          <div className="grid md:grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             {/* Subject Selection */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -312,7 +312,7 @@ export default function ExamTopicsSection({ user, hasClassViewerSession = false,
         </div>
 
         {/* Stats Cards */}
-        <div className="grid md:grid-cols-3 gap-6 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-6">
           <div className="bg-blue-50 rounded-lg p-6 text-center">
             <div className="text-4xl font-bold text-blue-600 mb-2">{totalTopics}</div>
             <div className="text-gray-700 font-medium">Toplam Konu</div>
@@ -327,7 +327,7 @@ export default function ExamTopicsSection({ user, hasClassViewerSession = false,
           </div>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid gap-6 lg:grid-cols-2">
           {/* Topics Table */}
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h3 className="text-lg font-semibold mb-4 flex items-center">
@@ -335,71 +335,116 @@ export default function ExamTopicsSection({ user, hasClassViewerSession = false,
               {selectedSubject} Konuları
             </h3>
 
-            {/* Table Header */}
-            <div className="flex items-center text-sm font-medium text-gray-700 border-b pb-2 mb-2">
-              <div
-                className="flex-1 cursor-pointer hover:text-blue-600 flex items-center"
-                onClick={() => handleSort('name')}
-              >
-                KONU
-                {sortBy === 'name' && (
-                  <span className="ml-1">{sortOrder === 'asc' ? '↑' : '↓'}</span>
-                )}
+            <div className="hidden md:block">
+              {/* Table Header */}
+              <div className="flex items-center text-sm font-medium text-gray-700 border-b pb-2 mb-2">
+                <div
+                  className="flex-1 cursor-pointer hover:text-blue-600 flex items-center"
+                  onClick={() => handleSort('name')}
+                >
+                  KONU
+                  {sortBy === 'name' && (
+                    <span className="ml-1">{sortOrder === 'asc' ? '\u2191' : '\u2193'}</span>
+                  )}
+                </div>
+                <div
+                  className="w-32 text-center cursor-pointer hover:text-blue-600 flex items-center justify-center"
+                  onClick={() => handleSort('total')}
+                >
+                  TOPLAM SORU
+                  {sortBy === 'total' && (
+                    <span className="ml-1">{sortOrder === 'asc' ? '\u2191' : '\u2193'}</span>
+                  )}
+                </div>
+                <div className="w-48 text-center">YILLIK DA\u011eILIM</div>
               </div>
-              <div
-                className="w-32 text-center cursor-pointer hover:text-blue-600 flex items-center justify-center"
-                onClick={() => handleSort('total')}
-              >
-                TOPLAM SORU
-                {sortBy === 'total' && (
-                  <span className="ml-1">{sortOrder === 'asc' ? '↑' : '↓'}</span>
-                )}
+
+              {/* Table Body */}
+              <div className="space-y-1 max-h-96 overflow-y-auto">
+                {filteredTopics.map((topic) => (
+                  <div
+                    key={topic.konu}
+                    onClick={() => setSelectedTopic(topic.konu)}
+                    className={`flex items-center py-2 px-2 rounded cursor-pointer transition-colors ${
+                      selectedTopic === topic.konu
+                        ? 'bg-blue-100 border-l-4 border-blue-600'
+                        : 'hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex-1 text-sm font-medium text-gray-900">
+                      {topic.konu}
+                    </div>
+                    <div className="w-32 text-center">
+                      <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-bold">
+                        {topic.total}
+                      </span>
+                    </div>
+                    <div className="w-48 flex flex-wrap justify-center gap-1">
+                      {selectedYears.map(year => {
+                        const count = topic.yillar[year] || 0;
+                        return (
+                          <div
+                            key={year}
+                            className={`px-2 py-1 rounded text-xs font-medium ${
+                              count > 0
+                                ? count >= 4
+                                  ? 'bg-green-500 text-white'
+                                  : count >= 2
+                                  ? 'bg-green-300 text-green-900'
+                                  : 'bg-green-100 text-green-800'
+                                : 'bg-gray-100 text-gray-400'
+                            }`}
+                          >
+                            {year.slice(2)}: {count}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div className="w-48 text-center">YILLIK DAĞILIM</div>
             </div>
 
-            {/* Table Body */}
-            <div className="space-y-1 max-h-96 overflow-y-auto">
+            {/* Mobile Topic List */}
+            <div className="md:hidden space-y-3">
               {filteredTopics.map((topic) => (
-                <div
+                <button
                   key={topic.konu}
                   onClick={() => setSelectedTopic(topic.konu)}
-                  className={`flex items-center py-2 px-2 rounded cursor-pointer transition-colors ${
-                    selectedTopic === topic.konu
-                      ? 'bg-blue-100 border-l-4 border-blue-600'
-                      : 'hover:bg-gray-50'
+                  className={`w-full text-left bg-gray-50 border border-gray-200 rounded-lg p-4 transition-colors ${
+                    selectedTopic === topic.konu ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-100'
                   }`}
                 >
-                  <div className="flex-1 text-sm font-medium text-gray-900">
-                    {topic.konu}
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="font-semibold text-gray-900">{topic.konu}</span>
+                      <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-bold">
+                        {topic.total}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedYears.map(year => {
+                        const count = topic.yillar[year] || 0;
+                        return (
+                          <span
+                            key={year}
+                            className={`px-2 py-1 rounded text-xs font-medium ${
+                              count > 0
+                                ? count >= 4
+                                  ? 'bg-green-500 text-white'
+                                  : count >= 2
+                                  ? 'bg-green-300 text-green-900'
+                                  : 'bg-green-100 text-green-800'
+                                : 'bg-gray-100 text-gray-400'
+                            }`}
+                          >
+                            {year.slice(2)}: {count}
+                          </span>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <div className="w-32 text-center">
-                    <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-bold">
-                      {topic.total}
-                    </span>
-                  </div>
-                  <div className="w-48 flex justify-center gap-1">
-                    {selectedYears.map(year => {
-                      const count = topic.yillar[year] || 0;
-                      return (
-                        <div
-                          key={year}
-                          className={`px-2 py-1 rounded text-xs font-medium ${
-                            count > 0
-                              ? count >= 4
-                                ? 'bg-green-500 text-white'
-                                : count >= 2
-                                ? 'bg-green-300 text-green-900'
-                                : 'bg-green-100 text-green-800'
-                              : 'bg-gray-100 text-gray-400'
-                          }`}
-                        >
-                          {year.slice(2)}: {count}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
+                </button>
               ))}
             </div>
           </div>
@@ -456,7 +501,7 @@ export default function ExamTopicsSection({ user, hasClassViewerSession = false,
               </p>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6 mb-6">
+            <div className="grid gap-6 lg:grid-cols-2 mb-6">
               <div className="bg-white rounded-xl p-6 border-2 border-gray-200">
                 <h4 className="text-lg font-semibold mb-4">Ücretsiz</h4>
                 <ul className="space-y-2 text-sm text-gray-700">

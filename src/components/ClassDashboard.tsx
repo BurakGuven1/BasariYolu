@@ -65,8 +65,8 @@ export default function ClassDashboard({ classData, onBack }: ClassDashboardProp
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
-        <div className="mb-8 flex justify-between items-start">
-          <div className="flex items-center space-x-4">
+        <div className="mb-8 flex flex-col gap-4 md:flex-row md:justify-between md:items-start">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <button
               onClick={onBack}
               className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
@@ -100,7 +100,7 @@ export default function ClassDashboard({ classData, onBack }: ClassDashboardProp
         </div>
 
         {/* Stats */}
-        <div className="grid md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-lg p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
@@ -142,7 +142,7 @@ export default function ClassDashboard({ classData, onBack }: ClassDashboardProp
           </div>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Announcements */}
           <div className="bg-white rounded-lg p-6 shadow-sm">
             <h3 className="text-lg font-semibold mb-4 flex items-center">

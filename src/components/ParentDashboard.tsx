@@ -209,7 +209,7 @@ export default function ParentDashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="mb-8 flex justify-between items-start">
+        <div className="mb-8 flex flex-col gap-4 md:flex-row md:justify-between md:items-start">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Veli Paneli</h1>
             <p className="text-gray-600">
@@ -227,7 +227,7 @@ export default function ParentDashboard() {
 
         {/* Child Selection */}
         <div className="mb-6">
-          <div className="flex items-center space-x-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <h3 className="text-lg font-semibold">Çocuklarım:</h3>
             {children.map((child) => (
               <button
@@ -266,7 +266,7 @@ export default function ParentDashboard() {
         {/* Selected Child Info */}
         {selectedChildData && (
           <div className="mb-6 bg-blue-50 rounded-lg p-4">
-            <div className="flex items-center space-x-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
               <User className="h-10 w-10 text-blue-600" />
               <div>
                 <h3 className="text-lg font-semibold text-blue-900">
@@ -301,7 +301,7 @@ export default function ParentDashboard() {
         ) : selectedChildData ? (
           <>
         {/* Stats Overview */}
-        <div className="grid md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-lg p-6 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
@@ -361,7 +361,7 @@ export default function ParentDashboard() {
         </div>
 
         {/* Charts */}
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <div className="bg-white rounded-lg p-6 shadow-sm">
             <h3 className="text-lg font-semibold mb-4">Son Denemeler İlerlemesi</h3>
             {chartData.length > 0 ? (
