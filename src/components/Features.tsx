@@ -1,4 +1,3 @@
-import React from 'react';
 import { 
   BarChart3, Brain, Users, Target, 
   TrendingUp, BookOpen, Clock, Award 

@@ -14,10 +14,9 @@ import ParentDashboard from './components/ParentDashboard';
 import ExamTopicsSection from './components/ExamTopicsSection';
 import TeacherLogin from './components/TeacherLogin';
 import TeacherDashboard from './components/TeacherDashboard';
-import ClassDashboard from './components/ClassDashboard';
 
 function App() {
-  const { user, loading, setParentUser, clearUser } = useAuth();
+  const { user, loading, setParentUser } = useAuth();
   const [showStudentParentLoginModal, setShowStudentParentLoginModal] = useState(false);
   const [showTeacherLoginModal, setShowTeacherLoginModal] = useState(false);
   const [currentView, setCurrentView] = useState<'home' | 'dashboard'>('home');

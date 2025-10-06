@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { BookOpen, User, Bell, Menu, X, Home, Package, BarChart3, GraduationCap } from 'lucide-react';
 
 interface NavbarProps {
@@ -8,7 +8,7 @@ interface NavbarProps {
   onMenuToggle: () => void;
 }
 
-export default function Navbar({ user, onStudentParentLogin, onTeacherLogin, onMenuToggle }: NavbarProps) {
+export default function Navbar({ user, onStudentParentLogin, onTeacherLogin }: NavbarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const toggleMobileMenu = () => {
