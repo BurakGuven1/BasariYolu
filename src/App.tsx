@@ -136,7 +136,7 @@ function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-4 gap-8">
             <div>
-              <h3 className="text-lg font-semibold mb-4">EduTracker</h3>
+              <h3 className="text-lg font-semibold mb-4">BaşarıYolu</h3>
               <p className="text-gray-400 text-sm">
                 Türkiye'nin en kapsamlı öğrenci takip platformu. 
                 Yapay zeka desteğiyle akademik başarınızı artırın.
@@ -163,14 +163,14 @@ function App() {
             <div>
               <h4 className="font-semibold mb-3">İletişim</h4>
               <p className="text-sm text-gray-400">
-                info@edutracker.com<br />
+                info@basariyolu.com<br />
                 0850 123 45 67<br />
                 7/24 Canlı Destek
               </p>
             </div>
           </div>
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400 text-sm">
-            <p>&copy; 2024 EduTracker. Tüm hakları saklıdır.</p>
+            <p>&copy; {new Date().getFullYear()} BaşarıYolu. Tüm hakları saklıdır.</p>
           </div>
         </div>
       </footer>
