@@ -22,7 +22,7 @@ interface SubjectData {
   };
 }
 
-//2025 verileri de eklensin 
+
 // Gerçek YKS verileri
 const examData: { [key: string]: SubjectData } = {
 
