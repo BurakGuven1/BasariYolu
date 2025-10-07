@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react';
 import { Search, Filter, Crown, TrendingUp, Award, BarChart3, Lock } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useFeatureAccess } from '../hooks/useFeatureAccess';
+import FeatureGate from './FeatureGate';
 
 interface ExamTopicsSectionProps {
   user?: any;
@@ -147,6 +149,7 @@ const freeYears = ['2018', '2019', '2020'];
 const premiumYears = ['2021', '2022', '2023', '2024', '2025'];
 
 export default function ExamTopicsSection({ user, hasClassViewerSession = false, onUpgrade }: ExamTopicsSectionProps) {
+  const { canAccessExamTopics } = useFeatureAccess();
   const [selectedSubject, setSelectedSubject] = useState<string>('AYT Matematik');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedYears, setSelectedYears] = useState<string[]>(freeYears);
@@ -187,6 +190,14 @@ export default function ExamTopicsSection({ user, hasClassViewerSession = false,
   const totalQuestions = filteredTopics.reduce((sum, topic) => sum + topic.total, 0);
 
   const toggleYear = (year: string) => {
+
+    const isPremium = premiumYears.includes(year);
+    
+    // Premium yıllar için erişim kontrolü
+    if (isPremium && !canAccessExamTopics(year)) {
+      onUpgrade();
+      return;
+    }
     if (selectedYears.includes(year)) {
       if (selectedYears.length > 1) {
         setSelectedYears(selectedYears.filter(y => y !== year));
@@ -555,6 +566,20 @@ export default function ExamTopicsSection({ user, hasClassViewerSession = false,
           </div>
         </div>
       </div>
+
+      <FeatureGate
+        feature="exam_topics"
+        onUpgrade={onUpgrade}
+        showPaywall={true}
+        fallback={<div>Bu özelliğe erişiminiz yok</div>}
+      >
+        {/* Chart ve premium içerik */}
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={chartData}>
+            {/* ... */}
+          </BarChart>
+        </ResponsiveContainer>
+      </FeatureGate>
     </div>
   );
 }

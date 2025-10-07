@@ -22,6 +22,7 @@ export interface PlanFeatures {
   study_recommendations?: boolean;
   priority_support?: boolean;
   custom_goals?: boolean;
+  [key: string]: any;
 }
 
 export interface UserSubscription {

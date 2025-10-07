@@ -7,9 +7,16 @@ import ExamForm from './ExamForm';
 import HomeworkForm from './HomeworkForm';
 import ExamTopicsSection from './ExamTopicsSection';
 import AIInsights from './AIInsights';
+import { useFeatureAccess } from '../hooks/useFeatureAccess';
+import SubscriptionBadge from './SubscriptionBadge';
+import ExamLimitBadge from './ExamLimitBadge';
+import FeatureGate from './FeatureGate';
 import { getStudentInviteCode, signOut, deleteExamResult, updateHomework, deleteHomework, addStudySession, getWeeklyStudyGoal, createWeeklyStudyGoal, updateWeeklyStudyGoal, getWeeklyStudySessions } from '../lib/supabase';
 
 export default function StudentDashboard() {
+  const { canAddExam, isFreeTier } = useFeatureAccess();
+  const [, setShowUpgradeModal] = useState(false);
+  const [, setShowAddExam] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'exams' | 'homeworks' | 'analysis' | 'classes'>('overview');
   const [showExamForm, setShowExamForm] = useState(false);
   const [showHomeworkForm, setShowHomeworkForm] = useState(false);
@@ -1050,7 +1057,43 @@ const chartData = filteredExamResults
             </div>
           </div>
         )}
-        
+        {!isFreeTier && (
+          <div className="mb-6">
+            <SubscriptionBadge />
+          </div>
+        )}
+
+        {/* Exam Limit Badge */}
+        <div className="mb-6">
+          <ExamLimitBadge onUpgrade={() => setShowUpgradeModal(true)} />
+        </div>
+
+        {/* AI Analysis with Feature Gate */}
+        {activeTab === 'analysis' && (
+          <FeatureGate
+          feature="ai_analysis"
+          onUpgrade={() => setShowUpgradeModal(true)}
+          showPaywall={true}
+          fallback={<div>Bu özelliğe erişiminiz yok</div>}
+        >
+          {/* İçeriği buraya koy */}
+          <div>AI Analysis Content</div>
+        </FeatureGate>
+        )}
+
+        {/* Add Exam Button with Limit Check */}
+        <button
+          onClick={() => {
+            if (!canAddExam()) {
+              setShowUpgradeModal(true);
+              return;
+            }
+            setShowAddExam(true);
+          }}
+          className="bg-blue-600 text-white px-6 py-3 rounded-lg"
+        >
+          Deneme Ekle
+        </button>
       </div>
 
       {/* Study Session Form */}

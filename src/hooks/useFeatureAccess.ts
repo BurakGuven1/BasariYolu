@@ -1,31 +1,30 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from './useAuth';
+import { getUserSubscription, getExamCountForPeriod } from '../lib/subscriptionApi';
+import { UserSubscription } from '../types/subscription';
 
 export function useFeatureAccess() {
   const { user } = useAuth();
-  const [subscription, setSubscription] = useState<any>(null);
+  const [subscription, setSubscription] = useState<UserSubscription | null>(null);
   const [loading, setLoading] = useState(true);
+const [examStats, setExamStats] = useState<{ count: number; limit: number; remaining: number }>({ 
+  count: 0, 
+  limit: 0, 
+  remaining: 0 
+});
 
   useEffect(() => {
-    if (user) {
+    if (user?.id) {
       loadSubscription();
+      loadExamStats();
+    } else {
+      setLoading(false);
     }
-  }, [user]);
+  }, [user?.id]);
 
   const loadSubscription = async () => {
     try {
-      const { data, error } = await supabase
-        .from('user_subscriptions')
-        .select(`
-          *,
-          plan:subscription_plans(*)
-        `)
-        .eq('user_id', user?.id)
-        .eq('status', 'active')
-        .single();
-
-      if (error) throw error;
+      const { data } = await getUserSubscription(user!.id);
       setSubscription(data);
     } catch (error) {
       console.error('Error loading subscription:', error);
@@ -34,41 +33,86 @@ export function useFeatureAccess() {
     }
   };
 
-  const hasFeature = (featureName: string): boolean => {
-    if (!subscription?.plan?.features) return false;
-    return subscription.plan.features[featureName] === true;
+  const loadExamStats = async () => {
+    try {
+      const stats = await getExamCountForPeriod(user!.id);
+      setExamStats(stats);
+    } catch (error) {
+      console.error('Error loading exam stats:', error);
+    }
   };
 
-  const canAccessExamTopics = (year: string): boolean => {
+  const featureMap: Record<string, string> = {
+  'ai_analysis': 'ai_support',
+  'exam_topics': 'limited_content',
+  'advanced_reports': 'advanced_reports',
+  'custom_goals': 'priority_support'
+};
+
+const hasFeature = useCallback((featureName: string): boolean => {
+  if (!subscription?.plan?.features) return false;
+  const mappedName = featureMap[featureName] || featureName;
+  const featureValue = subscription.plan.features[mappedName];
+  
+  // limited_content için ters mantık (false = premium)
+  if (mappedName === 'limited_content') {
+    return featureValue === false;
+  }
+  
+  return featureValue === true;
+}, [subscription]);
+
+  const canAccessExamTopics = useCallback((year: string): boolean => {
     const freeYears = ['2018', '2019', '2020'];
     if (freeYears.includes(year)) return true;
     return hasFeature('exam_topics');
-  };
+  }, [hasFeature]);
 
-  const getRemainingExams = async (): Promise<number> => {
-    if (!subscription) return 0;
-    
-    const maxExams = subscription.plan.features.max_exams;
-    if (maxExams === -1) return -1; // Unlimited
+  const canAddExam = useCallback((): boolean => {
+    if (!subscription) return false;
+    const maxExams = subscription.plan?.features?.max_exams || 0;
+    if (maxExams === -1) return true; // Unlimited
+    return examStats.count < maxExams;
+  }, [subscription, examStats]);
 
-    // Count user's exams in current period
-    const { count } = await supabase
-      .from('exams')
-      .select('*', { count: 'exact', head: true })
-      .eq('student_id', user?.id)
-      .gte('created_at', subscription.current_period_start)
-      .lte('created_at', subscription.current_period_end);
+  const getFeatureLimit = useCallback((featureName: string): number => {
+    if (!subscription?.plan?.features) return 0;
+    const value = subscription.plan.features[featureName];
+    return typeof value === 'number' ? value : 0;
+  }, [subscription]);
 
-    return Math.max(0, maxExams - (count || 0));
-  };
+  const isTrialActive = useCallback((): boolean => {
+    if (!subscription) return false;
+    if (subscription.status !== 'trial') return false;
+    if (!subscription.trial_end_date) return false;
+    return new Date(subscription.trial_end_date) > new Date();
+  }, [subscription]);
+
+  const getDaysUntilExpiry = useCallback((): number => {
+    if (!subscription?.current_period_end) return 0;
+    const now = new Date();
+    const end = new Date(subscription.current_period_end);
+    const diff = end.getTime() - now.getTime();
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
+  }, [subscription]);
 
   return {
     subscription,
     loading,
     hasFeature,
     canAccessExamTopics,
-    getRemainingExams,
+    canAddExam,
+    getFeatureLimit,
+    isTrialActive,
+    getDaysUntilExpiry,
+    examStats,
     planName: subscription?.plan?.name || 'free',
-    isFreeTier: !subscription || subscription.status !== 'active'
+    planDisplayName: subscription?.plan?.display_name || 'Ücretsiz',
+    isFreeTier: !subscription || subscription.status !== 'active',
+    isPremium: subscription?.status === 'active' && subscription?.plan?.name !== 'temel',
+    refresh: () => {
+      loadSubscription();
+      loadExamStats();
+    }
   };
 }
