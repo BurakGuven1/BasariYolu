@@ -1,17 +1,23 @@
 import React, { useState } from 'react';
-import { BookOpen, Plus, TrendingUp, Calendar, Target, Award, Clock, CheckCircle, AlertCircle, LogOut, CreditCard as Edit, Trash2, MoreVertical, Trophy, Star, Users, X } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
-import { Scatter, ScatterChart } from 'recharts';
+import { BookOpen, Plus, TrendingUp, Calendar, Target, Award, Clock, CheckCircle, AlertCircle, LogOut, CreditCard as Edit, Trash2, MoreVertical, Users, X } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer} from 'recharts';
 import { useAuth } from '../hooks/useAuth';
 import { useStudentData } from '../hooks/useStudentData';
 import ExamForm from './ExamForm';
 import HomeworkForm from './HomeworkForm';
 import ExamTopicsSection from './ExamTopicsSection';
 import AIInsights from './AIInsights';
+import { useFeatureAccess } from '../hooks/useFeatureAccess';
+import SubscriptionBadge from './SubscriptionBadge';
+import ExamLimitBadge from './ExamLimitBadge';
+import FeatureGate from './FeatureGate';
 import { getStudentInviteCode, signOut, deleteExamResult, updateHomework, deleteHomework, addStudySession, getWeeklyStudyGoal, createWeeklyStudyGoal, updateWeeklyStudyGoal, getWeeklyStudySessions } from '../lib/supabase';
 
 export default function StudentDashboard() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'exams' | 'homeworks' | 'analysis'>('overview');
+  const { canAddExam, isFreeTier } = useFeatureAccess();
+  const [, setShowUpgradeModal] = useState(false);
+  const [, setShowAddExam] = useState(false);
+  const [activeTab, setActiveTab] = useState<'overview' | 'exams' | 'homeworks' | 'analysis' | 'classes'>('overview');
   const [showExamForm, setShowExamForm] = useState(false);
   const [showHomeworkForm, setShowHomeworkForm] = useState(false);
   const [showInviteCode, setShowInviteCode] = useState(false);
@@ -113,12 +119,10 @@ export default function StudentDashboard() {
     studentData, 
     examResults, 
     homeworks, 
-    aiRecommendations, 
     studentClasses, 
     classAssignments,
     classAnnouncements,
     classExamResults,
-    loading, 
     refetch 
   } = useStudentData(user?.id);
 
@@ -392,7 +396,7 @@ const chartData = filteredExamResults
 
   const renderOverview = () => (
     <div className="space-y-6">
-      <div className="grid md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-white rounded-lg p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
@@ -477,9 +481,9 @@ const chartData = filteredExamResults
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
   <div className="bg-white rounded-lg p-6 shadow-sm">
-    <div className="flex justify-between items-center mb-4">
+    <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-4">
       <h3 className="text-lg font-semibold">Deneme İlerlemesi</h3>
       <select
         value={chartFilter}
@@ -500,7 +504,7 @@ const chartData = filteredExamResults
         <XAxis dataKey="date" fontSize={12} /> 
         <YAxis domain={[100, 500]} />
         <Tooltip 
-          formatter={(value, name, props) => [
+          formatter={(value, _name, props) => [
             `${value} puan`,
             `${props.payload.examName} (${props.payload.examType})`
           ]}
@@ -534,7 +538,7 @@ const chartData = filteredExamResults
                 <p>Henüz ödev eklenmemiş</p>
               </div>
             ) : (
-              [...homeworks, ...classAssignments].slice(0, 4).map((homework, index) => (
+              [...homeworks, ...classAssignments].slice(0, 4).map((homework) => (
               <div key={homework.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center space-x-3">
                   {homework.completed ? (
@@ -561,7 +565,7 @@ const chartData = filteredExamResults
 
   const renderExams = () => (
     <div className="bg-white rounded-lg p-6 shadow-sm">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-6">
         <h3 className="text-lg font-semibold">Deneme Sonuçları</h3>
         <button 
           onClick={() => setShowExamForm(true)}
@@ -586,7 +590,7 @@ const chartData = filteredExamResults
         ) : (
           examResults.slice(0, 5).map((exam, index) => (
           <div key={index} className="border rounded-lg p-4 relative">
-            <div className="flex justify-between items-start mb-3 pr-8">
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start mb-3 pr-8">
               <div>
                 <h4 className="font-semibold">{exam.exam_name}</h4>
                 <p className="text-sm text-gray-600">{new Date(exam.exam_date).toLocaleDateString('tr-TR')}</p>
@@ -647,7 +651,7 @@ const chartData = filteredExamResults
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="mb-8 flex justify-between items-start">
+        <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Öğrenci Paneli</h1>
             <p className="text-gray-600">
@@ -682,7 +686,7 @@ const chartData = filteredExamResults
         {/* Payment Notice */}
         {showPaymentNotice && (
           <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <div className="flex justify-between items-start">
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start">
               <div>
                 <h3 className="text-yellow-800 font-medium">Ödeme Bildirimi</h3>
                 <p className="text-yellow-700 text-sm mt-1">
@@ -732,7 +736,7 @@ const chartData = filteredExamResults
         {activeTab === 'analysis' && renderAnalysis()}
         {activeTab === 'classes' && (
           <div className="bg-white rounded-lg p-6 shadow-sm">
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-6">
               <h3 className="text-lg font-semibold">Sınıflarım</h3>
               <div className="flex space-x-2">
                 <button
@@ -779,7 +783,7 @@ const chartData = filteredExamResults
               ) : (
                 studentClasses.map((classData) => (
                   <div key={classData.id} className="border rounded-lg p-4">
-                    <div className="flex justify-between items-start mb-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start mb-4">
                       <div>
                         <h4 className="font-semibold">{classData.classes?.class_name}</h4>
                         <p className="text-sm text-gray-600">
@@ -870,7 +874,7 @@ const chartData = filteredExamResults
         )}
         {activeTab === 'homeworks' && (
           <div className="bg-white rounded-lg p-6 shadow-sm">
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-6">
               <h3 className="text-lg font-semibold">Ödev Takibi</h3>
               <button 
                 onClick={() => setShowHomeworkForm(true)}
@@ -890,7 +894,7 @@ const chartData = filteredExamResults
                       <p className="text-gray-700 font-medium mb-2">Sınıf Ödevleri:</p>
                       {classAssignments.slice(0, 3).map((assignment) => (
                         <div key={assignment.id} className="p-3 bg-blue-50 rounded-lg mb-2">
-                          <div className="flex justify-between items-start">
+                          <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start">
                             <div>
                               <p className="font-medium text-blue-900">{assignment.title}</p>
                               <p className="text-sm text-blue-700">{assignment.subject}</p>
@@ -1034,7 +1038,7 @@ const chartData = filteredExamResults
         {showExamTopics && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl max-w-7xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
+              <div className="sticky top-0 bg-white border-b px-6 py-4 flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
                 <h2 className="text-xl font-bold">TYT-AYT Çıkmış Konular Analizi</h2>
                 <button
                   onClick={() => setShowExamTopics(false)}
@@ -1053,7 +1057,43 @@ const chartData = filteredExamResults
             </div>
           </div>
         )}
-        
+        {!isFreeTier && (
+          <div className="mb-6">
+            <SubscriptionBadge />
+          </div>
+        )}
+
+        {/* Exam Limit Badge */}
+        <div className="mb-6">
+          <ExamLimitBadge onUpgrade={() => setShowUpgradeModal(true)} />
+        </div>
+
+        {/* AI Analysis with Feature Gate */}
+        {activeTab === 'analysis' && (
+          <FeatureGate
+          feature="ai_analysis"
+          onUpgrade={() => setShowUpgradeModal(true)}
+          showPaywall={true}
+          fallback={<div>Bu özelliğe erişiminiz yok</div>}
+        >
+          {/* İçeriği buraya koy */}
+          <div>AI Analysis Content</div>
+        </FeatureGate>
+        )}
+
+        {/* Add Exam Button with Limit Check */}
+        <button
+          onClick={() => {
+            if (!canAddExam()) {
+              setShowUpgradeModal(true);
+              return;
+            }
+            setShowAddExam(true);
+          }}
+          className="bg-blue-600 text-white px-6 py-3 rounded-lg"
+        >
+          Deneme Ekle
+        </button>
       </div>
 
       {/* Study Session Form */}

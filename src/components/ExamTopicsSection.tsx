@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react';
 import { Search, Filter, Crown, TrendingUp, Award, BarChart3, Lock } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useFeatureAccess } from '../hooks/useFeatureAccess';
+import FeatureGate from './FeatureGate';
 
 interface ExamTopicsSectionProps {
   user?: any;
@@ -22,7 +24,7 @@ interface SubjectData {
   };
 }
 
-//2025 verileri de eklensin 
+
 // Gerçek YKS verileri
 const examData: { [key: string]: SubjectData } = {
 
@@ -30,71 +32,71 @@ const examData: { [key: string]: SubjectData } = {
     "konular": [
       {"konu": "Ses Bilgisi", "yillar": {"2018": 3, "2019": 1, "2020": 0, "2021": 1, "2022": 0, "2023": 1, "2024": 0, "2025": 0}},
       {"konu": "Dil Bilgisi", "yillar": {"2018": 1, "2019": 8, "2020": 3, "2021": 2, "2022": 3, "2023": 2, "2024": 0, "2025": 0}},
-      {"konu": "Noktalama İşaretleri", "yillar": {"2018": 1, "2019": 1, "2020": 2, "2021": 2, "2022": 2, "2023": 2, "2024": 2, "2025": 0}},
-      {"konu": "Yazım Kuralları", "yillar": {"2018": 2, "2019": 2, "2020": 2, "2021": 2, "2022": 2, "2023": 2, "2024": 2, "2025": 0}},
+      {"konu": "Noktalama İşaretleri", "yillar": {"2018": 1, "2019": 1, "2020": 2, "2021": 2, "2022": 2, "2023": 2, "2024": 2, "2025": 2}},
+      {"konu": "Yazım Kuralları", "yillar": {"2018": 2, "2019": 2, "2020": 2, "2021": 2, "2022": 2, "2023": 2, "2024": 2, "2025": 2}},
       {"konu": "Anlatım Bozukluğu", "yillar": {"2018": 1, "2019": 0, "2020": 0, "2021": 0, "2022": 0, "2023": 0, "2024": 0, "2025": 0}},
-      {"konu": "Paragraf", "yillar": {"2018": 22, "2019": 22, "2020": 26, "2021": 25, "2022": 26, "2023": 26, "2024": 26, "2025": 0}},
-      {"konu": "Cümlede Anlam", "yillar": {"2018": 7, "2019": 3, "2020": 6, "2021": 3, "2022": 3, "2023": 4, "2024": 5, "2025": 0}},
-      {"konu": "Sözcükte Anlam", "yillar": {"2018": 3, "2019": 3, "2020": 1, "2021": 5, "2022": 4, "2023": 3, "2024": 5, "2025": 0}}
+      {"konu": "Paragraf", "yillar": {"2018": 22, "2019": 22, "2020": 26, "2021": 25, "2022": 26, "2023": 26, "2024": 26, "2025": 26}},
+      {"konu": "Cümlede Anlam", "yillar": {"2018": 7, "2019": 3, "2020": 6, "2021": 3, "2022": 3, "2023": 4, "2024": 5, "2025": 5}},
+      {"konu": "Sözcükte Anlam", "yillar": {"2018": 3, "2019": 3, "2020": 1, "2021": 5, "2022": 4, "2023": 3, "2024": 5, "2025": 5}}
     ],
     "toplamSoru": {"2018": 40, "2019": 40, "2020": 40, "2021": 40, "2022": 40, "2023": 40, "2024": 40, "2025": 40}
   },
   "TYT Matematik": {
     "konular": [
-      {"konu": "Temel Kavramlar", "yillar": {"2018": 4, "2019": 4, "2020": 1, "2021": 3, "2022": 3, "2023": 2, "2024": 1, "2025": 0}},
-      {"konu": "Sayı Basamakları", "yillar": {"2018": 2, "2019": 1, "2020": 1, "2021": 2, "2022": 1, "2023": 1, "2024": 2, "2025": 0}},
-      {"konu": "Bölünebilme Kuralları", "yillar": {"2018": 0, "2019": 0, "2020": 1, "2021": 1, "2022": 1, "2023": 1, "2024": 1, "2025": 0}},
-      {"konu": "OBEB-OKEK", "yillar": {"2018": 0, "2019": 0, "2020": 0, "2021": 0, "2022": 0, "2023": 0, "2024": 1, "2025": 0}},
-      {"konu": "Rasyonel Sayılar", "yillar": {"2018": 1, "2019": 0, "2020": 3, "2021": 0, "2022": 2, "2023": 2, "2024": 2, "2025": 0}},
+      {"konu": "Temel Kavramlar", "yillar": {"2018": 4, "2019": 4, "2020": 1, "2021": 3, "2022": 3, "2023": 2, "2024": 1, "2025": 2}},
+      {"konu": "Sayı Basamakları", "yillar": {"2018": 2, "2019": 1, "2020": 1, "2021": 2, "2022": 1, "2023": 1, "2024": 2, "2025": 2}},
+      {"konu": "Bölünebilme Kuralları", "yillar": {"2018": 0, "2019": 0, "2020": 1, "2021": 1, "2022": 1, "2023": 1, "2024": 1, "2025": 1}},
+      {"konu": "OBEB-OKEK", "yillar": {"2018": 0, "2019": 0, "2020": 0, "2021": 0, "2022": 0, "2023": 0, "2024": 1, "2025": 1}},
+      {"konu": "Rasyonel Sayılar", "yillar": {"2018": 1, "2019": 0, "2020": 3, "2021": 0, "2022": 2, "2023": 2, "2024": 2, "2025": 2}},
       {"konu": "Basit Eşitsizlikler", "yillar": {"2018": 1, "2019": 1, "2020": 1, "2021": 1, "2022": 1, "2023": 3, "2024": 0, "2025": 0}},
-      {"konu": "Mutlak Değer", "yillar": {"2018": 1, "2019": 1, "2020": 1, "2021": 1, "2022": 1, "2023": 1, "2024": 2, "2025": 0}},
-      {"konu": "Üslü Sayılar", "yillar": {"2018": 2, "2019": 0, "2020": 1, "2021": 1, "2022": 1, "2023": 1, "2024": 1, "2025": 0}},
-      {"konu": "Köklü Sayılar", "yillar": {"2018": 2, "2019": 1, "2020": 1, "2021": 1, "2022": 1, "2023": 1, "2024": 1, "2025": 0}},
+      {"konu": "Mutlak Değer", "yillar": {"2018": 1, "2019": 1, "2020": 1, "2021": 1, "2022": 1, "2023": 1, "2024": 2, "2025": 1}},
+      {"konu": "Üslü Sayılar", "yillar": {"2018": 2, "2019": 0, "2020": 1, "2021": 1, "2022": 1, "2023": 1, "2024": 1, "2025": 1}},
+      {"konu": "Köklü Sayılar", "yillar": {"2018": 2, "2019": 1, "2020": 1, "2021": 1, "2022": 1, "2023": 1, "2024": 1, "2025": 1}},
       {"konu": "Çarpanlara Ayırma", "yillar": {"2018": 1, "2019": 1, "2020": 0, "2021": 0, "2022": 0, "2023": 0, "2024": 0, "2025": 0}},
       {"konu": "Oran-Orantı", "yillar": {"2018": 0, "2019": 0, "2020": 0, "2021": 1, "2022": 1, "2023": 1, "2024": 0, "2025": 0}},
-      {"konu": "Denklem Çözme", "yillar": {"2018": 1, "2019": 2, "2020": 1, "2021": 0, "2022": 2, "2023": 0, "2024": 1, "2025": 0}},
-      {"konu": "Problemler", "yillar": {"2018": 11, "2019": 11, "2020": 12, "2021": 13, "2022": 11, "2023": 13, "2024": 10, "2025": 0}},
-      {"konu": "Kümeler – Kartezyen Çarpım", "yillar": {"2018": 2, "2019": 2, "2020": 1, "2021": 1, "2022": 1, "2023": 1, "2024": 1, "2025": 0}},
-      {"konu": "Mantık", "yillar": {"2018": 1, "2019": 0, "2020": 0, "2021": 1, "2022": 1, "2023": 1, "2024": 1, "2025": 0}},
-      {"konu": "Fonksiyonlar", "yillar": {"2018": 1, "2019": 1, "2020": 2, "2021": 2, "2022": 1, "2023": 1, "2024": 1, "2025": 0}},
+      {"konu": "Denklem Çözme", "yillar": {"2018": 1, "2019": 2, "2020": 1, "2021": 0, "2022": 2, "2023": 0, "2024": 1, "2025": 1}},
+      {"konu": "Problemler", "yillar": {"2018": 11, "2019": 11, "2020": 12, "2021": 13, "2022": 11, "2023": 13, "2024": 10, "2025": 12}},
+      {"konu": "Kümeler – Kartezyen Çarpım", "yillar": {"2018": 2, "2019": 2, "2020": 1, "2021": 1, "2022": 1, "2023": 1, "2024": 1, "2025": 1}},
+      {"konu": "Mantık", "yillar": {"2018": 1, "2019": 0, "2020": 0, "2021": 1, "2022": 1, "2023": 1, "2024": 1, "2025": 1}},
+      {"konu": "Fonksiyonlar", "yillar": {"2018": 1, "2019": 1, "2020": 2, "2021": 2, "2022": 1, "2023": 1, "2024": 1, "2025": 1}},
       {"konu": "Polinomlar", "yillar": {"2018": 0, "2019": 1, "2020": 0, "2021": 0, "2022": 1, "2023": 0, "2024": 0, "2025": 0}},
-      {"konu": "Permütasyon-Kombinasyon", "yillar": {"2018": 1, "2019": 1, "2020": 1, "2021": 2, "2022": 0, "2023": 0, "2024": 1, "2025": 0}},
-      {"konu": "Olasılık", "yillar": {"2018": 1, "2019": 2, "2020": 1, "2021": 1, "2022": 1, "2023": 1, "2024": 1, "2025": 0}},
-      {"konu": "Veri – İstatistik", "yillar": {"2018": 0, "2019": 0, "2020": 1, "2021": 0, "2022": 1, "2023": 1, "2024": 1, "2025": 0}}
+      {"konu": "Permütasyon-Kombinasyon", "yillar": {"2018": 1, "2019": 1, "2020": 1, "2021": 2, "2022": 0, "2023": 0, "2024": 1, "2025": 1}},
+      {"konu": "Olasılık", "yillar": {"2018": 1, "2019": 2, "2020": 1, "2021": 1, "2022": 1, "2023": 1, "2024": 1, "2025": 1}},
+      {"konu": "Veri – İstatistik", "yillar": {"2018": 0, "2019": 0, "2020": 1, "2021": 0, "2022": 1, "2023": 1, "2024": 1, "2025": 1}}
     ],
     "toplamSoru": {"2018": 29, "2019": 30, "2020": 30, "2021": 30, "2022": 30, "2023": 30, "2024": 30, "2025": 30}
   },
   "TYT Geometri": {
     "konular": [
-      {"konu": "Açılar ve Üçgenler", "yillar": {"2018": 3, "2019": 2, "2020": 2, "2021": 4, "2022": 4, "2023": 5, "2024": 5, "2025": 0}},
-      {"konu": "Çokgenler", "yillar": {"2018": 1, "2019": 1, "2020": 1, "2021": 1, "2022": 1, "2023": 1, "2024": 1, "2025": 0}},
-      {"konu": "Yamuk", "yillar": {"2018": 1, "2019": 0, "2020": 2, "2021": 0, "2022": 0, "2023": 1, "2024": 1, "2025": 0}},
+      {"konu": "Açılar ve Üçgenler", "yillar": {"2018": 3, "2019": 2, "2020": 2, "2021": 4, "2022": 4, "2023": 5, "2024": 5, "2025": 5}},
+      {"konu": "Çokgenler", "yillar": {"2018": 1, "2019": 1, "2020": 1, "2021": 1, "2022": 1, "2023": 1, "2024": 1, "2025": 1}},
+      {"konu": "Yamuk", "yillar": {"2018": 1, "2019": 0, "2020": 2, "2021": 0, "2022": 0, "2023": 1, "2024": 1, "2025": 1}},
       {"konu": "Eşkenar Dörtgen", "yillar": {"2018": 0, "2019": 0, "2020": 0, "2021": 0, "2022": 1, "2023": 0, "2024": 0, "2025": 0}},
       {"konu": "Deltoid", "yillar": {"2018": 0, "2019": 0, "2020": 0, "2021": 1, "2022": 0, "2023": 0, "2024": 0, "2025": 0}},
       {"konu": "Kare", "yillar": {"2018": 1, "2019": 1, "2020": 1, "2021": 0, "2022": 0, "2023": 0, "2024": 0, "2025": 0}},
-      {"konu": "Dikdörtgen", "yillar": {"2018": 1, "2019": 1, "2020": 2, "2021": 1, "2022": 1, "2023": 1, "2024": 1, "2025": 0}},
+      {"konu": "Dikdörtgen", "yillar": {"2018": 1, "2019": 1, "2020": 2, "2021": 1, "2022": 1, "2023": 1, "2024": 1, "2025": 1}},
       {"konu": "Çember ve Daire", "yillar": {"2018": 1, "2019": 2, "2020": 0, "2021": 0, "2022": 0, "2023": 0, "2024": 0, "2025": 0}},
       {"konu": "Analitik Geometri", "yillar": {"2018": 1, "2019": 1, "2020": 0, "2021": 1, "2022": 1, "2023": 0, "2024": 0, "2025": 0}},
-      {"konu": "Katı Cisimler", "yillar": {"2018": 2, "2019": 2, "2020": 2, "2021": 2, "2022": 2, "2023": 2, "2024": 2, "2025": 0}}
+      {"konu": "Katı Cisimler", "yillar": {"2018": 2, "2019": 2, "2020": 2, "2021": 2, "2022": 2, "2023": 2, "2024": 2, "2025": 2}}
     ],
     "toplamSoru": {"2018": 11, "2019": 10, "2020": 10, "2021": 10, "2022": 10, "2023": 10, "2024": 10, "2025": 10}
   },
   "TYT Fizik": {
     "konular": [
       {"konu": "Fizik Bilimine Giriş", "yillar": {"2018": 1, "2019": 0, "2020": 1, "2021": 0, "2022": 0, "2023": 0, "2024": 0, "2025": 0}},
-      {"konu": "Madde Ve Özellikleri", "yillar": {"2018": 0, "2019": 1, "2020": 0, "2021": 1, "2022": 1, "2023": 1, "2024": 1, "2025": 0}},
+      {"konu": "Madde Ve Özellikleri", "yillar": {"2018": 0, "2019": 1, "2020": 0, "2021": 1, "2022": 1, "2023": 1, "2024": 1, "2025": 1}},
       {"konu": "Sıvıların Kaldırma Kuvveti", "yillar": {"2018": 1, "2019": 0, "2020": 1, "2021": 0, "2022": 0, "2023": 0, "2024": 1, "2025": 0}},
       {"konu": "Basınç", "yillar": {"2018": 0, "2019": 0, "2020": 0, "2021": 1, "2022": 1, "2023": 0, "2024": 0, "2025": 0}},
-      {"konu": "Isı, Sıcaklık ve Genleşme", "yillar": {"2018": 1, "2019": 1, "2020": 1, "2021": 1, "2022": 1, "2023": 1, "2024": 1, "2025": 0}},
-      {"konu": "Hareket ve Kuvvet", "yillar": {"2018": 1, "2019": 1, "2020": 1, "2021": 1, "2022": 1, "2023": 1, "2024": 1, "2025": 0}},
+      {"konu": "Isı, Sıcaklık ve Genleşme", "yillar": {"2018": 1, "2019": 1, "2020": 1, "2021": 1, "2022": 1, "2023": 1, "2024": 1, "2025": 1}},
+      {"konu": "Hareket ve Kuvvet", "yillar": {"2018": 1, "2019": 1, "2020": 1, "2021": 1, "2022": 1, "2023": 1, "2024": 1, "2025": 1}},
       {"konu": "Dinamik", "yillar": {"2018": 0, "2019": 0, "2020": 0, "2021": 0, "2022": 0, "2023": 0, "2024": 0, "2025": 0}},
       {"konu": "İş, Güç ve Enerji", "yillar": {"2018": 0, "2019": 1, "2020": 0, "2021": 0, "2022": 0, "2023": 0, "2024": 0, "2025": 0}},
       {"konu": "Elektrostatik", "yillar": {"2018": 0, "2019": 0, "2020": 0, "2021": 0, "2022": 0, "2023": 0, "2024": 0, "2025": 0}},
-      {"konu": "Elektrik Akımı ve Devreler", "yillar": {"2018": 0, "2019": 1, "2020": 1, "2021": 0, "2022": 0, "2023": 2, "2024": 0, "2025": 0}},
+      {"konu": "Elektrik Akımı ve Devreler", "yillar": {"2018": 0, "2019": 1, "2020": 1, "2021": 0, "2022": 0, "2023": 2, "2024": 0, "2025": 1}},
       {"konu": "Elektriksel Enerji ve Güç", "yillar": {"2018": 0, "2019": 0, "2020": 0, "2021": 1, "2022": 1, "2023": 0, "2024": 0, "2025": 0}},
-      {"konu": "Optik", "yillar": {"2018": 2, "2019": 2, "2020": 1, "2021": 1, "2022": 1, "2023": 2, "2024": 1, "2025": 0}},
-      {"konu": "Manyetizma", "yillar": {"2018": 1, "2019": 0, "2020": 0, "2021": 0, "2022": 0, "2023": 0, "2024": 1, "2025": 0}},
-      {"konu": "Dalgalar", "yillar": {"2018": 0, "2019": 0, "2020": 1, "2021": 1, "2022": 1, "2023": 0, "2024": 1, "2025": 0}}
+      {"konu": "Optik", "yillar": {"2018": 2, "2019": 2, "2020": 1, "2021": 1, "2022": 1, "2023": 2, "2024": 1, "2025": 1}},
+      {"konu": "Manyetizma", "yillar": {"2018": 1, "2019": 0, "2020": 0, "2021": 0, "2022": 0, "2023": 0, "2024": 1, "2025": 1}},
+      {"konu": "Dalgalar", "yillar": {"2018": 0, "2019": 0, "2020": 1, "2021": 1, "2022": 1, "2023": 0, "2024": 1, "2025": 1}}
     ],
     "toplamSoru": {"2018": 7, "2019": 7, "2020": 7, "2021": 7, "2022": 7, "2023": 7, "2024": 7, "2025": 7}
   },
@@ -116,16 +118,16 @@ const examData: { [key: string]: SubjectData } = {
   "TYT Tarih": {
     "konular": [
       {"konu": "Tarih ve Zaman", "yillar": {"2018": 0, "2019": 0, "2020": 0, "2021": 0, "2022": 0, "2023": 0, "2024": 0, "2025": 0}},
-      {"konu": "İlk ve Orta Çağlarda Türk Dünyası", "yillar": {"2018": 1, "2019": 1, "2020": 1, "2021": 1, "2022": 1, "2023": 1, "2024": 1, "2025": 0}},
+      {"konu": "İlk ve Orta Çağlarda Türk Dünyası", "yillar": {"2018": 1, "2019": 1, "2020": 1, "2021": 1, "2022": 1, "2023": 1, "2024": 1, "2025": 1}},
       {"konu": "İslam Medeniyetinin Doğuşu", "yillar": {"2018": 0, "2019": 0, "2020": 0, "2021": 0, "2022": 0, "2023": 0, "2024": 0, "2025": 0}},
-      {"konu": "Türklerin İslamiyet'i Kabulü ve İlk Türk İslam Devletleri", "yillar": {"2018": 1, "2019": 1, "2020": 1, "2021": 1, "2022": 1, "2023": 1, "2024": 1, "2025": 0}},
+      {"konu": "Türklerin İslamiyet'i Kabulü ve İlk Türk İslam Devletleri", "yillar": {"2018": 1, "2019": 1, "2020": 1, "2021": 1, "2022": 1, "2023": 1, "2024": 1, "2025": 1}},
       {"konu": "Beylikten Devlete Osmanlı", "yillar": {"2018": 1, "2019": 1, "2020": 0, "2021": 0, "2022": 1, "2023": 0, "2024": 0, "2025": 0}},
-      {"konu": "Dünya Gücü Osmanlı", "yillar": {"2018": 0, "2019": 0, "2020": 0, "2021": 0, "2022": 0, "2023": 0, "2024": 1, "2025": 0}},
+      {"konu": "Dünya Gücü Osmanlı", "yillar": {"2018": 0, "2019": 0, "2020": 0, "2021": 0, "2022": 0, "2023": 0, "2024": 1, "2025": 1}},
       {"konu": "Değişim Çağında Avrupa ve Osmanlı", "yillar": {"2018": 0, "2019": 0, "2020": 0, "2021": 0, "2022": 0, "2023": 0, "2024": 0, "2025": 0}},
       {"konu": "Uluslararası İlişkilerde Denge Stratejisi (1774-1914)", "yillar": {"2018": 1, "2019": 0, "2020": 1, "2021": 1, "2022": 0, "2023": 1, "2024": 0, "2025": 0}},
       {"konu": "XX. Yüzyıl Başlarında Osmanlı Devleti ve Dünya", "yillar": {"2018": 1, "2019": 0, "2020": 1, "2021": 0, "2022": 0, "2023": 0, "2024": 0, "2025": 0}},
-      {"konu": "Milli Mücadele", "yillar": {"2018": 0, "2019": 1, "2020": 1, "2021": 1, "2022": 1, "2023": 2, "2024": 1, "2025": 0}},
-      {"konu": "Atatürkçülük ve Türk İnkılabı", "yillar": {"2018": 0, "2019": 1, "2020": 0, "2021": 1, "2022": 1, "2023": 0, "2024": 1, "2025": 0}}
+      {"konu": "Milli Mücadele", "yillar": {"2018": 0, "2019": 1, "2020": 1, "2021": 1, "2022": 1, "2023": 2, "2024": 1, "2025": 1}},
+      {"konu": "Atatürkçülük ve Türk İnkılabı", "yillar": {"2018": 0, "2019": 1, "2020": 0, "2021": 1, "2022": 1, "2023": 0, "2024": 1, "2025": 1}}
     ],
     "toplamSoru": {"2018": 5, "2019": 5, "2020": 5, "2021": 5, "2022": 5, "2023": 5, "2024": 5, "2025": 5}
   },
@@ -147,6 +149,7 @@ const freeYears = ['2018', '2019', '2020'];
 const premiumYears = ['2021', '2022', '2023', '2024', '2025'];
 
 export default function ExamTopicsSection({ user, hasClassViewerSession = false, onUpgrade }: ExamTopicsSectionProps) {
+  const { canAccessExamTopics } = useFeatureAccess();
   const [selectedSubject, setSelectedSubject] = useState<string>('AYT Matematik');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedYears, setSelectedYears] = useState<string[]>(freeYears);
@@ -187,6 +190,14 @@ export default function ExamTopicsSection({ user, hasClassViewerSession = false,
   const totalQuestions = filteredTopics.reduce((sum, topic) => sum + topic.total, 0);
 
   const toggleYear = (year: string) => {
+
+    const isPremium = premiumYears.includes(year);
+    
+    // Premium yıllar için erişim kontrolü
+    if (isPremium && !canAccessExamTopics(year)) {
+      onUpgrade();
+      return;
+    }
     if (selectedYears.includes(year)) {
       if (selectedYears.length > 1) {
         setSelectedYears(selectedYears.filter(y => y !== year));
@@ -229,7 +240,7 @@ export default function ExamTopicsSection({ user, hasClassViewerSession = false,
 
         {/* Controls */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-          <div className="grid md:grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             {/* Subject Selection */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -312,7 +323,7 @@ export default function ExamTopicsSection({ user, hasClassViewerSession = false,
         </div>
 
         {/* Stats Cards */}
-        <div className="grid md:grid-cols-3 gap-6 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-6">
           <div className="bg-blue-50 rounded-lg p-6 text-center">
             <div className="text-4xl font-bold text-blue-600 mb-2">{totalTopics}</div>
             <div className="text-gray-700 font-medium">Toplam Konu</div>
@@ -327,7 +338,7 @@ export default function ExamTopicsSection({ user, hasClassViewerSession = false,
           </div>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid gap-6 lg:grid-cols-2">
           {/* Topics Table */}
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h3 className="text-lg font-semibold mb-4 flex items-center">
@@ -335,71 +346,116 @@ export default function ExamTopicsSection({ user, hasClassViewerSession = false,
               {selectedSubject} Konuları
             </h3>
 
-            {/* Table Header */}
-            <div className="flex items-center text-sm font-medium text-gray-700 border-b pb-2 mb-2">
-              <div
-                className="flex-1 cursor-pointer hover:text-blue-600 flex items-center"
-                onClick={() => handleSort('name')}
-              >
-                KONU
-                {sortBy === 'name' && (
-                  <span className="ml-1">{sortOrder === 'asc' ? '↑' : '↓'}</span>
-                )}
+            <div className="hidden md:block">
+              {/* Table Header */}
+              <div className="flex items-center text-sm font-medium text-gray-700 border-b pb-2 mb-2">
+                <div
+                  className="flex-1 cursor-pointer hover:text-blue-600 flex items-center"
+                  onClick={() => handleSort('name')}
+                >
+                  KONU
+                  {sortBy === 'name' && (
+                    <span className="ml-1">{sortOrder === 'asc' ? '\u2191' : '\u2193'}</span>
+                  )}
+                </div>
+                <div
+                  className="w-32 text-center cursor-pointer hover:text-blue-600 flex items-center justify-center"
+                  onClick={() => handleSort('total')}
+                >
+                  TOPLAM SORU
+                  {sortBy === 'total' && (
+                    <span className="ml-1">{sortOrder === 'asc' ? '\u2191' : '\u2193'}</span>
+                  )}
+                </div>
+                <div className="w-48 text-center">YILLIK DAĞILIM</div>
               </div>
-              <div
-                className="w-32 text-center cursor-pointer hover:text-blue-600 flex items-center justify-center"
-                onClick={() => handleSort('total')}
-              >
-                TOPLAM SORU
-                {sortBy === 'total' && (
-                  <span className="ml-1">{sortOrder === 'asc' ? '↑' : '↓'}</span>
-                )}
+
+              {/* Table Body */}
+              <div className="space-y-1 max-h-96 overflow-y-auto">
+                {filteredTopics.map((topic) => (
+                  <div
+                    key={topic.konu}
+                    onClick={() => setSelectedTopic(topic.konu)}
+                    className={`flex items-center py-2 px-2 rounded cursor-pointer transition-colors ${
+                      selectedTopic === topic.konu
+                        ? 'bg-blue-100 border-l-4 border-blue-600'
+                        : 'hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex-1 text-sm font-medium text-gray-900">
+                      {topic.konu}
+                    </div>
+                    <div className="w-32 text-center">
+                      <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-bold">
+                        {topic.total}
+                      </span>
+                    </div>
+                    <div className="w-48 flex flex-wrap justify-center gap-1">
+                      {selectedYears.map(year => {
+                        const count = topic.yillar[year] || 0;
+                        return (
+                          <div
+                            key={year}
+                            className={`px-2 py-1 rounded text-xs font-medium ${
+                              count > 0
+                                ? count >= 4
+                                  ? 'bg-green-500 text-white'
+                                  : count >= 2
+                                  ? 'bg-green-300 text-green-900'
+                                  : 'bg-green-100 text-green-800'
+                                : 'bg-gray-100 text-gray-400'
+                            }`}
+                          >
+                            {year.slice(2)}: {count}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div className="w-48 text-center">YILLIK DAĞILIM</div>
             </div>
 
-            {/* Table Body */}
-            <div className="space-y-1 max-h-96 overflow-y-auto">
+            {/* Mobile Topic List */}
+            <div className="md:hidden space-y-3">
               {filteredTopics.map((topic) => (
-                <div
+                <button
                   key={topic.konu}
                   onClick={() => setSelectedTopic(topic.konu)}
-                  className={`flex items-center py-2 px-2 rounded cursor-pointer transition-colors ${
-                    selectedTopic === topic.konu
-                      ? 'bg-blue-100 border-l-4 border-blue-600'
-                      : 'hover:bg-gray-50'
+                  className={`w-full text-left bg-gray-50 border border-gray-200 rounded-lg p-4 transition-colors ${
+                    selectedTopic === topic.konu ? 'border-blue-500 bg-blue-50' : 'hover:bg-gray-100'
                   }`}
                 >
-                  <div className="flex-1 text-sm font-medium text-gray-900">
-                    {topic.konu}
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="font-semibold text-gray-900">{topic.konu}</span>
+                      <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-bold">
+                        {topic.total}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedYears.map(year => {
+                        const count = topic.yillar[year] || 0;
+                        return (
+                          <span
+                            key={year}
+                            className={`px-2 py-1 rounded text-xs font-medium ${
+                              count > 0
+                                ? count >= 4
+                                  ? 'bg-green-500 text-white'
+                                  : count >= 2
+                                  ? 'bg-green-300 text-green-900'
+                                  : 'bg-green-100 text-green-800'
+                                : 'bg-gray-100 text-gray-400'
+                            }`}
+                          >
+                            {year.slice(2)}: {count}
+                          </span>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <div className="w-32 text-center">
-                    <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-bold">
-                      {topic.total}
-                    </span>
-                  </div>
-                  <div className="w-48 flex justify-center gap-1">
-                    {selectedYears.map(year => {
-                      const count = topic.yillar[year] || 0;
-                      return (
-                        <div
-                          key={year}
-                          className={`px-2 py-1 rounded text-xs font-medium ${
-                            count > 0
-                              ? count >= 4
-                                ? 'bg-green-500 text-white'
-                                : count >= 2
-                                ? 'bg-green-300 text-green-900'
-                                : 'bg-green-100 text-green-800'
-                              : 'bg-gray-100 text-gray-400'
-                          }`}
-                        >
-                          {year.slice(2)}: {count}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
+                </button>
               ))}
             </div>
           </div>
@@ -456,7 +512,7 @@ export default function ExamTopicsSection({ user, hasClassViewerSession = false,
               </p>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6 mb-6">
+            <div className="grid gap-6 lg:grid-cols-2 mb-6">
               <div className="bg-white rounded-xl p-6 border-2 border-gray-200">
                 <h4 className="text-lg font-semibold mb-4">Ücretsiz</h4>
                 <ul className="space-y-2 text-sm text-gray-700">
@@ -510,6 +566,20 @@ export default function ExamTopicsSection({ user, hasClassViewerSession = false,
           </div>
         </div>
       </div>
+
+      <FeatureGate
+        feature="exam_topics"
+        onUpgrade={onUpgrade}
+        showPaywall={true}
+        fallback={<div>Bu özelliğe erişiminiz yok</div>}
+      >
+        {/* Chart ve premium içerik */}
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={chartData}>
+            {/* ... */}
+          </BarChart>
+        </ResponsiveContainer>
+      </FeatureGate>
     </div>
   );
 }

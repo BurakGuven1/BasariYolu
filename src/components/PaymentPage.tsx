@@ -102,10 +102,10 @@ export default function PaymentPage({ isOpen, onClose, onPaymentSuccess, registr
           <X className="h-6 w-6" />
         </button>
 
-        <div className="flex items-center mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
           <button
             onClick={onClose}
-            className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 mr-4"
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mr-4"
           >
             <ArrowLeft className="h-5 w-5" />
             <span>Geri</span>
@@ -123,7 +123,7 @@ export default function PaymentPage({ isOpen, onClose, onPaymentSuccess, registr
               <h3 className="text-lg font-semibold text-blue-900 mb-4">Sipariş Özeti</h3>
               
               <div className="space-y-4">
-                <div className="flex justify-between items-start">
+                <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-start">
                   <div>
                     <h4 className="font-semibold text-blue-800">{selectedPackage.name}</h4>
                     <p className="text-sm text-blue-600">
@@ -179,24 +179,24 @@ export default function PaymentPage({ isOpen, onClose, onPaymentSuccess, registr
             <div className="bg-gray-50 rounded-xl p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Hesap Bilgileri</h3>
               <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
+                <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
                   <span className="text-gray-600">Ad Soyad:</span>
                   <span className="font-medium">{registrationData.name}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
                   <span className="text-gray-600">E-posta:</span>
                   <span className="font-medium">{registrationData.email}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
                   <span className="text-gray-600">Sınıf:</span>
                   <span className="font-medium">{registrationData.grade}. Sınıf</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
                   <span className="text-gray-600">Okul:</span>
                   <span className="font-medium">{registrationData.schoolName}</span>
                 </div>
                 {registrationData.classCode && (
-                  <div className="flex justify-between">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
                     <span className="text-gray-600">Sınıf Kodu:</span>
                     <span className="font-medium font-mono">{registrationData.classCode}</span>
                   </div>
@@ -210,7 +210,7 @@ export default function PaymentPage({ isOpen, onClose, onPaymentSuccess, registr
             {/* Payment Method Selection */}
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Ödeme Yöntemi</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <button
                   onClick={() => setPaymentMethod('card')}
                   className={`p-4 rounded-lg border-2 transition-colors ${
@@ -258,7 +258,7 @@ export default function PaymentPage({ isOpen, onClose, onPaymentSuccess, registr
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Son Kullanma Tarihi

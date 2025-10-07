@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Plus, FileText, BookOpen, Bell, Trophy, Users, ArrowLeft, CreditCard as Edit, Trash2, X, BarChart3, Save } from 'lucide-react';
+import { Plus, FileText, BookOpen, Bell, Trophy, ArrowLeft, CreditCard as Edit, Trash2, X, BarChart3, Save } from 'lucide-react';
 import { 
   addClassAssignment, 
   addClassAnnouncement, 
@@ -181,19 +181,19 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh }: C
     try {
       if (activeTab === 'assignments') {
         await updateClassAssignment(selectedItem.id, editForm);
-        alert('Ödev başarıyla güncellendi!');
+        alert('�dev ba�ar�yla g�ncellendi!');
       } else if (activeTab === 'announcements') {
         await updateClassAnnouncement(selectedItem.id, editForm);
-        alert('Duyuru başarıyla güncellendi!');
+        alert('Duyuru ba�ar�yla g�ncellendi!');
       } else if (activeTab === 'exams') {
         await updateClassExam(selectedItem.id, editForm);
-        alert('Sınav başarıyla güncellendi!');
+        alert('S�nav ba�ar�yla g�ncellendi!');
       }
 
       setShowEditModal(false);
       await loadClassContent();
     } catch (error: any) {
-      alert('Güncelleme hatası: ' + error.message);
+      alert('G�ncelleme hatas�: ' + error.message);
     } finally {
       setEditLoading(false);
     }
@@ -206,25 +206,24 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh }: C
     try {
       if (activeTab === 'assignments') {
         await deleteClassAssignment(selectedItem.id);
-        alert('Ödev başarıyla silindi!');
+        alert('�dev ba�ar�yla silindi!');
       } else if (activeTab === 'announcements') {
         await deleteClassAnnouncement(selectedItem.id);
-        alert('Duyuru başarıyla silindi!');
+        alert('Duyuru ba�ar�yla silindi!');
       } else if (activeTab === 'exams') {
         await deleteClassExam(selectedItem.id);
-        alert('Sınav başarıyla silindi!');
+        alert('S�nav ba�ar�yla silindi!');
       }
 
       setShowDeleteModal(false);
       await loadClassContent();
     } catch (error: any) {
-      alert('Silme hatası: ' + error.message);
+      alert('Silme hatas�: ' + error.message);
     } finally {
       setDeleteLoading(false);
     }
   };
 
-  // Öğrenci sonuçlarını kaydet
   const handleSaveResults = async () => {
     if (!selectedItem) return;
 
@@ -323,6 +322,49 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh }: C
     setStudentResults(rankedResults);
   };
 
+  const resetFormState = () => {
+    setAssignmentForm({ title: '', description: '', subject: '', due_date: '' });
+    setAnnouncementForm({ title: '', content: '', type: 'info' });
+    setExamForm({ exam_name: '', exam_type: '', exam_date: '', total_questions: '' });
+  };
+
+  const handleOpenForm = () => {
+    resetFormState();
+    setShowForm(true);
+  };
+
+  const handleCloseForm = () => {
+    setShowForm(false);
+    resetFormState();
+  };
+
+  const handleSubmitAssignment = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!assignmentForm.title.trim() || !assignmentForm.subject || !assignmentForm.due_date) {
+      alert('L�tfen �dev ba�l���, ders ve teslim tarihini doldurun.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      await addClassAssignment({
+        class_id: classData.id,
+        teacher_id: classData.teacher_id,
+        ...assignmentForm
+      });
+
+      alert('�dev ba�ar�yla eklendi!');
+      handleCloseForm();
+      await loadClassContent();
+    } catch (error: any) {
+      alert('�dev ekleme hatas�: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmitAnnouncement = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -334,9 +376,8 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh }: C
         ...announcementForm
       });
 
-      alert('Duyuru başarıyla eklendi!');
-      setShowForm(false);
-      setAnnouncementForm({ title: '', content: '', type: 'info' });
+      alert('Duyuru ba�ar�yla eklendi!');
+      handleCloseForm();
       await loadClassContent();
     } catch (error: any) {
       alert('Duyuru ekleme hatası: ' + error.message);
@@ -359,9 +400,8 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh }: C
         total_questions: examForm.total_questions ? parseInt(examForm.total_questions) : 0
       });
 
-      alert('Sınav başarıyla eklendi!');
-      setShowForm(false);
-      setExamForm({ exam_name: '', exam_type: '', exam_date: '', total_questions: '' });
+      alert('S�nav ba�ar�yla eklendi!');
+      handleCloseForm();
       await loadClassContent();
     } catch (error: any) {
       alert('Sınav ekleme hatası: ' + error.message);
@@ -379,8 +419,8 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh }: C
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
-        <div className="mb-8 flex justify-between items-start">
-          <div className="flex items-center space-x-4">
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-4">
             <button
               onClick={onBack}
               className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
@@ -396,7 +436,7 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh }: C
         </div>
 
         {/* Tabs */}
-        <div className="flex space-x-1 mb-8">
+        <div className="mb-8 flex flex-wrap gap-2">
           {[
             { key: 'assignments', label: 'Ödevler', icon: BookOpen },
             { key: 'announcements', label: 'Duyurular', icon: Bell },
@@ -419,15 +459,15 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh }: C
 
         {/* Content */}
         <div className="bg-white rounded-lg p-6 shadow-sm">
-          <div className="flex justify-between items-center mb-6">
+          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <h3 className="text-lg font-semibold">
               {activeTab === 'assignments' && 'Ödev Yönetimi'}
               {activeTab === 'announcements' && 'Duyuru Yönetimi'}
               {activeTab === 'exams' && 'Sınav Yönetimi'}
             </h3>
             <button
-              onClick={() => setShowForm(true)}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-blue-700"
+              onClick={handleOpenForm}
+              className="flex w-full items-center justify-center space-x-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 sm:w-auto"
             >
               <Plus className="h-4 w-4" />
               <span>
@@ -454,19 +494,19 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh }: C
                 ) : (
                   assignments.map((assignment) => (
                     <div key={assignment.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                      <div className="flex justify-between items-start">
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <div className="flex-1">
                           <h4 className="font-semibold text-lg">{assignment.title}</h4>
                           <p className="text-blue-600 font-medium">{assignment.subject}</p>
                           {assignment.description && (
                             <p className="text-gray-600 mt-2">{assignment.description}</p>
                           )}
-                          <div className="flex items-center space-x-4 mt-3 text-sm text-gray-500">
+                          <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-gray-500">
                             <span>Son Teslim: {new Date(assignment.due_date).toLocaleDateString('tr-TR')}</span>
                             <span>Oluşturulma: {new Date(assignment.created_at).toLocaleDateString('tr-TR')}</span>
                           </div>
                         </div>
-                        <div className="flex space-x-2">
+                        <div className="flex flex-wrap gap-2 sm:flex-nowrap">
                           <button 
                             onClick={() => handleEdit(assignment)}
                             className="text-blue-600 hover:text-blue-800 px-3 py-1 rounded border border-blue-600 hover:bg-blue-50 flex items-center space-x-1"
@@ -497,7 +537,7 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh }: C
                 ) : (
                   announcements.map((announcement) => (
                     <div key={announcement.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                      <div className="flex justify-between items-start">
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <div className="flex-1">
                           <div className="flex items-center space-x-2 mb-2">
                             <h4 className="font-semibold text-lg">{announcement.title}</h4>
@@ -517,7 +557,7 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh }: C
                             <span>Oluşturulma: {new Date(announcement.created_at).toLocaleDateString('tr-TR')}</span>
                           </div>
                         </div>
-                        <div className="flex space-x-2">
+                        <div className="flex flex-wrap gap-2 sm:flex-nowrap">
                           <button 
                             onClick={() => handleEdit(announcement)}
                             className="text-blue-600 hover:text-blue-800 px-3 py-1 rounded border border-blue-600 hover:bg-blue-50 flex items-center space-x-1"
@@ -548,11 +588,11 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh }: C
                 ) : (
                   exams.map((exam) => (
                     <div key={exam.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                      <div className="flex justify-between items-start">
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <div className="flex-1">
                           <h4 className="font-semibold text-lg">{exam.exam_name}</h4>
                           <p className="text-purple-600 font-medium">{exam.exam_type}</p>
-                          <div className="flex items-center space-x-4 mt-3 text-sm text-gray-500">
+                          <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-gray-500">
                             <span>Sınav Tarihi: {new Date(exam.exam_date).toLocaleDateString('tr-TR')}</span>
                             {exam.total_questions > 0 && (
                               <span>Soru Sayısı: {exam.total_questions}</span>
@@ -565,7 +605,7 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh }: C
                             </div>
                           )}
                         </div>
-                        <div className="flex space-x-2">
+                        <div className="flex flex-wrap gap-2 sm:flex-nowrap">
                           <button 
                             onClick={() => handleResults(exam)}
                             className="text-green-600 hover:text-green-800 px-3 py-1 rounded border border-green-600 hover:bg-green-50 flex items-center space-x-1"
@@ -620,7 +660,7 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh }: C
                       <input
                         type="text"
                         value={editForm.title || ''}
-                        onChange={(e) => setEditForm(prev => ({ ...prev, title: e.target.value }))}
+                        onChange={(e) => setEditForm((prev: any) => ({ ...prev, title: e.target.value }))}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                         required
                       />
@@ -629,7 +669,7 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh }: C
                       <label className="block text-sm font-medium text-gray-700 mb-1">Ders</label>
                       <select
                         value={editForm.subject || ''}
-                        onChange={(e) => setEditForm(prev => ({ ...prev, subject: e.target.value }))}
+                        onChange={(e) => setEditForm((prev: any) => ({ ...prev, subject: e.target.value }))}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                         required
                       >
@@ -644,7 +684,7 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh }: C
                       <input
                         type="date"
                         value={editForm.due_date || ''}
-                        onChange={(e) => setEditForm(prev => ({ ...prev, due_date: e.target.value }))}
+                        onChange={(e) => setEditForm((prev: any) => ({ ...prev, due_date: e.target.value }))}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                         required
                       />
@@ -653,7 +693,7 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh }: C
                       <label className="block text-sm font-medium text-gray-700 mb-1">Açıklama</label>
                       <textarea
                         value={editForm.description || ''}
-                        onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
+                        onChange={(e) => setEditForm((prev: any) => ({ ...prev, description: e.target.value }))}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                         rows={3}
                       />
@@ -668,7 +708,7 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh }: C
                       <input
                         type="text"
                         value={editForm.title || ''}
-                        onChange={(e) => setEditForm(prev => ({ ...prev, title: e.target.value }))}
+                        onChange={(e) => setEditForm((prev: any) => ({ ...prev, title: e.target.value }))}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                         required
                       />
@@ -677,7 +717,7 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh }: C
                       <label className="block text-sm font-medium text-gray-700 mb-1">Tür</label>
                       <select
                         value={editForm.type || 'info'}
-                        onChange={(e) => setEditForm(prev => ({ ...prev, type: e.target.value }))}
+                        onChange={(e) => setEditForm((prev: any) => ({ ...prev, type: e.target.value }))}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                       >
                         <option value="info">Bilgi</option>
@@ -690,7 +730,7 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh }: C
                       <label className="block text-sm font-medium text-gray-700 mb-1">İçerik</label>
                       <textarea
                         value={editForm.content || ''}
-                        onChange={(e) => setEditForm(prev => ({ ...prev, content: e.target.value }))}
+                        onChange={(e) => setEditForm((prev: any) => ({ ...prev, content: e.target.value }))}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                         rows={4}
                         required
@@ -706,7 +746,7 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh }: C
                       <input
                         type="text"
                         value={editForm.exam_name || ''}
-                        onChange={(e) => setEditForm(prev => ({ ...prev, exam_name: e.target.value }))}
+                        onChange={(e) => setEditForm((prev: any) => ({ ...prev, exam_name: e.target.value }))}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                         required
                       />
@@ -715,7 +755,7 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh }: C
                       <label className="block text-sm font-medium text-gray-700 mb-1">Sınav Türü</label>
                       <select
                         value={editForm.exam_type || ''}
-                        onChange={(e) => setEditForm(prev => ({ ...prev, exam_type: e.target.value }))}
+                        onChange={(e) => setEditForm((prev: any) => ({ ...prev, exam_type: e.target.value }))}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                         required
                       >
@@ -732,7 +772,7 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh }: C
                       <input
                         type="date"
                         value={editForm.exam_date || ''}
-                        onChange={(e) => setEditForm(prev => ({ ...prev, exam_date: e.target.value }))}
+                        onChange={(e) => setEditForm((prev: any) => ({ ...prev, exam_date: e.target.value }))}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                         required
                       />
@@ -742,7 +782,7 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh }: C
                       <input
                         type="number"
                         value={editForm.total_questions || ''}
-                        onChange={(e) => setEditForm(prev => ({ ...prev, total_questions: e.target.value }))}
+                        onChange={(e) => setEditForm((prev: any) => ({ ...prev, total_questions: e.target.value }))}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                         min="1"
                       />
@@ -1013,9 +1053,222 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh }: C
           </div>
         )}
 
-        {/* Add Forms - Bu kısım aynı kalacak */}
-        {/* ... (mevcut add forms kodu aynen kalacak) ... */}
-        
+        {showForm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6">
+            <div className="relative w-full max-w-2xl rounded-2xl bg-white shadow-xl">
+              <button
+                type="button"
+                onClick={handleCloseForm}
+                className="absolute right-4 top-4 text-gray-400 transition hover:text-gray-600"
+                aria-label="Kapat"
+              >
+                <X className="h-5 w-5" />
+              </button>
+              <div className="border-b border-gray-100 px-6 py-4">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {activeTab === 'assignments' && 'Yeni Ödev'}
+                  {activeTab === 'announcements' && 'Yeni Duyuru'}
+                  {activeTab === 'exams' && 'Yeni Sınav'}
+                </h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  {activeTab === 'assignments' && 'Ödev detaylarını öğrencilerinizle paylaşın.'}
+                  {activeTab === 'announcements' && 'Önemli duyurularınızı sınıfla paylaşın.'}
+                  {activeTab === 'exams' && 'Yeni bir sınav planlayın ve temel bilgileri girin.'}
+                </p>
+              </div>
+              <div className="px-6 py-6">
+                {activeTab === 'assignments' && (
+                  <form onSubmit={handleSubmitAssignment} className="space-y-4">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700">Ödev Başlığı *</label>
+                      <input
+                        type="text"
+                        value={assignmentForm.title}
+                        onChange={(e) => setAssignmentForm(prev => ({ ...prev, title: e.target.value }))}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Örnek: Paragraf Analizi çalışması"
+                        required
+                      />
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">Ders *</label>
+                        <select
+                          value={assignmentForm.subject}
+                          onChange={(e) => setAssignmentForm(prev => ({ ...prev, subject: e.target.value }))}
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          required
+                        >
+                          <option value="">Ders seçin</option>
+                          {subjects.map((subject) => (
+                            <option key={subject} value={subject}>
+                              {subject}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">Son Teslim Tarihi *</label>
+                        <input
+                          type="date"
+                          value={assignmentForm.due_date}
+                          onChange={(e) => setAssignmentForm(prev => ({ ...prev, due_date: e.target.value }))}
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700">Açıklama</label>
+                      <textarea
+                        value={assignmentForm.description}
+                        onChange={(e) => setAssignmentForm(prev => ({ ...prev, description: e.target.value }))}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        rows={4}
+                        placeholder="Ödev hakkında kısa bilgi ekleyin"
+                      />
+                    </div>
+                    <div className="flex justify-end gap-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={handleCloseForm}
+                        className="rounded-lg border border-gray-300 px-4 py-2 text-gray-600 hover:bg-gray-100"
+                      >
+                        İptal
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        {loading ? 'Kaydediliyor...' : 'Ödevi Kaydet'}
+                      </button>
+                    </div>
+                  </form>
+                )}
+                {activeTab === 'announcements' && (
+                  <form onSubmit={handleSubmitAnnouncement} className="space-y-4">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700">Duyuru Başlığı *</label>
+                      <input
+                        type="text"
+                        value={announcementForm.title}
+                        onChange={(e) => setAnnouncementForm(prev => ({ ...prev, title: e.target.value }))}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Örn: Veli toplantısı duyurusu"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700">Tür</label>
+                      <select
+                        value={announcementForm.type}
+                        onChange={(e) => setAnnouncementForm(prev => ({ ...prev, type: e.target.value as 'info' | 'warning' | 'success' | 'error' }))}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="info">Bilgilendirme</option>
+                        <option value="warning">Uyarı</option>
+                        <option value="success">Başarı</option>
+                        <option value="error">Hata</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700">İçerik *</label>
+                      <textarea
+                        value={announcementForm.content}
+                        onChange={(e) => setAnnouncementForm(prev => ({ ...prev, content: e.target.value }))}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        rows={5}
+                        placeholder="Duyuru metnini buraya yazın"
+                        required
+                      />
+                    </div>
+                    <div className="flex justify-end gap-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={handleCloseForm}
+                        className="rounded-lg border border-gray-300 px-4 py-2 text-gray-600 hover:bg-gray-100"
+                      >
+                        �ptal
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        {loading ? 'Kaydediliyor...' : 'Duyuruyu Kaydet'}
+                      </button>
+                    </div>
+                  </form>
+                )}
+                {activeTab === 'exams' && (
+                  <form onSubmit={handleSubmitExam} className="space-y-4">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700">Sınav Adı *</label>
+                      <input
+                        type="text"
+                        value={examForm.exam_name}
+                        onChange={(e) => setExamForm(prev => ({ ...prev, exam_name: e.target.value }))}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Örn: TYT Deneme 5"
+                        required
+                      />
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">Sınav Türü</label>
+                        <input
+                          type="text"
+                          value={examForm.exam_type}
+                          onChange={(e) => setExamForm(prev => ({ ...prev, exam_type: e.target.value }))}
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Örn: TYT, AYT, LGS..."
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">Sınav Tarihi *</label>
+                        <input
+                          type="date"
+                          value={examForm.exam_date}
+                          onChange={(e) => setExamForm(prev => ({ ...prev, exam_date: e.target.value }))}
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-gray-700">Toplam Soru Sayısı</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={examForm.total_questions}
+                        onChange={(e) => setExamForm(prev => ({ ...prev, total_questions: e.target.value }))}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Örn: 120"
+                      />
+                    </div>
+                    <div className="flex justify-end gap-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={handleCloseForm}
+                        className="rounded-lg border border-gray-300 px-4 py-2 text-gray-600 hover:bg-gray-100"
+                      >
+                        İptal
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        {loading ? 'Kaydediliyor...' : 'Sınavı Kaydet'}
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

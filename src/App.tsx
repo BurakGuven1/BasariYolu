@@ -14,10 +14,15 @@ import ParentDashboard from './components/ParentDashboard';
 import ExamTopicsSection from './components/ExamTopicsSection';
 import TeacherLogin from './components/TeacherLogin';
 import TeacherDashboard from './components/TeacherDashboard';
-import ClassDashboard from './components/ClassDashboard';
+import HeroV2 from './components/HeroV2';
+import ProblemSection from './components/ProblemSection';
+import VisionSection from './components/VisionSection';
+import ProductShowcase from './components/ProductShowcase';
+import SocialProof from './components/SocialProof';
+import CTASection from './components/CTASection';
 
 function App() {
-  const { user, loading, setParentUser, clearUser } = useAuth();
+  const { user, loading, setParentUser } = useAuth();
   const [showStudentParentLoginModal, setShowStudentParentLoginModal] = useState(false);
   const [showTeacherLoginModal, setShowTeacherLoginModal] = useState(false);
   const [currentView, setCurrentView] = useState<'home' | 'dashboard'>('home');
@@ -36,12 +41,10 @@ function App() {
       const teacherData = JSON.parse(teacherSession);
       console.log('Teacher session found:', teacherData);
       setTeacherUser(teacherData);
-      setCurrentView('dashboard'); // This should trigger dashboard view
+      setCurrentView('dashboard');
     } else if (classViewerSession) {
       const classData = JSON.parse(classViewerSession);
       console.log('Class viewer session found:', classData);
-      // Handle class viewer session - could redirect to class view
-      // For now, we'll stay on home page but with access to premium features
     }
   }, []);
 
@@ -58,7 +61,6 @@ function App() {
   const handleLogin = (loginUser?: any) => {
     console.log('handleLogin called');
     
-    // If a user object is passed (parent login), set it
     if (loginUser && loginUser.isParentLogin) {
       setParentUser(loginUser);
     }
@@ -85,6 +87,13 @@ function App() {
     }
   };
 
+  React.useEffect(() => {
+    if (!loading && !teacherUser && !user && currentView === 'dashboard') {
+      setCurrentView('home');
+    }
+  }, [loading, teacherUser, user, currentView]);
+
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -97,7 +106,6 @@ function App() {
   }
 
   const renderDashboard = () => {
-    // If teacher is logged in, show teacher dashboard
     if (teacherUser) {
       console.log('Rendering teacher dashboard for:', teacherUser);
       return <TeacherDashboard />;
@@ -105,13 +113,11 @@ function App() {
     
     if (!user) {
       console.log('No user in renderDashboard, redirecting to home');
-      setCurrentView('home');
       return null;
     }
     
     console.log('Rendering dashboard for user:', user.id);
-    
-    // Check if this is a parent login
+
     if (user.isParentLogin) {
       return <ParentDashboard />;
     }
@@ -121,8 +127,14 @@ function App() {
 
   const renderHomePage = () => (
     <div className="min-h-screen bg-white">
-      <Hero onGetStarted={handleGetStarted} />
-      <Features />
+
+      <HeroV2 onGetStarted={handleGetStarted} />
+      <ProblemSection />
+      <VisionSection />
+      <ProductShowcase />
+      <SocialProof />
+        {/* <Hero onGetStarted={handleGetStarted} />
+        <Features /> */}
       <PricingSection onSelectPackage={handleSelectPackage} />
       <ExamTopicsSection 
         user={user} 
@@ -130,13 +142,13 @@ function App() {
         onUpgrade={() => setShowStudentParentLoginModal(true)}
       />
       <TeacherSection />
-      
+      <CTASection onGetStarted={handleGetStarted} />
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-4 gap-8">
             <div>
-              <h3 className="text-lg font-semibold mb-4">EduTracker</h3>
+              <h3 className="text-lg font-semibold mb-4">BaşarıYolu</h3>
               <p className="text-gray-400 text-sm">
                 Türkiye'nin en kapsamlı öğrenci takip platformu. 
                 Yapay zeka desteğiyle akademik başarınızı artırın.
@@ -163,14 +175,14 @@ function App() {
             <div>
               <h4 className="font-semibold mb-3">İletişim</h4>
               <p className="text-sm text-gray-400">
-                info@edutracker.com<br />
+                info@basariyolu.com<br />
                 0850 123 45 67<br />
                 7/24 Canlı Destek
               </p>
             </div>
           </div>
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400 text-sm">
-            <p>&copy; 2024 EduTracker. Tüm hakları saklıdır.</p>
+            <p>&copy; {new Date().getFullYear()} BaşarıYolu. Tüm hakları saklıdır.</p>
           </div>
         </div>
       </footer>

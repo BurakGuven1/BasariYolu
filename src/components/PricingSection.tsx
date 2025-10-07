@@ -53,7 +53,7 @@ export default function PricingSection({ onSelectPackage }: PricingSectionProps)
           </div>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
           {packages.map((pkg, index) => (
             (() => {
               const currentPrice = billingCycle === 'monthly' ? pkg.monthlyPrice : pkg.yearlyPrice;
@@ -64,7 +64,7 @@ export default function PricingSection({ onSelectPackage }: PricingSectionProps)
             <div
               key={pkg.id}
               className={`bg-white rounded-xl shadow-lg p-8 relative ${
-                index === 1 ? 'ring-2 ring-blue-500 scale-105' : ''
+                index === 1 ? 'md:ring-2 md:ring-blue-500 md:scale-105' : ''
               }`}
             >
               {index === 1 && (
@@ -126,13 +126,12 @@ export default function PricingSection({ onSelectPackage }: PricingSectionProps)
 
         <div className="text-center mt-12">
           <p className="text-gray-600 mb-4">
-            Tüm paketlerde 7 gün ücretsiz deneme hakkı vardır.
+            Yıllık Ödemelerinizde %33 indirim fırsatı 🚀
           </p>
-          <div className="flex justify-center items-center space-x-8 text-sm text-gray-500">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-8 text-sm text-gray-500">
             <span>✓ Güvenli ödeme</span>
-            <span>✓ İstediğiniz zaman iptal</span>
             <span>✓ 24/7 destek</span>
-            <span>✓ {billingCycle === 'yearly' ? 'Yıllık %17 indirim' : 'Esnek ödeme'}</span>
+            <span>✓ {billingCycle === 'yearly' ? 'Yıllık %33 indirim' : 'Esnek ödeme'}</span>
           </div>
         </div>
       </div>

@@ -12,7 +12,7 @@ interface LoginModalProps {
 export default function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
   const [activeTab, setActiveTab] = useState<'student' | 'parent'>('student');
   const [isLoginMode, setIsLoginMode] = useState(true);
-  const [userType, setUserType] = useState<'student' | 'parent'>('student');
+  const [userType] = useState<'student' | 'parent'>('student');
   const [loading, setLoading] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [registrationData, setRegistrationData] = useState<any>(null);
@@ -760,9 +760,6 @@ export default function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps
       // 10'un katlarına yukarı yuvarla ve kuruşları kaldır
       const roundedSavings = Math.ceil(savings / 10) * 10;
       
-      const discountPercentage = formData.billingCycle === 'yearly' 
-        ? Math.round(((selectedPkg.monthlyPrice * 12 - selectedPkg.yearlyPrice) / (selectedPkg.monthlyPrice * 12)) * 100)
-        : 0;
                   
                   return (
                     <div className="space-y-3">

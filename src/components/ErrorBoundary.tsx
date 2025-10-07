@@ -1,4 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, ArrowLeft, RefreshCw, Home } from 'lucide-react';
 
 interface Props {
@@ -123,10 +123,10 @@ class ErrorBoundary extends Component<Props, State> {
                 Sorun devam ederse, lütfen destek ekibiyle iletişime geçin.
               </p>
               <a 
-                href="mailto:destek@edutracker.com" 
+                href="mailto:destek@basariyolu.com" 
                 className="text-blue-600 hover:text-blue-700 font-semibold"
               >
-                destek@edutracker.com
+                destek@basariyolu.com
               </a>
             </div>
           </div>

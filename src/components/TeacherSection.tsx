@@ -36,7 +36,7 @@ export default function TeacherSection() {
         </div>
 
         {/* Features Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
           <div className="text-center bg-white p-6 rounded-xl shadow-sm">
             <div className="bg-green-100 p-3 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
               <Users className="h-8 w-8 text-green-600" />
@@ -77,7 +77,7 @@ export default function TeacherSection() {
             <p className="text-gray-600">Sınıfınız için uygun paketi seçin ve maliyeti hesaplayın</p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -203,7 +203,7 @@ export default function TeacherSection() {
         </div>
 
         {/* Security & Features */}
-        <div className="mt-12 grid md:grid-cols-3 gap-8">
+        <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-8">
           <div className="text-center">
             <div className="bg-blue-100 p-3 rounded-full w-12 h-12 mx-auto mb-3 flex items-center justify-center">
               <Shield className="h-6 w-6 text-blue-600" />

@@ -415,7 +415,7 @@ export default function ExamForm({ isOpen, onClose, studentId, onSuccess, editDa
         <label className="block text-sm font-medium text-gray-700 mb-1">
           {label} ({maxQuestions} soru)
         </label>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           <input
             type="number"
             name={dogruField}
@@ -448,7 +448,7 @@ export default function ExamForm({ isOpen, onClose, studentId, onSuccess, editDa
     <div className="space-y-4">
       <h4 className="font-semibold text-blue-600">TYT - Temel Yeterlilik Testi (120 soru - 135 dk)</h4>
       
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {renderInputField('Türkçe', 'tyt_turkce_dogru', 'tyt_turkce_yanlis', 40)}
         {renderInputField('Matematik', 'tyt_matematik_dogru', 'tyt_matematik_yanlis', 40)}
         {renderInputField('Fen Bilimleri', 'tyt_fen_dogru', 'tyt_fen_yanlis', 20)}
@@ -475,7 +475,7 @@ export default function ExamForm({ isOpen, onClose, studentId, onSuccess, editDa
       {/* TYT kısmı (AYT ile birlikte alınır) */}
       <div className="bg-blue-50 p-3 rounded">
         <h5 className="font-medium text-blue-800 mb-2">TYT Kısmı (AYT ile birlikte)</h5>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {renderInputField('Türkçe', 'tyt_turkce_dogru', 'tyt_turkce_yanlis', 40)}
           {renderInputField('Matematik', 'tyt_matematik_dogru', 'tyt_matematik_yanlis', 40)}
           {renderInputField('Fen Bilimleri', 'tyt_fen_dogru', 'tyt_fen_yanlis', 20)}
@@ -484,7 +484,7 @@ export default function ExamForm({ isOpen, onClose, studentId, onSuccess, editDa
       </div>
       
       {/* AYT alanları */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {aytType === 'sayisal' && (
           <>
             {renderInputField('Matematik', 'ayt_matematik_dogru', 'ayt_matematik_yanlis', 40)}
@@ -522,7 +522,7 @@ export default function ExamForm({ isOpen, onClose, studentId, onSuccess, editDa
     <div className="space-y-4">
       <h4 className="font-semibold text-purple-600">LGS - Liseye Geçiş Sınavı (90 soru - 155 dk)</h4>
       
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {renderInputField('Türkçe', 'lgs_turkce_dogru', 'lgs_turkce_yanlis', 20)}
         {renderInputField('Matematik', 'lgs_matematik_dogru', 'lgs_matematik_yanlis', 20)}
         {renderInputField('Fen Bilimleri', 'lgs_fen_dogru', 'lgs_fen_yanlis', 20)}

@@ -1,5 +1,5 @@
 /*
-  # Sample Data for EduTracker Platform
+  # Sample Data for BaşarıYolu Platform
 
   1. Sample Users and Profiles
   2. Sample Students and Parents

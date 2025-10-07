@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { BookOpen, User, Bell, Menu, X, Home, Package, BarChart3, GraduationCap } from 'lucide-react';
+import { useState } from 'react';
+import { BookOpen, User, Bell, Menu, X, Package, GraduationCap, Brain, Goal } from 'lucide-react';
 
 interface NavbarProps {
   user?: any;
@@ -8,7 +8,7 @@ interface NavbarProps {
   onMenuToggle: () => void;
 }
 
-export default function Navbar({ user, onStudentParentLogin, onTeacherLogin, onMenuToggle }: NavbarProps) {
+export default function Navbar({ user, onStudentParentLogin, onTeacherLogin }: NavbarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const toggleMobileMenu = () => {
@@ -24,9 +24,9 @@ export default function Navbar({ user, onStudentParentLogin, onTeacherLogin, onM
   };
 
   const navItems = [
-    { id: 'features', label: 'Özellikler', icon: Home },
+    { id: 'features', label: 'Çözümlerimiz', icon: Brain },
     { id: 'pricing', label: 'Paketler', icon: Package },
-    { id: 'exam-topics', label: 'TYT-AYT Çıkmış Konular', icon: BarChart3 },
+    { id: 'exam-topics', label: 'TYT-AYT Çıkmış Konular', icon: Goal },
     { id: 'teacher', label: 'Öğretmenler', icon: GraduationCap },
   ];
 
@@ -36,7 +36,7 @@ export default function Navbar({ user, onStudentParentLogin, onTeacherLogin, onM
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <BookOpen className="h-8 w-8 text-blue-600" />
-            <span className="ml-2 text-xl font-bold text-gray-900">EduTracker</span>
+            <span className="ml-2 text-xl font-bold text-gray-900">BaşarıYolu</span>
           </div>
           
           {/* Desktop Navigation */}

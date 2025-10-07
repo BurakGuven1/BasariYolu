@@ -1,4 +1,3 @@
-import React from 'react';
 import { 
   BarChart3, Brain, Users, Target, 
   TrendingUp, BookOpen, Clock, Award 
@@ -64,12 +63,12 @@ export default function Features() {
             Platform Özellikleri
           </h2>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            EduTracker ile öğrenme sürecinizi optimize edin. Modern teknoloji ve yapay zeka 
+            BaşarıYolu ile öğrenme sürecinizi optimize edin. Modern teknoloji ve yapay zeka 
             desteğiyle akademik başarınızı artırın.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           {features.map((feature, index) => (
             <div
               key={index}
@@ -91,9 +90,9 @@ export default function Features() {
         <div className="mt-16 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-8">
           <div className="text-center">
             <h3 className="text-2xl font-bold text-gray-900 mb-4">
-              Neden EduTracker?
+              Neden BaşarıYolu?
             </h3>
-            <div className="grid md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
               <div className="text-center">
                 <div className="text-3xl font-bold text-blue-600 mb-2">10,000+</div>
                 <p className="text-gray-600">Aktif Öğrenci</p>
