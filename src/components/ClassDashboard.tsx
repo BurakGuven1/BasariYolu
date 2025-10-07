@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Users, BookOpen, Bell, Trophy, Calendar, LogOut, ArrowLeft } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Users, BookOpen, Bell, Trophy, ArrowLeft, Settings } from 'lucide-react';
 import { getClassData, getClassAssignments, getClassAnnouncements, getClassExams } from '../lib/teacherApi';
 
 interface ClassDashboardProps {

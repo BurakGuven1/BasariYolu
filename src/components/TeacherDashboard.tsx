@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Plus, BookOpen, Settings, LogOut, Copy, RefreshCw, Eye, EyeOff, CreditCard as Edit } from 'lucide-react';
+import { Users, Plus, BookOpen, Settings, LogOut, Copy, Eye, EyeOff, CreditCard as Edit } from 'lucide-react';
 import { getTeacherClasses, createClass, getClassData } from '../lib/teacherApi';
 import { PACKAGE_OPTIONS, calculateClassPrice } from '../types/teacher';
 import ClassManagementPanel from './ClassManagementPanel';

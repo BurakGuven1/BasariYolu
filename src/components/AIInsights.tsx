@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Brain, TrendingUp, AlertTriangle, Target, Lightbulb, TrendingDown, Minus } from 'lucide-react';
-import { analyzeExamResults, generateMotivationalMessage, detectTopicWeaknesses } from '../lib/ai';
+import { analyzeExamResults, generateMotivationalMessage } from '../lib/ai';
 
 interface AIInsightsProps {
   examResults: any[];

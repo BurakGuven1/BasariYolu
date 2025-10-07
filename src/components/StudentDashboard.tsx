@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { BookOpen, Plus, TrendingUp, Calendar, Target, Award, Clock, CheckCircle, AlertCircle, LogOut, CreditCard as Edit, Trash2, MoreVertical, Trophy, Star, Users, X } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
-import { Scatter, ScatterChart } from 'recharts';
+import { BookOpen, Plus, TrendingUp, Calendar, Target, Award, Clock, CheckCircle, AlertCircle, LogOut, CreditCard as Edit, Trash2, MoreVertical, Users, X } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer} from 'recharts';
 import { useAuth } from '../hooks/useAuth';
 import { useStudentData } from '../hooks/useStudentData';
 import ExamForm from './ExamForm';
@@ -11,7 +10,7 @@ import AIInsights from './AIInsights';
 import { getStudentInviteCode, signOut, deleteExamResult, updateHomework, deleteHomework, addStudySession, getWeeklyStudyGoal, createWeeklyStudyGoal, updateWeeklyStudyGoal, getWeeklyStudySessions } from '../lib/supabase';
 
 export default function StudentDashboard() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'exams' | 'homeworks' | 'analysis'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'exams' | 'homeworks' | 'analysis' | 'classes'>('overview');
   const [showExamForm, setShowExamForm] = useState(false);
   const [showHomeworkForm, setShowHomeworkForm] = useState(false);
   const [showInviteCode, setShowInviteCode] = useState(false);
@@ -113,12 +112,10 @@ export default function StudentDashboard() {
     studentData, 
     examResults, 
     homeworks, 
-    aiRecommendations, 
     studentClasses, 
     classAssignments,
     classAnnouncements,
     classExamResults,
-    loading, 
     refetch 
   } = useStudentData(user?.id);
 
@@ -500,7 +497,7 @@ const chartData = filteredExamResults
         <XAxis dataKey="date" fontSize={12} /> 
         <YAxis domain={[100, 500]} />
         <Tooltip 
-          formatter={(value, name, props) => [
+          formatter={(value, _name, props) => [
             `${value} puan`,
             `${props.payload.examName} (${props.payload.examType})`
           ]}
@@ -534,7 +531,7 @@ const chartData = filteredExamResults
                 <p>Henüz ödev eklenmemiş</p>
               </div>
             ) : (
-              [...homeworks, ...classAssignments].slice(0, 4).map((homework, index) => (
+              [...homeworks, ...classAssignments].slice(0, 4).map((homework) => (
               <div key={homework.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center space-x-3">
                   {homework.completed ? (

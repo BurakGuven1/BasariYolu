@@ -35,12 +35,10 @@ function App() {
       const teacherData = JSON.parse(teacherSession);
       console.log('Teacher session found:', teacherData);
       setTeacherUser(teacherData);
-      setCurrentView('dashboard'); // This should trigger dashboard view
+      setCurrentView('dashboard');
     } else if (classViewerSession) {
       const classData = JSON.parse(classViewerSession);
       console.log('Class viewer session found:', classData);
-      // Handle class viewer session - could redirect to class view
-      // For now, we'll stay on home page but with access to premium features
     }
   }, []);
 
@@ -57,7 +55,6 @@ function App() {
   const handleLogin = (loginUser?: any) => {
     console.log('handleLogin called');
     
-    // If a user object is passed (parent login), set it
     if (loginUser && loginUser.isParentLogin) {
       setParentUser(loginUser);
     }
@@ -84,6 +81,13 @@ function App() {
     }
   };
 
+  React.useEffect(() => {
+    if (!loading && !teacherUser && !user && currentView === 'dashboard') {
+      setCurrentView('home');
+    }
+  }, [loading, teacherUser, user, currentView]);
+
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -96,7 +100,6 @@ function App() {
   }
 
   const renderDashboard = () => {
-    // If teacher is logged in, show teacher dashboard
     if (teacherUser) {
       console.log('Rendering teacher dashboard for:', teacherUser);
       return <TeacherDashboard />;
@@ -104,13 +107,11 @@ function App() {
     
     if (!user) {
       console.log('No user in renderDashboard, redirecting to home');
-      setCurrentView('home');
       return null;
     }
     
     console.log('Rendering dashboard for user:', user.id);
-    
-    // Check if this is a parent login
+
     if (user.isParentLogin) {
       return <ParentDashboard />;
     }

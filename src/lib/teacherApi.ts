@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { Teacher, Class, ClassStudent, ClassPayment, PACKAGE_OPTIONS } from '../types/teacher';
+import { PACKAGE_OPTIONS } from '../types/teacher';
 
 // Teacher Authentication
 export const registerTeacher = async (teacherData: {
@@ -468,7 +468,7 @@ export const deleteClassExam = async (examId: string) => {
 };
 
 // File upload function (placeholder - implement with actual file storage)
-export const uploadExamResultFile = async (formData: FormData) => {
+export const uploadExamResultFile = async () => {
   // This would integrate with Supabase Storage or another file service
   // For now, return a success response
   return { data: { url: 'placeholder-url' }, error: null };

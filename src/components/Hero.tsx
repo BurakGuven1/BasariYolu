@@ -1,4 +1,3 @@
-import React from 'react';
 import { TrendingUp, Users, Brain, Target, BarChart3 } from 'lucide-react';
 
 interface HeroProps {
