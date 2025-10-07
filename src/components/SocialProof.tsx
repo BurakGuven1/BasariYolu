@@ -30,7 +30,7 @@ export default function SocialProof() {
 
   const testimonials = [
     {
-      name: 'Ayşe Yılmaz',
+      name: 'Şehnaz Güldiken',
       role: 'Veli',
       avatar: '👩',
       rating: 5,
@@ -38,7 +38,7 @@ export default function SocialProof() {
       result: 'Matematik neti 3 ayda 6 → 14'
     },
     {
-      name: 'Ahmet Demir',
+      name: 'Nezih Demir',
       role: 'Matematik Öğretmeni',
       avatar: '👨‍🏫',
       rating: 5,
@@ -46,7 +46,7 @@ export default function SocialProof() {
       result: 'Sınıf ortalaması +23% arttı'
     },
     {
-      name: 'Mehmet Kaya',
+      name: 'Tunç Yılmaz',
       role: '12. Sınıf Öğrencisi',
       avatar: '🎓',
       rating: 5,
@@ -59,7 +59,7 @@ export default function SocialProof() {
       avatar: '👩‍💼',
       rating: 5,
       text: 'Kızımın her sınavını takip edebiliyorum. Öğretmenin yorumlarını görüyorum. Artık ne olup bittiğini biliyorum, bu çok değerli.',
-      result: 'Kızı ilk 100\'e girdi'
+      result: 'Kızı ilk 7000\'e girdi'
     },
     {
       name: 'Can Öztürk',

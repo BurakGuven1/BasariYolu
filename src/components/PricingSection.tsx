@@ -126,13 +126,12 @@ export default function PricingSection({ onSelectPackage }: PricingSectionProps)
 
         <div className="text-center mt-12">
           <p className="text-gray-600 mb-4">
-            Tüm paketlerde 7 gün ücretsiz deneme hakkı vardır.
+            Yıllık Ödemelerinizde %33 indirim fırsatı 🚀
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-8 text-sm text-gray-500">
             <span>✓ Güvenli ödeme</span>
-            <span>✓ İstediğiniz zaman iptal</span>
             <span>✓ 24/7 destek</span>
-            <span>✓ {billingCycle === 'yearly' ? 'Yıllık %17 indirim' : 'Esnek ödeme'}</span>
+            <span>✓ {billingCycle === 'yearly' ? 'Yıllık %33 indirim' : 'Esnek ödeme'}</span>
           </div>
         </div>
       </div>

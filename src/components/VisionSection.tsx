@@ -13,7 +13,7 @@ export default function VisionSection() {
     {
       icon: Link2,
       title: 'Bağlantılı Ekosistem',
-      description: 'Öğretmen → Öğrenci → Veli. Herkes aynı sayfada. Şeffaf. Gerçek zamanlı.',
+      description: 'Öğretmen → Öğrenci → Veli. Herkes aynı platformda. Şeffaf. Gerçek zamanlı.',
       highlight: 'Kimse karanlıkta kalmıyor.',
       color: 'from-blue-500 to-cyan-500',
       stats: '3 taraf tek platformda'
@@ -24,7 +24,7 @@ export default function VisionSection() {
       description: '2018-2025 tüm TYT-AYT soruları analiz edildi. Hangi konular sık çıkıyor?',
       highlight: 'Akıllı çalış, sıkı değil.',
       color: 'from-green-500 to-emerald-500',
-      stats: '50,000+ soru analizi'
+      stats: '5000 çıkmış soru analizi'
     }
   ];
 

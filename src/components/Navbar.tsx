@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BookOpen, User, Bell, Menu, X, Home, Package, BarChart3, GraduationCap } from 'lucide-react';
+import { BookOpen, User, Bell, Menu, X, Package, GraduationCap, Brain, Goal } from 'lucide-react';
 
 interface NavbarProps {
   user?: any;
@@ -24,9 +24,9 @@ export default function Navbar({ user, onStudentParentLogin, onTeacherLogin }: N
   };
 
   const navItems = [
-    { id: 'features', label: 'Özellikler', icon: Home },
+    { id: 'features', label: 'Çözümlerimiz', icon: Brain },
     { id: 'pricing', label: 'Paketler', icon: Package },
-    { id: 'exam-topics', label: 'TYT-AYT Çıkmış Konular', icon: BarChart3 },
+    { id: 'exam-topics', label: 'TYT-AYT Çıkmış Konular', icon: Goal },
     { id: 'teacher', label: 'Öğretmenler', icon: GraduationCap },
   ];
 
