@@ -356,7 +356,7 @@ export default function ExamTopicsSection({ user, hasClassViewerSession = false,
                     <span className="ml-1">{sortOrder === 'asc' ? '\u2191' : '\u2193'}</span>
                   )}
                 </div>
-                <div className="w-48 text-center">YILLIK DA\u011eILIM</div>
+                <div className="w-48 text-center">YILLIK DAĞILIM</div>
               </div>
 
               {/* Table Body */}

@@ -14,6 +14,12 @@ import ParentDashboard from './components/ParentDashboard';
 import ExamTopicsSection from './components/ExamTopicsSection';
 import TeacherLogin from './components/TeacherLogin';
 import TeacherDashboard from './components/TeacherDashboard';
+import HeroV2 from './components/HeroV2';
+import ProblemSection from './components/ProblemSection';
+import VisionSection from './components/VisionSection';
+import ProductShowcase from './components/ProductShowcase';
+import SocialProof from './components/SocialProof';
+import CTASection from './components/CTASection';
 
 function App() {
   const { user, loading, setParentUser } = useAuth();
@@ -121,8 +127,14 @@ function App() {
 
   const renderHomePage = () => (
     <div className="min-h-screen bg-white">
-      <Hero onGetStarted={handleGetStarted} />
-      <Features />
+
+      <HeroV2 onGetStarted={handleGetStarted} />
+      <ProblemSection />
+      <VisionSection />
+      <ProductShowcase />
+      <SocialProof />
+        {/* <Hero onGetStarted={handleGetStarted} />
+        <Features /> */}
       <PricingSection onSelectPackage={handleSelectPackage} />
       <ExamTopicsSection 
         user={user} 
@@ -130,7 +142,7 @@ function App() {
         onUpgrade={() => setShowStudentParentLoginModal(true)}
       />
       <TeacherSection />
-      
+      <CTASection onGetStarted={handleGetStarted} />
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
