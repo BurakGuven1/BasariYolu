@@ -98,12 +98,12 @@ export default function VisionSection() {
                   Matematik çalışıyor ama netleri yükselmiyor.
                 </p>
                 <p className="text-lg">
-                  BaşarıYolu'na giriyor. AI analiz ediyor:<br />
-                  <span className="text-yellow-400 font-semibold">"Trigonometri %40, Logaritma %60"</span>
+                  BaşarıYolu'na giriyor. Yapay zeka eksikleri analiz ediyor:<br />
+                  <span className="text-yellow-400 font-semibold">"Son 8 yılın çıkmış sorularına göre gelecek yılın sınavına uygun çalışma planı sunuyor"</span>
                 </p>
                 <p className="text-lg">
                   Öğretmeni görüyor, ödev atıyor.<br />
-                  Annesi telefonda bildirimleri alıyor.<br />
+                  Velisi telefonda bildirimleri alıyor.<br />
                   <strong className="text-white">Mehmet artık ne yapacağını biliyor.</strong>
                 </p>
                 <div className="bg-green-500/20 border border-green-400 rounded-lg p-4 mt-6">
@@ -124,7 +124,7 @@ export default function VisionSection() {
                     </svg>
                   </div>
                   <p className="text-white font-semibold">Videoyu İzle</p>
-                  <p className="text-blue-200 text-sm">2 dakika</p>
+                  <p className="text-blue-200 text-sm">1 dakika</p>
                 </div>
               </div>
             </div>

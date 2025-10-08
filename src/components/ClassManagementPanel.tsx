@@ -181,19 +181,19 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh }: C
     try {
       if (activeTab === 'assignments') {
         await updateClassAssignment(selectedItem.id, editForm);
-        alert('�dev ba�ar�yla g�ncellendi!');
+        alert('Ödev başarıyla güncellendi!');
       } else if (activeTab === 'announcements') {
         await updateClassAnnouncement(selectedItem.id, editForm);
-        alert('Duyuru ba�ar�yla g�ncellendi!');
+        alert('Duyuru başarıyla güncellendi!');
       } else if (activeTab === 'exams') {
         await updateClassExam(selectedItem.id, editForm);
-        alert('S�nav ba�ar�yla g�ncellendi!');
+        alert('Sınav başarıyla güncellendi!');
       }
 
       setShowEditModal(false);
       await loadClassContent();
     } catch (error: any) {
-      alert('G�ncelleme hatas�: ' + error.message);
+      alert('Güncelleme hatası: ' + error.message);
     } finally {
       setEditLoading(false);
     }
@@ -206,19 +206,19 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh }: C
     try {
       if (activeTab === 'assignments') {
         await deleteClassAssignment(selectedItem.id);
-        alert('�dev ba�ar�yla silindi!');
+        alert('Ödev başarıyla silindi!');
       } else if (activeTab === 'announcements') {
         await deleteClassAnnouncement(selectedItem.id);
-        alert('Duyuru ba�ar�yla silindi!');
+        alert('Duyuru başarıyla silindi!');
       } else if (activeTab === 'exams') {
         await deleteClassExam(selectedItem.id);
-        alert('S�nav ba�ar�yla silindi!');
+        alert('Sınav başarıyla silindi!');
       }
 
       setShowDeleteModal(false);
       await loadClassContent();
     } catch (error: any) {
-      alert('Silme hatas�: ' + error.message);
+      alert('Silme hatası: ' + error.message);
     } finally {
       setDeleteLoading(false);
     }
@@ -342,7 +342,7 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh }: C
     e.preventDefault();
 
     if (!assignmentForm.title.trim() || !assignmentForm.subject || !assignmentForm.due_date) {
-      alert('L�tfen �dev ba�l���, ders ve teslim tarihini doldurun.');
+      alert('Lütfen ödev başlığı, ders ve teslim tarihini doldurun.');
       return;
     }
 
@@ -355,11 +355,11 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh }: C
         ...assignmentForm
       });
 
-      alert('�dev ba�ar�yla eklendi!');
+      alert('Ödev başarıyla eklendi!');
       handleCloseForm();
       await loadClassContent();
     } catch (error: any) {
-      alert('�dev ekleme hatas�: ' + error.message);
+      alert('Ödev ekleme hatası: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -376,7 +376,7 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh }: C
         ...announcementForm
       });
 
-      alert('Duyuru ba�ar�yla eklendi!');
+      alert('Duyuru başarıyla eklendi!');
       handleCloseForm();
       await loadClassContent();
     } catch (error: any) {
@@ -400,7 +400,7 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh }: C
         total_questions: examForm.total_questions ? parseInt(examForm.total_questions) : 0
       });
 
-      alert('S�nav ba�ar�yla eklendi!');
+      alert('Sınav başarıyla eklendi!');
       handleCloseForm();
       await loadClassContent();
     } catch (error: any) {
@@ -1189,7 +1189,7 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh }: C
                         onClick={handleCloseForm}
                         className="rounded-lg border border-gray-300 px-4 py-2 text-gray-600 hover:bg-gray-100"
                       >
-                        �ptal
+                        İptal
                       </button>
                       <button
                         type="submit"

@@ -217,10 +217,10 @@ export default function ProductShowcase() {
               Tüm özellikleri denemek ister misin?
             </h3>
             <p className="text-gray-600 mb-6">
-              7 gün boyunca tüm premium özellikleri ücretsiz kullan. Kredi kartı gerekmez.
+              Haydi sen de <b>doğru</b> çalışarak bir adım öne geç 🚀
             </p>
             <button className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-8 py-4 rounded-full font-semibold hover:scale-105 transition-all shadow-lg">
-              Ücretsiz Dene
+              Başlayalım !
             </button>
           </div>
         </div>

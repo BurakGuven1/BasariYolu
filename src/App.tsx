@@ -20,9 +20,10 @@ import VisionSection from './components/VisionSection';
 import ProductShowcase from './components/ProductShowcase';
 import SocialProof from './components/SocialProof';
 import CTASection from './components/CTASection';
+import { supabase } from './lib/supabase';
 
 function App() {
-  const { user, loading, setParentUser } = useAuth();
+  const { user, loading, setParentUser,clearUser } = useAuth();
   const [showStudentParentLoginModal, setShowStudentParentLoginModal] = useState(false);
   const [showTeacherLoginModal, setShowTeacherLoginModal] = useState(false);
   const [currentView, setCurrentView] = useState<'home' | 'dashboard'>('home');
@@ -33,41 +34,49 @@ function App() {
   React.useEffect(() => {
     const teacherSession = localStorage.getItem('teacherSession');
     const classViewerSession = localStorage.getItem('classViewerSession');
-    
-    // Update class viewer session state
     setHasClassViewerSession(!!classViewerSession);
-    
+
     if (teacherSession) {
       const teacherData = JSON.parse(teacherSession);
       console.log('Teacher session found:', teacherData);
       setTeacherUser(teacherData);
       setCurrentView('dashboard');
-    } else if (classViewerSession) {
-      const classData = JSON.parse(classViewerSession);
-      console.log('Class viewer session found:', classData);
     }
   }, []);
 
   // Listen for teacher login modal trigger
   React.useEffect(() => {
-    const handleOpenTeacherLogin = () => {
-      setShowTeacherLoginModal(true);
-    };
-    
+    const handleOpenTeacherLogin = () => setShowTeacherLoginModal(true);
     window.addEventListener('openTeacherLogin', handleOpenTeacherLogin);
     return () => window.removeEventListener('openTeacherLogin', handleOpenTeacherLogin);
   }, []);
 
-  const handleLogin = (loginUser?: any) => {
-    console.log('handleLogin called');
-    
-    if (loginUser && loginUser.isParentLogin) {
-      setParentUser(loginUser);
+  const handleLogout = async () => {
+    try {
+      console.log('Logging out...');
+      await supabase.auth.signOut();
+      localStorage.removeItem('teacherSession');
+      localStorage.removeItem('classViewerSession');
+      await clearUser();
+      setTeacherUser(null);
+      setCurrentView('home');
+    } catch (err) {
+      console.error('Logout error:', err);
     }
-    
+  };
+
+  const handleLogin = (loginUser?: any) => {
+  console.log('handleLogin called');
+
+  if (loginUser && loginUser.isParentLogin) {
+    setParentUser(loginUser);
+  }
+
+  setTimeout(() => {
     setCurrentView('dashboard');
     setShowStudentParentLoginModal(false);
-  };
+  }, 300);
+};
 
   const handleGetStarted = () => {
     if (user) {
@@ -88,10 +97,16 @@ function App() {
   };
 
   React.useEffect(() => {
+  if (user && currentView === 'home') {
+    setCurrentView('dashboard');
+  }
+}, [user]);
+
+  React.useEffect(() => {
     if (!loading && !teacherUser && !user && currentView === 'dashboard') {
       setCurrentView('home');
     }
-  }, [loading, teacherUser, user, currentView]);
+  }, [loading,user, teacherUser, currentView]);
 
 
   if (loading) {
@@ -104,24 +119,16 @@ function App() {
       </div>
     );
   }
+  
 
-  const renderDashboard = () => {
-    if (teacherUser) {
-      console.log('Rendering teacher dashboard for:', teacherUser);
-      return <TeacherDashboard />;
-    }
-    
+    const renderDashboard = () => {
+    if (teacherUser) return <TeacherDashboard />;
     if (!user) {
-      console.log('No user in renderDashboard, redirecting to home');
+      console.log('No user, redirecting home');
+      setTimeout(() => setCurrentView('home'), 0);
       return null;
     }
-    
-    console.log('Rendering dashboard for user:', user.id);
-
-    if (user.isParentLogin) {
-      return <ParentDashboard />;
-    }
-    
+    if (user.isParentLogin) return <ParentDashboard />;
     return <StudentDashboard />;
   };
 
@@ -196,6 +203,7 @@ function App() {
           user={user} 
           onStudentParentLogin={() => setShowStudentParentLoginModal(true)}
           onTeacherLogin={() => setShowTeacherLoginModal(true)}
+          onLogout={handleLogout}
           onMenuToggle={() => {}}
         />
       )}

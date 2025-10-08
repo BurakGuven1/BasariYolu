@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BookOpen, Plus, TrendingUp, Calendar, Target, Award, Clock, CheckCircle, AlertCircle, LogOut, CreditCard as Edit, Trash2, MoreVertical, Users, X } from 'lucide-react';
+import { BookOpen, Plus, TrendingUp, Calendar, Target, Award, Clock, CheckCircle, AlertCircle, LogOut, CreditCard as Edit, Trash2, MoreVertical, Users, X, Brain } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer} from 'recharts';
 import { useAuth } from '../hooks/useAuth';
 import { useStudentData } from '../hooks/useStudentData';
@@ -14,9 +14,8 @@ import FeatureGate from './FeatureGate';
 import { getStudentInviteCode, signOut, deleteExamResult, updateHomework, deleteHomework, addStudySession, getWeeklyStudyGoal, createWeeklyStudyGoal, updateWeeklyStudyGoal, getWeeklyStudySessions } from '../lib/supabase';
 
 export default function StudentDashboard() {
-  const { canAddExam, isFreeTier } = useFeatureAccess();
+  const { planName, isFreeTier } = useFeatureAccess();
   const [, setShowUpgradeModal] = useState(false);
-  const [, setShowAddExam] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'exams' | 'homeworks' | 'analysis' | 'classes'>('overview');
   const [showExamForm, setShowExamForm] = useState(false);
   const [showHomeworkForm, setShowHomeworkForm] = useState(false);
@@ -51,7 +50,6 @@ export default function StudentDashboard() {
   const [goalLoading, setGoalLoading] = useState(false);
   const [showJoinClassModal, setShowJoinClassModal] = useState(false);
   const [classInviteCodeInput, setClassInviteCodeInput] = useState('');
-  const [showPaymentNotice, setShowPaymentNotice] = useState(true);
   const [showExamTopics, setShowExamTopics] = useState(false);
 
   const handleCreateWeeklyGoal = async (e: React.FormEvent) => {
@@ -127,15 +125,6 @@ export default function StudentDashboard() {
   } = useStudentData(user?.id);
 
   // Calculate package pricing
-  const getPackagePrice = () => {
-    const packageType = user?.profile?.package_type || 'basic';
-    const packages = {
-      basic: { monthly: 200, yearly: 2000, name: 'Temel Paket' },
-      advanced: { monthly: 300, yearly: 3000, name: 'Gelişmiş Paket' },
-      professional: { monthly: 500, yearly: 5000, name: 'Profesyonel Paket' }
-    };
-    return packages[packageType as keyof typeof packages] || packages.basic;
-  };
 
   const handleJoinClass = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -655,7 +644,7 @@ const chartData = filteredExamResults
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Öğrenci Paneli</h1>
             <p className="text-gray-600">
-              Hoş geldin, {user?.profile?.full_name || 'Öğrenci'}! İlerlemeni takip etmeye devam et.
+              Hoş geldin, {user?.profile?.full_name || 'Öğrencimiz'}! İlerlemeni takip etmeye devam et.
             </p>
             <button
               onClick={handleShowInviteCode}
@@ -672,43 +661,12 @@ const chartData = filteredExamResults
               <LogOut className="h-4 w-4" />
               <span>Çıkış Yap</span>
             </button>
-            <div className="text-right">
-              <p className="text-sm font-medium text-gray-900">
-                {getPackagePrice().name}
-              </p>
-              <p className="text-xs text-gray-600">
-                Aylık {getPackagePrice().monthly}₺ / Yıllık {getPackagePrice().yearly}₺
-              </p>
-            </div>
           </div>
         </div>
 
-        {/* Payment Notice */}
-        {showPaymentNotice && (
-          <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start">
-              <div>
-                <h3 className="text-yellow-800 font-medium">Ödeme Bildirimi</h3>
-                <p className="text-yellow-700 text-sm mt-1">
-                  <strong>{getPackagePrice().name}</strong> seçtiniz. 
-                  Aylık <strong>{getPackagePrice().monthly}₺</strong> veya 
-                  Yıllık <strong>{getPackagePrice().yearly}₺</strong> ödemeniz beklenmektedir.
-                </p>
-                <p className="text-yellow-600 text-xs mt-2">
-                  ⚠️ Ödeme yapılmadığı takdirde hesabınız silinecektir.
-                </p>
-              </div>
-              <button
-                onClick={() => setShowPaymentNotice(false)}
-                className="text-yellow-600 hover:text-yellow-800"
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-        )}
 
-        <div className="flex space-x-1 mb-8">
+        <div className="flex space-x-1 mb-8 items-center justify-between">
+        <div className="flex space-x-1">
           {[
             { key: 'overview', label: 'Genel Bakış', icon: TrendingUp },
             { key: 'exams', label: 'Denemeler', icon: BookOpen },
@@ -731,6 +689,17 @@ const chartData = filteredExamResults
           ))}
         </div>
 
+        <button
+          onClick={() => setShowExamTopics(true)}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2"
+        >
+          <Target className="h-4 w-4" />
+          <span>Çıkmış Konular</span>
+        </button>
+      </div>
+
+
+
         {activeTab === 'overview' && renderOverview()}
         {activeTab === 'exams' && renderExams()}
         {activeTab === 'analysis' && renderAnalysis()}
@@ -745,13 +714,6 @@ const chartData = filteredExamResults
                 >
                   <Plus className="h-4 w-4" />
                   <span>Sınıfa Katıl</span>
-                </button>
-                <button
-                  onClick={() => setShowExamTopics(true)}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2"
-                >
-                  <Target className="h-4 w-4" />
-                  <span>Çıkmış Konular</span>
                 </button>
               </div>
             </div>
@@ -875,7 +837,10 @@ const chartData = filteredExamResults
         {activeTab === 'homeworks' && (
           <div className="bg-white rounded-lg p-6 shadow-sm">
             <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-6">
-              <h3 className="text-lg font-semibold">Ödev Takibi</h3>
+              <h3 className="text-lg font-semibold">Ödev Takibi
+
+                <p> Kendi ödevlerini takip etmek için :</p>
+              </h3>
               <button 
                 onClick={() => setShowHomeworkForm(true)}
                 className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-green-700"
@@ -1063,37 +1028,39 @@ const chartData = filteredExamResults
           </div>
         )}
 
-        {/* Exam Limit Badge */}
-        <div className="mb-6">
-          <ExamLimitBadge onUpgrade={() => setShowUpgradeModal(true)} />
-        </div>
-
-        {/* AI Analysis with Feature Gate */}
-        {activeTab === 'analysis' && (
-          <FeatureGate
-          feature="ai_analysis"
-          onUpgrade={() => setShowUpgradeModal(true)}
-          showPaywall={true}
-          fallback={<div>Bu özelliğe erişiminiz yok</div>}
-        >
-          {/* İçeriği buraya koy */}
-          <div>AI Analysis Content</div>
-        </FeatureGate>
+        {planName === 'basic' && (
+          <div className="mb-6">
+            <ExamLimitBadge onUpgrade={() => setShowUpgradeModal(true)} />
+          </div>
         )}
 
-        {/* Add Exam Button with Limit Check */}
-        <button
-          onClick={() => {
-            if (!canAddExam()) {
-              setShowUpgradeModal(true);
-              return;
-            }
-            setShowAddExam(true);
-          }}
-          className="bg-blue-600 text-white px-6 py-3 rounded-lg"
-        >
-          Deneme Ekle
-        </button>
+        {activeTab === 'analysis' && (
+          <FeatureGate
+            feature="ai_analysis"
+            onUpgrade={() => setShowUpgradeModal(true)}
+            showPaywall={true}
+          >
+            <div>
+              {/* AI Önerileri */}
+              <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <h3 className="text-lg font-semibold mb-4 flex items-center">
+                  <Brain className="h-5 w-5 mr-2 text-purple-600" />
+                  AI Önerileri
+                </h3>
+                {/* ... AI içeriği ... */}
+              </div>
+
+              {/* Kişiselleştirilmiş Çalışma Planı */}
+              <div className="bg-white rounded-xl shadow-sm p-6">
+                <h3 className="text-lg font-semibold mb-4 flex items-center">
+                  <Target className="h-5 w-5 mr-2 text-orange-600" />
+                  Kişiselleştirilmiş Çalışma Planı
+                </h3>
+                {/* ... plan içeriği ... */}
+              </div>
+            </div>
+          </FeatureGate>
+        )}
       </div>
 
       {/* Study Session Form */}
