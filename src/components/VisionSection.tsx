@@ -86,29 +86,29 @@ export default function VisionSection() {
         </div>
 
         {/* Video/Story Section */}
-        <div className="bg-gradient-to-br from-blue-900 to-indigo-900 rounded-3xl p-8 sm:p-12 text-white shadow-2xl">
+        <div id="sena-story-video" className="bg-gradient-to-br from-blue-900 to-indigo-900 rounded-3xl p-8 sm:p-12 text-white shadow-2xl">
           <div className="grid md:grid-cols-2 gap-8 items-center">
             <div>
               <h3 className="text-3xl font-bold mb-4">
-                Mehmet'in Hikayesi
+                Sena'nın Hikayesi
               </h3>
               <div className="space-y-4 text-blue-100">
                 <p className="text-lg">
-                  <strong className="text-white">Mehmet, 11. sınıf öğrencisi.</strong><br />
+                  <strong className="text-white">Sena, 11. sınıf öğrencisi.</strong><br />
                   Matematik çalışıyor ama netleri yükselmiyor.
                 </p>
                 <p className="text-lg">
-                  BaşarıYolu'na giriyor. AI analiz ediyor:<br />
-                  <span className="text-yellow-400 font-semibold">"Trigonometri %40, Logaritma %60"</span>
+                  BaşarıYolu'na giriyor. Yapay zeka eksikleri analiz ediyor:<br />
+                  <span className="text-yellow-400 font-semibold">"Son 8 yılın çıkmış sorularına göre gelecek yılın sınavına uygun çalışma planı sunuyor"</span>
                 </p>
                 <p className="text-lg">
                   Öğretmeni görüyor, ödev atıyor.<br />
-                  Annesi telefonda bildirimleri alıyor.<br />
-                  <strong className="text-white">Mehmet artık ne yapacağını biliyor.</strong>
+                  Velisi telefonda bildirimleri alıyor.<br />
+                  <strong className="text-white">Sena artık ne yapacağını biliyor.</strong>
                 </p>
                 <div className="bg-green-500/20 border border-green-400 rounded-lg p-4 mt-6">
                   <p className="text-xl font-bold text-green-300">
-                    3 ay sonra Mehmet'in matematik neti 8'den 18'e çıktı! 🚀
+                    3 ay sonra Sena'nın matematik neti 13'den 24'e çıktı! 🚀
                   </p>
                 </div>
               </div>
@@ -124,9 +124,17 @@ export default function VisionSection() {
                     </svg>
                   </div>
                   <p className="text-white font-semibold">Videoyu İzle</p>
-                  <p className="text-blue-200 text-sm">2 dakika</p>
+                  <p className="text-blue-200 text-sm">1 dakika</p>
                 </div>
               </div>
+              <video
+                className="absolute top-0 left-0 w-full h-full rounded-2xl object-cover z-10"
+                src="/gemini.mp4"
+                controls
+                autoPlay={false}
+                muted
+                hidden={false} // istersen göster/gizle kontrolü de ekleyebilirsin
+              />
             </div>
           </div>
         </div>

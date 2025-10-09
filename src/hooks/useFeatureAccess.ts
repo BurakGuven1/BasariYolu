@@ -42,20 +42,21 @@ const [examStats, setExamStats] = useState<{ count: number; limit: number; remai
     }
   };
 
-  const featureMap: Record<string, string> = {
-  'ai_analysis': 'ai_support',
-  'exam_topics': 'limited_content',
-  'advanced_reports': 'advanced_reports',
-  'custom_goals': 'priority_support'
-};
-
 const hasFeature = useCallback((featureName: string): boolean => {
   if (!subscription?.plan?.features) return false;
+  
+  // Feature name mapping
+  const featureMap: Record<string, string> = {
+    'ai_analysis': 'ai_support',
+    'exam_topics': 'limited_content',
+    'advanced_reports': 'advanced_reports',
+    'custom_goals': 'priority_support'
+  };
+  
   const mappedName = featureMap[featureName] || featureName;
   const featureValue = subscription.plan.features[mappedName];
   
-  // limited_content için ters mantık (false = premium)
-  if (mappedName === 'limited_content') {
+  if (featureName === 'exam_topics') {
     return featureValue === false;
   }
   
@@ -69,11 +70,22 @@ const hasFeature = useCallback((featureName: string): boolean => {
   }, [hasFeature]);
 
   const canAddExam = useCallback((): boolean => {
-    if (!subscription) return false;
-    const maxExams = subscription.plan?.features?.max_exams || 0;
-    if (maxExams === -1) return true; // Unlimited
-    return examStats.count < maxExams;
-  }, [subscription, examStats]);
+  if (!subscription) return false;
+  
+  const planName = subscription.plan?.name;
+  
+  // Profesyonel paketler için sınırsız
+  if (planName === 'professional' || planName === 'profesyonel') {
+    return true;
+  }
+  
+  const features = subscription.plan?.features as any;
+  const maxExams = features?.max_exams || 0;
+  
+  if (maxExams === -1) return true;
+  
+  return examStats.count < maxExams;
+    }, [subscription, examStats]);
 
   const getFeatureLimit = useCallback((featureName: string): number => {
     if (!subscription?.plan?.features) return 0;
@@ -96,6 +108,16 @@ const hasFeature = useCallback((featureName: string): boolean => {
     return Math.ceil(diff / (1000 * 60 * 60 * 24));
   }, [subscription]);
 
+  const getPlanDisplayName = () => {
+  if (!subscription?.plan) return 'Ücretsiz';
+  const planNameMap: Record<string, string> = {
+    'basic': 'Temel Paket',
+    'advanced': 'Gelişmiş Paket',
+    'professional': 'Profesyonel Paket'
+  };
+  return planNameMap[subscription.plan.name] || subscription.plan.display_name;
+    };
+
   return {
     subscription,
     loading,
@@ -107,7 +129,7 @@ const hasFeature = useCallback((featureName: string): boolean => {
     getDaysUntilExpiry,
     examStats,
     planName: subscription?.plan?.name || 'free',
-    planDisplayName: subscription?.plan?.display_name || 'Ücretsiz',
+  planDisplayName: getPlanDisplayName(),
     isFreeTier: !subscription || subscription.status !== 'active',
     isPremium: subscription?.status === 'active' && subscription?.plan?.name !== 'temel',
     refresh: () => {

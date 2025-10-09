@@ -4,8 +4,6 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { useAuth } from './hooks/useAuth';
 import { packages } from './data/packages';
 import Navbar from './components/Navbar';
-import Hero from './components/Hero';
-import Features from './components/Features';
 import PricingSection from './components/PricingSection';
 import TeacherSection from './components/TeacherSection';
 import LoginModal from './components/LoginModal';
@@ -20,9 +18,13 @@ import VisionSection from './components/VisionSection';
 import ProductShowcase from './components/ProductShowcase';
 import SocialProof from './components/SocialProof';
 import CTASection from './components/CTASection';
+import UpgradeModal from './components/UpgradeModal';
+import { supabase } from './lib/supabase';
 
 function App() {
-  const { user, loading, setParentUser } = useAuth();
+  const { user, loading, setParentUser, clearUser } = useAuth();
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [targetUpgradePlan, setTargetUpgradePlan] = useState<any>(null);
   const [showStudentParentLoginModal, setShowStudentParentLoginModal] = useState(false);
   const [showTeacherLoginModal, setShowTeacherLoginModal] = useState(false);
   const [currentView, setCurrentView] = useState<'home' | 'dashboard'>('home');
@@ -33,40 +35,48 @@ function App() {
   React.useEffect(() => {
     const teacherSession = localStorage.getItem('teacherSession');
     const classViewerSession = localStorage.getItem('classViewerSession');
-    
-    // Update class viewer session state
     setHasClassViewerSession(!!classViewerSession);
-    
+
     if (teacherSession) {
       const teacherData = JSON.parse(teacherSession);
       console.log('Teacher session found:', teacherData);
       setTeacherUser(teacherData);
       setCurrentView('dashboard');
-    } else if (classViewerSession) {
-      const classData = JSON.parse(classViewerSession);
-      console.log('Class viewer session found:', classData);
     }
   }, []);
 
   // Listen for teacher login modal trigger
   React.useEffect(() => {
-    const handleOpenTeacherLogin = () => {
-      setShowTeacherLoginModal(true);
-    };
-    
+    const handleOpenTeacherLogin = () => setShowTeacherLoginModal(true);
     window.addEventListener('openTeacherLogin', handleOpenTeacherLogin);
     return () => window.removeEventListener('openTeacherLogin', handleOpenTeacherLogin);
   }, []);
 
+  const handleLogout = async () => {
+    try {
+      console.log('Logging out...');
+      await supabase.auth.signOut();
+      localStorage.removeItem('teacherSession');
+      localStorage.removeItem('classViewerSession');
+      await clearUser();
+      setTeacherUser(null);
+      setCurrentView('home');
+    } catch (err) {
+      console.error('Logout error:', err);
+    }
+  };
+
   const handleLogin = (loginUser?: any) => {
     console.log('handleLogin called');
-    
+
     if (loginUser && loginUser.isParentLogin) {
       setParentUser(loginUser);
     }
-    
-    setCurrentView('dashboard');
-    setShowStudentParentLoginModal(false);
+
+    setTimeout(() => {
+      setCurrentView('dashboard');
+      setShowStudentParentLoginModal(false);
+    }, 300);
   };
 
   const handleGetStarted = () => {
@@ -79,20 +89,35 @@ function App() {
 
   const handleSelectPackage = (packageId: string, billingCycle: 'monthly' | 'yearly') => {
     if (user) {
+      // Kullanıcı giriş yapmışsa upgrade modal aç
       const selectedPackage = packages.find(pkg => pkg.id === packageId);
-      const price = billingCycle === 'monthly' ? selectedPackage?.monthlyPrice : selectedPackage?.yearlyPrice;
-      alert(`${selectedPackage?.name} (${billingCycle === 'monthly' ? 'Aylık' : 'Yıllık'}) - ${price}₺ seçildi! Ödeme sayfasına yönlendiriliyorsunuz...`);
+      if (selectedPackage) {
+        setTargetUpgradePlan({
+          id: selectedPackage.id,
+          name: selectedPackage.name,
+          monthlyPrice: selectedPackage.monthlyPrice.toString(),
+          yearlyPrice: selectedPackage.yearlyPrice.toString(),
+          billingCycle
+        });
+        setShowUpgradeModal(true);
+      }
     } else {
+      // Giriş yapmamışsa login modal aç
       setShowStudentParentLoginModal(true);
     }
   };
 
   React.useEffect(() => {
+    if (user && currentView === 'home') {
+      setCurrentView('dashboard');
+    }
+  }, [user, currentView]);
+
+  React.useEffect(() => {
     if (!loading && !teacherUser && !user && currentView === 'dashboard') {
       setCurrentView('home');
     }
-  }, [loading, teacherUser, user, currentView]);
-
+  }, [loading, user, teacherUser, currentView]);
 
   if (loading) {
     return (
@@ -106,35 +131,23 @@ function App() {
   }
 
   const renderDashboard = () => {
-    if (teacherUser) {
-      console.log('Rendering teacher dashboard for:', teacherUser);
-      return <TeacherDashboard />;
-    }
-    
+    if (teacherUser) return <TeacherDashboard />;
     if (!user) {
-      console.log('No user in renderDashboard, redirecting to home');
+      console.log('No user, redirecting home');
+      setTimeout(() => setCurrentView('home'), 0);
       return null;
     }
-    
-    console.log('Rendering dashboard for user:', user.id);
-
-    if (user.isParentLogin) {
-      return <ParentDashboard />;
-    }
-    
+    if (user.isParentLogin) return <ParentDashboard />;
     return <StudentDashboard />;
   };
 
   const renderHomePage = () => (
     <div className="min-h-screen bg-white">
-
       <HeroV2 onGetStarted={handleGetStarted} />
       <ProblemSection />
       <VisionSection />
       <ProductShowcase />
       <SocialProof />
-        {/* <Hero onGetStarted={handleGetStarted} />
-        <Features /> */}
       <PricingSection onSelectPackage={handleSelectPackage} />
       <ExamTopicsSection 
         user={user} 
@@ -143,6 +156,7 @@ function App() {
       />
       <TeacherSection />
       <CTASection onGetStarted={handleGetStarted} />
+      
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -196,6 +210,7 @@ function App() {
           user={user} 
           onStudentParentLogin={() => setShowStudentParentLoginModal(true)}
           onTeacherLogin={() => setShowTeacherLoginModal(true)}
+          onLogout={handleLogout}
           onMenuToggle={() => {}}
         />
       )}
@@ -218,6 +233,26 @@ function App() {
           console.log('Teacher login success, setting view to dashboard');
         }}
       />
+
+      {/* Upgrade Modal */}
+      {showUpgradeModal && targetUpgradePlan && (
+        <UpgradeModal
+          isOpen={showUpgradeModal}
+          onClose={() => {
+            setShowUpgradeModal(false);
+            setTargetUpgradePlan(null);
+          }}
+          targetPlanId={targetUpgradePlan.id}
+          targetPlanName={targetUpgradePlan.name}
+          targetPlanPrice={{
+            monthly: targetUpgradePlan.monthlyPrice,
+            yearly: targetUpgradePlan.yearlyPrice
+          }}
+          onSuccess={() => {
+            window.location.reload();
+          }}
+        />
+      )}
     </ErrorBoundary>
   );
 }

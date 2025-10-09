@@ -3,7 +3,7 @@ import { User, TrendingUp, Clock, Award, BookOpen, AlertTriangle, Plus, UserPlus
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useAuth } from '../hooks/useAuth';
 import { useParentData } from '../hooks/useParentData';
-import { connectParentToStudent, signOut, supabase } from '../lib/supabase';
+import { signOut, supabase } from '../lib/supabase';
 
 export default function ParentDashboard() {
   const [selectedChild, setSelectedChild] = useState<string>('');
@@ -12,7 +12,7 @@ export default function ParentDashboard() {
   const [loading, setLoading] = useState(false);
   
   const { user, clearUser } = useAuth();
-  const { parentData, children, loading: dataLoading, refetch } = useParentData(user?.id);
+  const { children, loading: dataLoading } = useParentData(user?.id);
 
   const handleLogout = async () => {
     // For temp parent, just clear the user
@@ -50,7 +50,9 @@ export default function ParentDashboard() {
       // Update the user object to include this new child
       const updatedUser = {
         ...user,
-        connectedStudents: [...(user.connectedStudents || []), student]
+        connectedStudents: Array.isArray(user?.connectedStudents) 
+          ? [...user.connectedStudents, student]
+          : [student]
       };
       
       // Update the auth context
@@ -118,9 +120,23 @@ export default function ParentDashboard() {
       examResults: examResults.length,
       homeworks: homeworks.length,
       studySessions: studySessions.length,
-      examData: examResults.map(e => ({ name: e.exam_name, score: e.total_score, date: e.exam_date })),
-      homeworkData: homeworks.map(h => ({ title: h.title, completed: h.completed, due: h.due_date })),
-      studyData: studySessions.map(s => ({ subject: s.subject, minutes: s.duration_minutes, date: s.session_date }))
+      examData: examResults?.map((e: any) => ({ 
+        name: e.exam_name, 
+        score: e.total_score, 
+        date: e.exam_date 
+      })) || [],
+
+      homeworkData: homeworks?.map((h: any) => ({ 
+        title: h.title, 
+        completed: h.completed, 
+        due: h.due_date 
+      })) || [],
+
+      studyData: studySessions?.map((s: any) => ({ 
+        subject: s.subject, 
+        minutes: s.duration_minutes, 
+        date: s.session_date 
+      })) || []
     });
     
     const averageScore = examResults.length > 0 
@@ -176,7 +192,7 @@ export default function ParentDashboard() {
       .filter((exam: any) => exam.total_score != null && exam.exam_date) // Filter out invalid data
       .sort((a: any, b: any) => new Date(a.exam_date).getTime() - new Date(b.exam_date).getTime())
       .slice(-6) // Son 6 deneme
-      .map((exam: any, index: number) => ({
+      .map((exam: any) => ({
         date: new Date(exam.exam_date).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit' }),
         puan: Math.round(exam.total_score || 0),
         examType: exam.exam_type,
@@ -371,7 +387,7 @@ export default function ParentDashboard() {
                   <XAxis dataKey="date" fontSize={12} />
                   <YAxis domain={[100, 500]} />
                   <Tooltip 
-                    formatter={(value, name, props) => [
+                    formatter={(value, _name, props) => [
                       `${value} puan`,
                       `${props.payload.examName} (${props.payload.examType})`
                     ]}
@@ -412,7 +428,7 @@ export default function ParentDashboard() {
                     outerRadius={100}
                     fill="#8884d8"
                     dataKey="value"
-                    label={({ name, value, percent }) => `${name}: ${value}`}
+                    label={({ name, value}) => `${name}: ${value}`}
                   >
                     {homeworkCompletion.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />

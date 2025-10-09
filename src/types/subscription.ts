@@ -2,9 +2,11 @@ export type BillingCycle = 'monthly' | 'yearly';
 export type SubscriptionStatus = 'active' | 'cancelled' | 'expired' | 'trial';
 export type PaymentStatus = 'success' | 'failed' | 'pending' | 'refunded';
 
+export type PlanName = 'basic' | 'advanced' | 'professional' | 'temel' | 'gelismis' | 'profesyonel';
+
 export interface SubscriptionPlan {
   id: string;
-  name: 'temel' | 'gelismis' | 'profesyonel';
+  name: PlanName;
   display_name: string;
   monthly_price: number;
   yearly_price: number;
@@ -13,16 +15,18 @@ export interface SubscriptionPlan {
 }
 
 export interface PlanFeatures {
-  max_exams: number; // -1 = unlimited
-  ai_analysis: boolean;
-  exam_topics: boolean;
-  advanced_reports: boolean;
-  parent_dashboard: boolean;
-  homework_tracking: boolean;
-  study_recommendations?: boolean;
+  max_exams?: number; // -1 = unlimited
+  ai_support?: boolean;
+  email_support?: boolean;
+  basic_features?: boolean;
+  limited_content?: boolean;
+  advanced_reports?: boolean;
   priority_support?: boolean;
-  custom_goals?: boolean;
-  [key: string]: any;
+  question_analysis?: boolean;
+  ai_analysis?: boolean; // Alias
+  exam_topics?: boolean; // Alias
+  custom_goals?: boolean; // Alias
+  [key: string]: any; // Index signature
 }
 
 export interface UserSubscription {
@@ -39,7 +43,14 @@ export interface UserSubscription {
   payment_id: string | null;
   created_at: string;
   updated_at: string;
-  plan?: SubscriptionPlan; // Joined data
+  plan?: SubscriptionPlan;
+  upgrade_credit?: number;
+  original_price?: number;
+  discount_applied?: number;
+  proration_date?: string;
+  scheduled_plan_id?: string;
+  scheduled_billing_cycle?: string;
+  scheduled_change_date?: string;
 }
 
 export interface TeacherBilling {

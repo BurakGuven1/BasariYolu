@@ -6,9 +6,9 @@ interface ExamLimitBadgeProps {
 }
 
 export default function ExamLimitBadge({ onUpgrade }: ExamLimitBadgeProps) {
-  const { examStats, isFreeTier } = useFeatureAccess();
+  const { examStats, isFreeTier,planName } = useFeatureAccess();
 
-  if (isFreeTier) return null;
+  if (isFreeTier || planName === 'professional') return null;
 
   const percentage = examStats.limit === Infinity 
     ? 100 

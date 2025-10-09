@@ -147,7 +147,7 @@ export async function getExamCountForPeriod(userId: string) {
   }
 
   const { count, error } = await supabase
-    .from('exams')
+    .from('exam_results')
     .select('*', { count: 'exact', head: true })
     .eq('student_id', userId)
     .gte('created_at', subscription.current_period_start)

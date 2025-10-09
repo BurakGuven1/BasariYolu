@@ -123,10 +123,6 @@ export default function Paywall({ feature, onUpgrade, variant = 'overlay' }: Pay
           Paketi Yükselt
           <ArrowRight className="h-5 w-5" />
         </button>
-
-        <p className="text-xs text-center text-gray-500 mt-4">
-          7 gün ücretsiz deneme ile başla
-        </p>
       </div>
     );
   }

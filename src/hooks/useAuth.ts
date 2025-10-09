@@ -13,44 +13,42 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
 
+  // 🚀 İlk yüklemede session kontrolü
   useEffect(() => {
-    if (initialized) return; // Prevent re-initialization
+    if (initialized) return;
 
-    // Check current session once
     const initializeAuth = async () => {
+      setLoading(true);
       try {
-        // Check for temporary parent login first
+        // 🔹 Geçici veli oturumu kontrolü
         const tempParent = localStorage.getItem('tempParentUser');
         if (tempParent) {
           const parentUser = JSON.parse(tempParent);
           setUser(parentUser);
-          setLoading(false);
-          setInitialized(true);
           return;
         }
 
+        // 🔹 Supabase oturumu kontrolü
         const { data: { session } } = await supabase.auth.getSession();
-        
+
         if (session?.user) {
-          // Get profile data for the user
           const { data: profile } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
             .single();
-          
+
           setUser({
             ...session.user,
-            profile
+            profile,
           });
         } else {
           setUser(null);
         }
-        setLoading(false);
-        setInitialized(true);
-      } catch (error) {
-        console.error('Auth initialization error:', error);
+      } catch (err) {
+        console.error('Auth init error:', err);
         setUser(null);
+      } finally {
         setLoading(false);
         setInitialized(true);
       }
@@ -59,67 +57,69 @@ export const useAuth = () => {
     initializeAuth();
   }, [initialized]);
 
+  // 🎧 Auth state değişimlerini dinle
   useEffect(() => {
-    if (!initialized) return; // Don't set up listener until initialized
+    if (!initialized) return;
 
-    // Listen for auth changes - but don't cause loops
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        // Ignore initial SIGNED_IN event if we already have a user
-        if (event === 'SIGNED_IN' && user) {
-          return;
-        }
-        
-        // Check for temporary parent login first - don't override it
+        console.log('Auth state changed:', event);
+
+        // 🔹 Eğer veli login varsa, Supabase state'i ezmesin
         const tempParent = localStorage.getItem('tempParentUser');
         if (tempParent) {
-          const parentUser = JSON.parse(tempParent);
-          setUser(parentUser);
-          setLoading(false);
+          setUser(JSON.parse(tempParent));
           return;
         }
-        
-        // Clear temp parent on sign out
+
+        // 🔹 Supabase logout
         if (event === 'SIGNED_OUT') {
           localStorage.removeItem('tempParentUser');
+          setUser(null);
+          return;
         }
-        
+
+        // 🔹 Supabase login
         if (session?.user) {
-          // Get profile data for the user
           const { data: profile } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
             .single();
-          
+
           setUser({
             ...session.user,
-            profile
+            profile,
           });
         } else {
           setUser(null);
         }
-        setLoading(false);
       }
     );
 
     return () => subscription.unsubscribe();
-  }, [initialized, user]);
+  }, [initialized]);
 
-  // Function to set temporary parent user
+  // 👨‍👩‍👧 Geçici veli oturumu
   const setParentUser = (parentUser: any) => {
-    // Update localStorage as well
-    if (parentUser.isParentLogin) {
+    if (parentUser?.isParentLogin) {
       localStorage.setItem('tempParentUser', JSON.stringify(parentUser));
     }
     setUser(parentUser);
   };
 
-  // Function to clear user (for logout)
-  const clearUser = () => {
-    localStorage.removeItem('tempParentUser');
-    setInitialized(false);
-    setUser(null);
+  // 🚪 Logout fonksiyonu (App tarafından çağrılacak)
+  const clearUser = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error('Logout error:', err);
+    } finally {
+      localStorage.removeItem('tempParentUser');
+      setInitialized(false);
+      setUser(null);
+    }
   };
+
   return { user, loading, setParentUser, clearUser };
 };

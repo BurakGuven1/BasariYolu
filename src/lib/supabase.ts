@@ -7,7 +7,16 @@ if (!supabaseUrl || !supabaseKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+export const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storage: window.localStorage, // Brave ile uyumlu
+    storageKey: 'basariyolu-auth', // Custom key
+    flowType: 'pkce' // Daha güvenli
+  }
+});
 
 // Auth functions
 export const signUp = async (email: string, password: string) => {

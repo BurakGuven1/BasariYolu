@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BookOpen, Plus, TrendingUp, Calendar, Target, Award, Clock, CheckCircle, AlertCircle, LogOut, CreditCard as Edit, Trash2, MoreVertical, Users, X } from 'lucide-react';
+import { BookOpen, Plus, TrendingUp, Calendar, Target, Award, Clock, CheckCircle, AlertCircle, LogOut, CreditCard as Edit, Trash2, MoreVertical, Users, X, Brain,Crown, Trophy } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer} from 'recharts';
 import { useAuth } from '../hooks/useAuth';
 import { useStudentData } from '../hooks/useStudentData';
@@ -11,17 +11,27 @@ import { useFeatureAccess } from '../hooks/useFeatureAccess';
 import SubscriptionBadge from './SubscriptionBadge';
 import ExamLimitBadge from './ExamLimitBadge';
 import FeatureGate from './FeatureGate';
+import SmartStudyPlan from './SmartStudyPlan';
+import ExamCountdown from './ExamCountdown';
+import UpgradeModal from './UpgradeModal';
+import UpgradeHistory from './UpgradeHistory';
+import PointsDisplay from './PointsDisplay';
+import { addStudySessionPoints, completeChallenge, isChallengeCompletedToday } from '../lib/pointsSystem';
+import { packages } from '../data/packages';
+import { generatePerformanceInsights, generateDailyChallenge } from '../lib/ai';
 import { getStudentInviteCode, signOut, deleteExamResult, updateHomework, deleteHomework, addStudySession, getWeeklyStudyGoal, createWeeklyStudyGoal, updateWeeklyStudyGoal, getWeeklyStudySessions } from '../lib/supabase';
 
 export default function StudentDashboard() {
-  const { canAddExam, isFreeTier } = useFeatureAccess();
-  const [, setShowUpgradeModal] = useState(false);
-  const [, setShowAddExam] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'exams' | 'homeworks' | 'analysis' | 'classes'>('overview');
+  const [insights, setInsights] = useState<any[]>([]);
+  const [dailyChallenge, setDailyChallenge] = useState<any>(null);
+  const { planName, isFreeTier } = useFeatureAccess();
+  const [activeTab, setActiveTab] = useState<'overview' | 'exams' | 'homeworks' | 'analysis' | 'classes' | 'smartplan'| 'subscription'>('overview');
   const [showExamForm, setShowExamForm] = useState(false);
   const [showHomeworkForm, setShowHomeworkForm] = useState(false);
   const [showInviteCode, setShowInviteCode] = useState(false);
   const [inviteCode, setInviteCode] = useState('');
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [targetPlan, setTargetPlan] = useState<any>(null);
   const [editingExam, setEditingExam] = useState<any>(null);
   const [showExamMenu, setShowExamMenu] = useState<string | null>(null);
   const [showHomeworkMenu, setShowHomeworkMenu] = useState<string | null>(null);
@@ -51,7 +61,6 @@ export default function StudentDashboard() {
   const [goalLoading, setGoalLoading] = useState(false);
   const [showJoinClassModal, setShowJoinClassModal] = useState(false);
   const [classInviteCodeInput, setClassInviteCodeInput] = useState('');
-  const [showPaymentNotice, setShowPaymentNotice] = useState(true);
   const [showExamTopics, setShowExamTopics] = useState(false);
 
   const handleCreateWeeklyGoal = async (e: React.FormEvent) => {
@@ -127,15 +136,6 @@ export default function StudentDashboard() {
   } = useStudentData(user?.id);
 
   // Calculate package pricing
-  const getPackagePrice = () => {
-    const packageType = user?.profile?.package_type || 'basic';
-    const packages = {
-      basic: { monthly: 200, yearly: 2000, name: 'Temel Paket' },
-      advanced: { monthly: 300, yearly: 3000, name: 'Gelişmiş Paket' },
-      professional: { monthly: 500, yearly: 5000, name: 'Profesyonel Paket' }
-    };
-    return packages[packageType as keyof typeof packages] || packages.basic;
-  };
 
   const handleJoinClass = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -153,6 +153,16 @@ export default function StudentDashboard() {
       alert('Sınıfa katılma hatası: ' + error.message);
     }
   };
+
+    React.useEffect(() => {
+      if (studentData) {
+        const performanceInsights = generatePerformanceInsights(studentData);
+        setInsights(performanceInsights);
+        
+        const challenge = generateDailyChallenge(studentData);
+        setDailyChallenge(challenge);
+      }
+    }, [studentData]);
   // Load weekly study goal and calculate hours
   React.useEffect(() => {
     const loadWeeklyData = async () => {
@@ -217,6 +227,21 @@ export default function StudentDashboard() {
     }
     // Auth hook will handle the state change automatically
   };
+
+  const handleUpgradeClick = (planName: 'advanced' | 'professional') => {
+    const plan = packages.find(p => p.id === planName);
+    if (plan) {
+      setTargetPlan(plan);
+      setShowUpgradeModal(true);
+    }
+  };
+
+  // FeatureGate'deki onUpgrade prop'unu güncelle
+  <FeatureGate
+    feature="ai_analysis"
+    onUpgrade={() => handleUpgradeClick('advanced')}
+    showPaywall={true}
+  ></FeatureGate>
 
   const handleShowInviteCode = async () => {
     if (studentData) {
@@ -329,10 +354,12 @@ const handleAddStudySession = async (e: React.FormEvent) => {
   if (!studentData || !studyFormData.hours) return;
 
   try {
+    const durationMinutes = parseFloat(studyFormData.hours) * 60;
+    
     const sessionData = {
       student_id: studentData.id,
       subject: studyFormData.subject || 'Genel',
-      duration_minutes: parseFloat(studyFormData.hours) * 60,
+      duration_minutes: durationMinutes,
       session_date: studyFormData.date,
       notes: studyFormData.notes
     };
@@ -340,6 +367,9 @@ const handleAddStudySession = async (e: React.FormEvent) => {
     const { error } = await addStudySession(sessionData);
     if (error) throw error;
 
+    // 🎉 Puan ekle (1 saat = 10 puan)
+    const pointsResult = await addStudySessionPoints(studentData.id, durationMinutes);
+    
     // Haftalık çalışma saatlerini yeniden hesapla
     if (weeklyGoal) {
       await reloadWeeklyStudyHours(weeklyGoal);
@@ -363,7 +393,12 @@ const handleAddStudySession = async (e: React.FormEvent) => {
       subject: '',
       notes: ''
     });
-    alert('Çalışma seansı eklendi!');
+    
+    if (pointsResult.pointsEarned > 0) {
+      alert(`✅ Çalışma eklendi! 🎉 +${pointsResult.pointsEarned} puan kazandın!`);
+    } else {
+      alert('Çalışma seansı eklendi!');
+    }
   } catch (error) {
     console.error('Error adding study session:', error);
     alert('Çalışma seansı eklenirken hata oluştu');
@@ -396,6 +431,97 @@ const chartData = filteredExamResults
 
   const renderOverview = () => (
     <div className="space-y-6">
+
+      <div className="grid md:grid-cols-2 gap-6">
+      {/* AI Insights Card */}
+      <div className="bg-white rounded-xl shadow-sm p-6">
+        <h3 className="text-lg font-semibold mb-4 flex items-center">
+          <Brain className="h-5 w-5 mr-2 text-purple-600" />
+          AI Önerileri
+        </h3>
+        <div className="space-y-3">
+          {insights.map((insight, idx) => (
+            <div key={idx} className={`p-4 rounded-lg border-l-4 ${
+              insight.type === 'success' ? 'bg-green-50 border-green-500' :
+              insight.type === 'warning' ? 'bg-yellow-50 border-yellow-500' :
+              insight.type === 'danger' ? 'bg-red-50 border-red-500' :
+              'bg-blue-50 border-blue-500'
+            }`}>
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">{insight.icon}</span>
+                <div>
+                  <h4 className="font-semibold text-gray-900">{insight.title}</h4>
+                  <p className="text-sm text-gray-600 mt-1">{insight.message}</p>
+                  <button className="text-sm font-medium mt-2 text-blue-600 hover:underline">
+                    {insight.action} →
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Daily Challenge Card */}
+      {dailyChallenge && (
+        <div className="bg-gradient-to-br from-purple-500 to-pink-500 text-white rounded-xl shadow-lg p-6">
+          <h3 className="text-lg font-semibold mb-4 flex items-center">
+            <Trophy className="h-5 w-5 mr-2" />
+            Günün Görevi
+          </h3>
+          <div className="space-y-3">
+            <h4 className="text-2xl font-bold">{dailyChallenge.title}</h4>
+            <p className="text-purple-100">{dailyChallenge.description}</p>
+            <div className="flex items-center justify-between pt-4">
+              <div className="flex items-center gap-2">
+                <span className="bg-white/20 px-3 py-1 rounded-full text-sm">
+                  {dailyChallenge.difficulty === 'easy' ? '🟢 Kolay' :
+                   dailyChallenge.difficulty === 'medium' ? '🟡 Orta' :
+                   '🔴 Zor'}
+                </span>
+                <span className="bg-white/20 px-3 py-1 rounded-full text-sm">
+                  +{dailyChallenge.points} puan
+                </span>
+              </div>
+              <button className="bg-white text-purple-600 px-6 py-2 rounded-full font-semibold hover:bg-purple-50">
+                Başla
+              </button>
+            </div>
+          </div>
+          <button
+            onClick={async () => {
+              if (!studentData) return;
+              
+              // Bugün tamamlandı mı kontrol et
+              const completed = await isChallengeCompletedToday(studentData.id, dailyChallenge.id);
+              
+              if (completed) {
+                alert('🎯 Bu görevi bugün zaten tamamladınız!');
+                return;
+              }
+              
+              // Challenge tamamla
+              const result = await completeChallenge(
+                studentData.id,
+                dailyChallenge.id,
+                dailyChallenge.points,
+                dailyChallenge.title
+              );
+              
+              if (result.success) {
+                alert(`🎉 Görev tamamlandı! +${dailyChallenge.points} puan kazandın!`);
+                window.location.reload(); // Points'i güncelle
+              } else {
+                alert(result.error || 'Görev tamamlanamadı');
+              }
+            }}
+            className="bg-white text-purple-600 px-6 py-2 rounded-full font-semibold hover:bg-purple-50"
+          >
+            Başla
+          </button>
+        </div>
+      )}
+    </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-white rounded-lg p-6 shadow-sm">
           <div className="flex items-center justify-between">
@@ -454,17 +580,17 @@ const chartData = filteredExamResults
             </div>
             <Clock className="h-8 w-8 text-blue-600" />
           </div>
-          <div className="flex space-x-2 mt-2">
+          <div className="mt-2 flex flex-wrap gap-2">
           <button
             onClick={() => setShowStudyForm(true)}
-            className="mt-2 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200"
+            className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 sm:mt-0"
           >
             Çalışma Ekle
           </button>
           {!weeklyGoal && (
             <button
               onClick={() => setShowGoalForm(true)}
-              className="mt-2 text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200"
+              className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200 sm:mt-0"
             >
               Hedef Belirle
             </button>
@@ -472,7 +598,7 @@ const chartData = filteredExamResults
           {weeklyGoal && (
             <button
               onClick={() => setShowGoalForm(true)}
-              className="mt-2 text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded hover:bg-yellow-200"
+              className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded hover:bg-yellow-200 sm:mt-0"
             >
               Hedef Güncelle
             </button>
@@ -569,7 +695,7 @@ const chartData = filteredExamResults
         <h3 className="text-lg font-semibold">Deneme Sonuçları</h3>
         <button 
           onClick={() => setShowExamForm(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-blue-700">
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 sm:w-auto">
           <Plus className="h-4 w-4" />
           <span>Yeni Deneme</span>
         </button>
@@ -655,7 +781,7 @@ const chartData = filteredExamResults
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Öğrenci Paneli</h1>
             <p className="text-gray-600">
-              Hoş geldin, {user?.profile?.full_name || 'Öğrenci'}! İlerlemeni takip etmeye devam et.
+              Hoş geldin, {user?.profile?.full_name || 'Öğrencimiz'}! İlerlemeni takip etmeye devam et.
             </p>
             <button
               onClick={handleShowInviteCode}
@@ -663,6 +789,9 @@ const chartData = filteredExamResults
             >
               Veli Davet Kodu
             </button>
+          </div>
+          <div className="flex flex-col items-end gap-2">
+            {studentData && <PointsDisplay studentId={studentData.id} />}      
           </div>
           <div className="flex flex-col items-end space-y-2">
             <button
@@ -672,54 +801,25 @@ const chartData = filteredExamResults
               <LogOut className="h-4 w-4" />
               <span>Çıkış Yap</span>
             </button>
-            <div className="text-right">
-              <p className="text-sm font-medium text-gray-900">
-                {getPackagePrice().name}
-              </p>
-              <p className="text-xs text-gray-600">
-                Aylık {getPackagePrice().monthly}₺ / Yıllık {getPackagePrice().yearly}₺
-              </p>
-            </div>
           </div>
         </div>
 
-        {/* Payment Notice */}
-        {showPaymentNotice && (
-          <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start">
-              <div>
-                <h3 className="text-yellow-800 font-medium">Ödeme Bildirimi</h3>
-                <p className="text-yellow-700 text-sm mt-1">
-                  <strong>{getPackagePrice().name}</strong> seçtiniz. 
-                  Aylık <strong>{getPackagePrice().monthly}₺</strong> veya 
-                  Yıllık <strong>{getPackagePrice().yearly}₺</strong> ödemeniz beklenmektedir.
-                </p>
-                <p className="text-yellow-600 text-xs mt-2">
-                  ⚠️ Ödeme yapılmadığı takdirde hesabınız silinecektir.
-                </p>
-              </div>
-              <button
-                onClick={() => setShowPaymentNotice(false)}
-                className="text-yellow-600 hover:text-yellow-800"
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-        )}
 
-        <div className="flex space-x-1 mb-8">
+        <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
           {[
             { key: 'overview', label: 'Genel Bakış', icon: TrendingUp },
             { key: 'exams', label: 'Denemeler', icon: BookOpen },
             { key: 'homeworks', label: 'Ödevler', icon: Calendar },
             { key: 'classes', label: 'Sınıflarım', icon: Users },
             { key: 'analysis', label: 'AI Analiz', icon: Target },
+            { key: 'smartplan', label: 'Akıllı Plan', icon: Brain },
+            { key: 'subscription', label: 'Aboneliğim', icon: Crown },
           ].map(({ key, label, icon: Icon }) => (
             <button
               key={key}
               onClick={() => setActiveTab(key as any)}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors sm:w-auto ${
                 activeTab === key
                   ? 'bg-blue-600 text-white'
                   : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
@@ -731,27 +831,32 @@ const chartData = filteredExamResults
           ))}
         </div>
 
+        <button
+          onClick={() => setShowExamTopics(true)}
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 sm:w-auto"
+        >
+          <Target className="h-4 w-4" />
+          <span>Çıkmış Konular</span>
+        </button>
+      </div>
+
         {activeTab === 'overview' && renderOverview()}
         {activeTab === 'exams' && renderExams()}
         {activeTab === 'analysis' && renderAnalysis()}
+        {activeTab === 'smartplan' && studentData && (
+          <SmartStudyPlan studentData={studentData} />
+        )}
         {activeTab === 'classes' && (
           <div className="bg-white rounded-lg p-6 shadow-sm">
             <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-6">
               <h3 className="text-lg font-semibold">Sınıflarım</h3>
-              <div className="flex space-x-2">
+              <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setShowJoinClassModal(true)}
-                  className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-green-700"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-green-700 sm:w-auto"
                 >
                   <Plus className="h-4 w-4" />
                   <span>Sınıfa Katıl</span>
-                </button>
-                <button
-                  onClick={() => setShowExamTopics(true)}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2"
-                >
-                  <Target className="h-4 w-4" />
-                  <span>Çıkmış Konular</span>
                 </button>
               </div>
             </div>
@@ -775,7 +880,7 @@ const chartData = filteredExamResults
                   )}
                   <button
                     onClick={() => setShowJoinClassModal(true)}
-                    className="mt-4 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+                    className="mt-4 w-full rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-green-700 sm:w-auto"
                   >
                     İlk Sınıfa Katıl
                   </button>
@@ -875,10 +980,13 @@ const chartData = filteredExamResults
         {activeTab === 'homeworks' && (
           <div className="bg-white rounded-lg p-6 shadow-sm">
             <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-6">
-              <h3 className="text-lg font-semibold">Ödev Takibi</h3>
+              <h3 className="text-lg font-semibold">Ödev Takibi
+
+                <p> Kendi ödevlerini takip etmek için :</p>
+              </h3>
               <button 
                 onClick={() => setShowHomeworkForm(true)}
-                className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-green-700"
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-green-700 sm:w-auto"
               >
                 <Plus className="h-4 w-4" />
                 <span>Yeni Ödev</span>
@@ -912,7 +1020,7 @@ const chartData = filteredExamResults
                   )}
                   <button 
                     onClick={() => setShowHomeworkForm(true)}
-                    className="mt-4 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+                    className="mt-4 w-full rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-green-700 sm:w-auto"
                   >
                     İlk Ödevi Ekle
                   </button>
@@ -1034,6 +1142,25 @@ const chartData = filteredExamResults
           </>
         )}
 
+        {showUpgradeModal && targetPlan && (
+        <UpgradeModal
+          isOpen={showUpgradeModal}
+          onClose={() => {
+            setShowUpgradeModal(false);
+            setTargetPlan(null);
+          }}
+          targetPlanId={targetPlan.id}
+          targetPlanName={targetPlan.name}
+          targetPlanPrice={{
+            monthly: targetPlan.monthlyPrice.toString(),
+            yearly: targetPlan.yearlyPrice.toString()
+          }}
+          onSuccess={() => {
+            refetch(); // Subscription'ı yeniden yükle
+          }}
+        />
+      )}
+
         {/* Exam Topics Modal */}
         {showExamTopics && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -1063,37 +1190,45 @@ const chartData = filteredExamResults
           </div>
         )}
 
-        {/* Exam Limit Badge */}
-        <div className="mb-6">
-          <ExamLimitBadge onUpgrade={() => setShowUpgradeModal(true)} />
-        </div>
-
-        {/* AI Analysis with Feature Gate */}
+        {planName === 'basic' && (
+          <div className="mb-6">
+            <ExamLimitBadge onUpgrade={() => setShowUpgradeModal(true)} />
+          </div>
+        )}
         {activeTab === 'analysis' && (
           <FeatureGate
-          feature="ai_analysis"
-          onUpgrade={() => setShowUpgradeModal(true)}
-          showPaywall={true}
-          fallback={<div>Bu özelliğe erişiminiz yok</div>}
-        >
-          {/* İçeriği buraya koy */}
-          <div>AI Analysis Content</div>
-        </FeatureGate>
+            feature="ai_analysis"
+            onUpgrade={() => setShowUpgradeModal(true)}
+            showPaywall={true}
+          >
+            <div>
+              {/* AI Önerileri */}
+              <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <h3 className="text-lg font-semibold mb-4 flex items-center">
+                  <Brain className="h-5 w-5 mr-2 text-purple-600" />
+                  AI Önerileri
+                </h3>
+                {/* ... AI içeriği ... */}
+              </div>
+
+              {/* Kişiselleştirilmiş Çalışma Planı */}
+              <div className="bg-white rounded-xl shadow-sm p-6">
+                <h3 className="text-lg font-semibold mb-4 flex items-center">
+                  <Target className="h-5 w-5 mr-2 text-orange-600" />
+                  Kişiselleştirilmiş Çalışma Planı
+                </h3>
+                {/* ... plan içeriği ... */}
+              </div>
+            </div>
+          </FeatureGate>
         )}
 
-        {/* Add Exam Button with Limit Check */}
-        <button
-          onClick={() => {
-            if (!canAddExam()) {
-              setShowUpgradeModal(true);
-              return;
-            }
-            setShowAddExam(true);
-          }}
-          className="bg-blue-600 text-white px-6 py-3 rounded-lg"
-        >
-          Deneme Ekle
-        </button>
+        {activeTab === 'subscription' && (
+          <div className="space-y-6">
+            <SubscriptionBadge />
+            <UpgradeHistory />
+          </div>
+        )}
       </div>
 
       {/* Study Session Form */}
@@ -1157,17 +1292,17 @@ const chartData = filteredExamResults
                   placeholder="Ne çalıştınız?"
                 />
               </div>
-              <div className="flex space-x-3">
+              <div className="flex flex-col gap-3 sm:flex-row">
                 <button
                   type="button"
                   onClick={() => setShowStudyForm(false)}
-                  className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200"
+                  className="w-full rounded-lg bg-gray-100 py-2 text-gray-700 hover:bg-gray-200 sm:flex-1"
                 >
                   İptal
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
+                  className="w-full rounded-lg bg-blue-600 py-2 text-white hover:bg-blue-700 sm:flex-1"
                 >
                   Ekle
                 </button>
@@ -1206,18 +1341,18 @@ const chartData = filteredExamResults
                   Önerilen: Günde 3-4 saat (Haftalık 21-28 saat)
                 </p>
               </div>
-              <div className="flex space-x-3">
+              <div className="flex flex-col gap-3 sm:flex-row">
                 <button
                   type="button"
                   onClick={() => setShowGoalForm(false)}
-                  className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200"
+                  className="w-full rounded-lg bg-gray-100 py-2 text-gray-700 hover:bg-gray-200 sm:flex-1"
                 >
                   İptal
                 </button>
                 <button
                   type="submit"
                   disabled={goalLoading}
-                  className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
+                  className="w-full rounded-lg bg-blue-600 py-2 text-white hover:bg-blue-700 sm:flex-1"
                 >
                   {goalLoading ? 'Kaydediliyor...' : (weeklyGoal ? 'Güncelle' : 'Belirle')}
                 </button>
@@ -1253,20 +1388,20 @@ const chartData = filteredExamResults
                   Örnek: 645A-A006-208D
                 </p>
               </div>
-              <div className="flex space-x-3">
+              <div className="flex flex-col gap-3 sm:flex-row">
                 <button
                   type="button"
                   onClick={() => {
                     setShowJoinClassModal(false);
                     setClassInviteCodeInput('');
                   }}
-                  className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200"
+                  className="w-full rounded-lg bg-gray-100 py-2 text-gray-700 hover:bg-gray-200 sm:flex-1"
                 >
                   İptal
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700"
+                  className="w-full rounded-lg bg-green-600 py-2 text-white hover:bg-green-700 sm:flex-1"
                 >
                   Katıl
                 </button>
@@ -1306,6 +1441,7 @@ const chartData = filteredExamResults
           </div>
         </div>
       )}
+      <ExamCountdown />
     </div>
   );
 }

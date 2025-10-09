@@ -89,9 +89,15 @@ export default function HeroV2({ onGetStarted }: HeroV2Props) {
             Potansiyelini Keşfet
             <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
           </button>
-          <button className="group border-2 border-white/30 text-white px-8 py-4 rounded-full text-lg font-semibold hover:bg-white hover:text-[#1F2533] transition-all flex items-center justify-center gap-2">
+          <button 
+            onClick={() => {
+              const videoSection = document.getElementById('sena-story-video');
+              videoSection?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }}
+            className="group border-2 border-white/30 text-white px-8 py-4 rounded-full text-lg font-semibold hover:bg-white hover:text-[#1F2533] transition-all flex items-center justify-center gap-2"
+          >
             <Play className="h-5 w-5" />
-            Hikayemizi İzle
+            Öğrencimizi İzleyin⭐
           </button>
         </div>
 
