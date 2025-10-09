@@ -1,5 +1,5 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
-import { AlertTriangle, ArrowLeft, RefreshCw, Home } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 
 interface Props {
   children: ReactNode;
@@ -37,16 +37,6 @@ class ErrorBoundary extends Component<Props, State> {
     });
   }
 
-  handleGoBack = () => {
-    // Go back to previous page
-    if (window.history.length > 1) {
-      window.history.back();
-    } else {
-      // If no history, go to home
-      window.location.href = '/';
-    }
-  };
-
   handleRefresh = () => {
     window.location.reload();
   };
@@ -69,22 +59,22 @@ class ErrorBoundary extends Component<Props, State> {
             </h1>
             
             <p className="text-gray-600 mb-6">
-              Üzgünüz, beklenmeyen bir hata oluştu. Lütfen sayfayı yenileyin veya önceki sayfaya dönün.
+              Üzgünüz, beklenmeyen bir hata oluştu. Lütfen sayfayı yenileyin veya ana sayfaya dönün.
             </p>
 
             {/* Error Details (only in development) */}
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+            {import.meta.env.DEV && this.state.error && (
               <div className="bg-gray-100 p-4 rounded-lg mb-6 text-left">
                 <h3 className="font-semibold text-gray-900 mb-2">Hata Detayları:</h3>
-                <p className="text-sm text-red-600 font-mono">
+                <p className="text-sm text-red-600 font-mono break-all">
                   {this.state.error.message}
                 </p>
                 {this.state.errorInfo && (
                   <details className="mt-2">
-                    <summary className="text-sm text-gray-600 cursor-pointer">
+                    <summary className="text-sm text-gray-600 cursor-pointer hover:text-gray-900">
                       Stack Trace
                     </summary>
-                    <pre className="text-xs text-gray-500 mt-2 overflow-auto">
+                    <pre className="text-xs text-gray-500 mt-2 overflow-auto max-h-40">
                       {this.state.errorInfo.componentStack}
                     </pre>
                   </details>
@@ -94,16 +84,8 @@ class ErrorBoundary extends Component<Props, State> {
 
             <div className="space-y-3">
               <button
-                onClick={this.handleGoBack}
-                className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center justify-center space-x-2"
-              >
-                <ArrowLeft className="h-5 w-5" />
-                <span>Önceki Sayfaya Dön</span>
-              </button>
-              
-              <button
                 onClick={this.handleRefresh}
-                className="w-full bg-gray-100 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-200 transition-colors font-semibold flex items-center justify-center space-x-2"
+                className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center justify-center space-x-2"
               >
                 <RefreshCw className="h-5 w-5" />
                 <span>Sayfayı Yenile</span>
@@ -124,7 +106,7 @@ class ErrorBoundary extends Component<Props, State> {
               </p>
               <a 
                 href="mailto:destek@basariyolu.com" 
-                className="text-blue-600 hover:text-blue-700 font-semibold"
+                className="text-blue-600 hover:text-blue-700 font-semibold text-sm"
               >
                 destek@basariyolu.com
               </a>

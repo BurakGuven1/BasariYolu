@@ -45,7 +45,7 @@ export default function Navbar({ user, onStudentParentLogin, onTeacherLogin,onLo
   return (
     <nav className="bg-white shadow-lg border-b border-gray-200 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
+        <div className="flex h-16 items-center justify-between gap-4">
           <div className="flex items-center">
            <Logo 
             size="medium" 
@@ -68,41 +68,46 @@ export default function Navbar({ user, onStudentParentLogin, onTeacherLogin,onLo
             ))}
           </div>
 
-          {user && user.id ? (
-            <>
-              {/* 🔔 Desktop - Bildirim ve kullanıcı */}
-              <Bell className="h-6 w-6 text-gray-600 cursor-pointer hover:text-blue-600" />
-              <div className="flex items-center space-x-2">
-                <User className="h-6 w-6 text-gray-600" />
-                <span className="text-sm text-gray-700 font-bold">
-                  {user.name || user.email || 'Kullanıcı'}
-                </span>
-
-                {/* 🚪 Çıkış Butonu */}
+          <div className="hidden md:flex items-center gap-4">
+            {user && user.id ? (
+              <div className="flex flex-wrap items-center justify-end gap-3">
+                <button
+                  type="button"
+                  className="text-gray-600 transition-colors hover:text-blue-600"
+                  aria-label="Bildirimler"
+                >
+                  <Bell className="h-6 w-6" />
+                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <User className="h-6 w-6 text-gray-600" />
+                  <span className="text-sm font-bold text-gray-700">
+                    {user.name || user.email || 'Kullanıcı'}
+                  </span>
+                </div>
                 <button
                   onClick={onLogout}
-                  className="ml-3 text-xs text-gray-500 hover:text-red-600 font-bold transition-colors"
+                  className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm font-semibold text-gray-600 transition-colors hover:border-red-500 hover:text-red-600"
                 >
                   Çıkış
                 </button>
               </div>
-            </>
-          ) : (
-            <div className="flex space-x-2">
-              <button
-                onClick={onStudentParentLogin}
-                className="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors text-xs font-bold"
-              >
-                Öğrenci/Veli Girişi
-              </button>
-              <button
-                onClick={onTeacherLogin}
-                className="bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors text-xs font-bold"
-              >
-                Öğretmen/Sınıf Girişi
-              </button>
-            </div>
-          )}
+            ) : (
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <button
+                  onClick={onStudentParentLogin}
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+                >
+                  Öğrenci/Veli Girişi
+                </button>
+                <button
+                  onClick={onTeacherLogin}
+                  className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-green-700"
+                >
+                  Öğretmen/Sınıf Girişi
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* Mobile Menu Button */}
           <div className="lg:hidden flex items-center">

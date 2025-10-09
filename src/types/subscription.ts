@@ -43,7 +43,14 @@ export interface UserSubscription {
   payment_id: string | null;
   created_at: string;
   updated_at: string;
-  plan?: SubscriptionPlan; // Joined data
+  plan?: SubscriptionPlan;
+  upgrade_credit?: number;
+  original_price?: number;
+  discount_applied?: number;
+  proration_date?: string;
+  scheduled_plan_id?: string;
+  scheduled_billing_cycle?: string;
+  scheduled_change_date?: string;
 }
 
 export interface TeacherBilling {

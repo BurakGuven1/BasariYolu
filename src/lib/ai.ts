@@ -115,8 +115,8 @@ export const analyzeExamResults = async (examResults: any[]): Promise<ExamAnalys
         subject,
         topic: 'Performans Düzeltme',
         priority: 'medium',
-        estimatedHours: 8,
-        description: `${subject} konusundaki düşüşü durdurmak için tekrar ve pekiştirme çalışması yapın.`
+        estimatedHours: 7,
+        description: `${subject} dersindeki düşüşü durdurmak için tekrar ve pekiştirme çalışması yapın.`
       });
     }
   });
@@ -173,7 +173,7 @@ export const analyzeExamResults = async (examResults: any[]): Promise<ExamAnalys
       topic: 'Sınav Stratejisi',
       priority: 'medium',
       estimatedHours: 5,
-      description: 'Sınav tekniği ve zaman yönetimi çalışması yapın. Tahmin stratejileri öğrenin.'
+      description: 'Sınav tekniği,zaman yönetimi ve en çok çıkmış konuların çalışmasını yapın.'
     });
   }
 
@@ -376,20 +376,98 @@ const getSubjectNet = (exam: any, subject: string): number | null => {
 };
 
 export const generateMotivationalMessage = (studentData: any): string => {
-  const messages = [
-    'Bugün dün yapamadığın bir şeyi yapabilirsin! 💪',
-    'Her çalıştığın dakika seni hedefe bir adım daha yaklaştırıyor! 🎯',
-    'Başarı, küçük çabaların günlük tekrarıdır. Devam et! ⭐',
-    'Sen yapabilirsin! Her zorluk, seni daha güçlü yapıyor. 🚀',
-    'Bugün kendine yatırım yap, yarın kendine teşekkür et! 📚',
-    'Hayallerinin peşinden koşmaya devam et! 🌟',
-    'Her yeni gün, yeni bir fırsat demektir! 🌅',
-    'Azim ve kararlılık her kapıyı açar! 🔑',
-    'Başarı yolunda her adım değerlidir! 👣',
-    'Kendine inan, çünkü sen eşsizsin! ✨'
-  ];
+  // Contextual messages based on student performance
+  const performanceLevel = calculatePerformanceLevel(studentData);
   
-  return messages[Math.floor(Math.random() * messages.length)];
+  const messagesByLevel = {
+    excellent: [
+      'Harika gidiyorsun! Bu performansı sürdür! 🏆',
+      'Muhteşem bir başarı gösteriyorsun! Devam et! ⭐',
+      'Sen bir yıldızsın! Potansiyelin sınırsız! 🌟',
+      'Bu başarı senin emeğinin ödülü! Gurur duyuyoruz! 💫',
+      'Lider gibi ilerliyorsun! İlham veriyorsun! 👑'
+    ],
+    good: [
+      'Çok iyi ilerliyorsun! Hedefine yaklaşıyorsun! 🎯',
+      'Güzel bir grafik çiziyorsun! Böyle devam! 📈',
+      'Emeklerin karşılığını alıyorsun! Bravo! 👏',
+      'Bu tempo ile başarı kaçınılmaz! 🚀',
+      'Her gün biraz daha iyisin! Fark edilir mi? ✨'
+    ],
+    needsWork: [
+      'Bugün dün yapamadığın bir şeyi yapabilirsin! 💪',
+      'Her çalıştığın dakika seni hedefe bir adım daha yaklaştırıyor! 🎯',
+      'Başarı, küçük çabaların günlük tekrarıdır. Devam et! ⭐',
+      'Her zorluk, seni daha güçlü yapıyor. Sen yapabilirsin! 🔥',
+      'Düşmek yok, kalkmak var! Hadi yeniden başla! 💫'
+    ],
+    struggling: [
+      'Zor zamanlar geçici, başarı kalıcıdır! 🌈',
+      'Her usta bir zamanlar acemiydi. Sen de öğreniyorsun! 📚',
+      'Bugün zorlanıyorsan, yarın daha güçlü olacaksın! 💪',
+      'Başarısızlık değil, öğrenme fırsatı! Pes etme! 🎓',
+      'En karanlık gece bile sabaha çıkar. Devam et! 🌅'
+    ],
+    newStart: [
+      'Yeni bir başlangıç, yeni bir umut! Haydi! 🎉',
+      'Bugün, geleceğini şekillendirme günü! 🚀',
+      'Her büyük yolculuk ilk adımla başlar! 👣',
+      'Hazırsın! Şimdi zamanı! 💫',
+      'Senin dönemin başlıyor! Hazır mısın? ⚡'
+    ]
+  };
+
+  // Time-based messages
+  const hour = new Date().getHours();
+  const timeMessages = {
+    morning: [
+      'Günaydın! Bugün harika bir gün olacak! ☀️',
+      'Sabah erken kalkan yol alır! Hadi başlayalım! 🌅',
+      'Yeni bir gün, yeni fırsatlar! 🌞'
+    ],
+    afternoon: [
+      'Öğlen enerjini topla! İkinci yarı senin! ⚡',
+      'Günün yarısı geçti, momentum kaybetme! 🔥',
+      'Ara ver ama pes etme! Devam! 💪'
+    ],
+    evening: [
+      'Akşam çalışmaları en verimli! Fırsatı kaçırma! 🌙',
+      'Gece sessizliği, konsantrasyonun dostu! 📚',
+      'Son bir gayret daha! Yarın kendine teşekkür edeceksin! ⭐'
+    ],
+    night: [
+      'Gece geç oldu, dinlenmeyi unutma! 😴',
+      'Yarın için enerji topla! İyi geceler! 🌜',
+      'Başarı için istirahat de önemli! 💤'
+    ]
+  };
+
+  // Combine contextual and time-based
+  let selectedMessages = messagesByLevel[performanceLevel] || messagesByLevel.newStart;
+  
+  // Add time-specific message if it's extreme hours
+  if (hour >= 6 && hour < 12) {
+    selectedMessages = [...selectedMessages, ...timeMessages.morning];
+  } else if (hour >= 22 || hour < 6) {
+    selectedMessages = [...selectedMessages, ...timeMessages.night];
+  }
+
+  return selectedMessages[Math.floor(Math.random() * selectedMessages.length)];
+};
+
+// Helper function to determine performance level
+const calculatePerformanceLevel = (studentData: any): 'excellent' | 'good' | 'needsWork' | 'struggling' | 'newStart' => {
+  if (!studentData?.exam_results || studentData.exam_results.length === 0) {
+    return 'newStart';
+  }
+
+  const recentExams = studentData.exam_results.slice(-5);
+  const avgScore = recentExams.reduce((sum: number, exam: any) => sum + (exam.total_score || 0), 0) / recentExams.length;
+
+  if (avgScore >= 400) return 'excellent';
+  if (avgScore >= 300) return 'good';
+  if (avgScore >= 200) return 'needsWork';
+  return 'struggling';
 };
 
 // Helper functions
@@ -425,9 +503,8 @@ const calculateDetailedSubjectAverages = (examResults: any[]): Record<string, an
         
         const recentAvg = recent.reduce((sum, net) => sum + net, 0) / recent.length;
         const olderAvg = older.reduce((sum, net) => sum + net, 0) / older.length;
-        
+
         change = recentAvg - olderAvg;
-        change = recent - older;
         
         if (change > 1) trend = 'increasing';
         else if (change < -1) trend = 'decreasing';
@@ -467,6 +544,8 @@ export const detectTopicWeaknesses = (topicScores: TopicPerformance[]): string[]
   return weaknesses;
 };
 
+
+
 export const generateStudyRecommendations = (weaknesses: string[]): string[] => {
   const recommendations: string[] = [];
   
@@ -481,4 +560,344 @@ export const generateStudyRecommendations = (weaknesses: string[]): string[] => 
   });
   
   return recommendations;
+};
+
+// ============================================
+// SMART STUDY RECOMMENDATIONS
+// ============================================
+
+export const generateSmartStudyPlan = (studentData: any) => {
+  const weakTopics = analyzeWeakTopics(studentData.exam_results || []);
+  const studyHours = calculateStudyHours(studentData);
+  
+  return {
+    priority: 'high',
+    focusAreas: weakTopics.slice(0, 3),
+    dailyGoal: `${Math.ceil(studyHours)} saat odaklanmış çalışma`,
+    weeklyTarget: generateWeeklyTargets(weakTopics, studyHours),
+    tips: generateStudyTips(weakTopics),
+    motivation: generateMotivationalMessage(studentData)
+  };
+};
+
+const analyzeWeakTopics = (examResults: any[]) => {
+  // Group by subject and find lowest performers
+  const subjectScores: Record<string, number[]> = {};
+  
+  examResults.forEach(exam => {
+    if (exam.subject_scores) {
+      Object.entries(exam.subject_scores).forEach(([subject, score]) => {
+        if (!subjectScores[subject]) subjectScores[subject] = [];
+        subjectScores[subject].push(score as number);
+      });
+    }
+  });
+
+  const weakTopics = Object.entries(subjectScores)
+    .map(([subject, scores]) => ({
+      subject,
+      avgScore: scores.reduce((a, b) => a + b, 0) / scores.length,
+      trend: calculateTrend(scores)
+    }))
+    .sort((a, b) => a.avgScore - b.avgScore);
+
+  return weakTopics;
+};
+
+const calculateStudyHours = (studentData: any) => {
+  const currentScore = studentData.latest_exam_score || 0;
+  const targetScore = studentData.target_score || 500;
+  const daysUntilExam = calculateDaysUntilExam(studentData.target_exam_date);
+  
+  const scoreGap = targetScore - currentScore;
+  
+  let hoursNeeded = 3;
+  
+  if (scoreGap > 200) {
+    hoursNeeded = 5;
+  } else if (scoreGap > 100) {
+    hoursNeeded = 4;
+  } else if (scoreGap > 50) {
+    hoursNeeded = 3.5;
+  }
+  
+  if (daysUntilExam < 30 && daysUntilExam > 0) {
+    hoursNeeded = Math.min(hoursNeeded + 1, 6);
+  }
+  
+  return Math.min(hoursNeeded, 6);
+};
+
+const calculateTrend = (scores: number[]) => {
+  if (scores.length < 2) return 'stable';
+  const recent = scores.slice(-3);
+  const older = scores.slice(0, -3);
+  
+  const recentAvg = recent.reduce((a, b) => a + b, 0) / recent.length;
+  const olderAvg = older.reduce((a, b) => a + b, 0) / (older.length || 1);
+  
+  if (recentAvg > olderAvg + 5) return 'improving';
+  if (recentAvg < olderAvg - 5) return 'declining';
+  return 'stable';
+};
+
+const calculateDaysUntilExam = (examDate: string | null) => {
+  if (!examDate) return 365;
+  const today = new Date();
+  const target = new Date(examDate);
+  return Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+};
+
+const generateWeeklyTargets = (weakTopics: any[], studyHours: number) => {
+  return weakTopics.slice(0, 3).map(topic => ({
+    subject: topic.subject,
+    hoursPerWeek: Math.ceil(studyHours * 0.4), // 40% of daily time
+    specificGoals: [
+      `${topic.subject} konusunda 10 soru çöz`,
+      `Zayıf konuları tekrar et`,
+      `Deneme sınavında +5 net hedefle`
+    ]
+  }));
+};
+
+const generateStudyTips = (weakTopics: any[]) => {
+  const tipsBySubject: Record<string, string[]> = {
+    'Matematik': [
+      '📐 Formülleri ezberle değil, mantığını anla',
+      '🧮 Her gün en az 20 soru çöz',
+      '📝 Yanlış sorularını not defterine yaz,Öğretmenine sormaktan çekinme',
+      '🎯 Önce kolay sorularla başla, sonra zorlaş'
+    ],
+    'Türkçe': [
+      '📚 Her gün 1 paragraf oku ve analiz et. (40 sorunun 26 sorusu paragraftan gelecek⚠️)',
+      '✍️ Sözcük dağarcığını genişlet',
+      '🎭 Anlatım türlerini iyi öğren',
+      '📖 Noktalama kurallarını pekiştir'
+    ],
+    'Fizik': [
+      '🔬 Deneyleri görselleştir',
+      '📊 Grafik sorularına odaklan',
+      '⚡ Formül türetmeyi öğren',
+      '🎯 Birim çevirmeleri dikkatli yap'
+    ],
+    'Kimya': [
+      '⚗️ Periyodik tabloyu ezberle',
+      '🧪 Tepkime denklemlerini denkleştir',
+      '📈 Mol kavramını iyice öğren',
+      '🎨 Renk değişimlerini not al'
+    ],
+    'Biyoloji': [
+      '🧬 DNA-RNA farkını iyi öğren',
+      '🔬 Hücre organellerini görselleştir',
+      '🌱 Fotosentez-solunum karşılaştır',
+      '📊 Tablo ve şema çalış'
+    ]
+  };
+
+  const tips: string[] = [];
+  weakTopics.forEach(topic => {
+    const subjectTips = tipsBySubject[topic.subject] || [
+      '📚 Düzenli çalış',
+      '🎯 Hedef belirle',
+      '💪 Pes etme'
+    ];
+    tips.push(...subjectTips.slice(0, 2));
+  });
+
+  return tips.slice(0, 5);
+};
+
+// ============================================
+// PERFORMANCE INSIGHTS
+// ============================================
+
+export const generatePerformanceInsights = (studentData: any) => {
+  const insights = [];
+
+  // Trend analysis
+  if (studentData.exam_results && studentData.exam_results.length >= 3) {
+    const recent = studentData.exam_results.slice(-3);
+    const scores = recent.map((e: any) => e.total_score);
+    const trend = calculateTrend(scores);
+
+    if (trend === 'improving') {
+      insights.push({
+        type: 'success',
+        icon: '📈',
+        title: 'Harika İlerleme!',
+        message: 'Son 3 denemedeki performansın sürekli yükseliyor! Bu temponu koru.',
+        action: 'Mevcut çalışma planını sürdür'
+      });
+    } else if (trend === 'declining') {
+      insights.push({
+        type: 'warning',
+        icon: '📉',
+        title: 'Dikkat: Düşüş Var',
+        message: 'Son performansında düşüş gözlemleniyor. Çalışma stratejini gözden geçir.',
+        action: 'Öğretmeninle görüş'
+      });
+    }
+  }
+
+  // Study consistency
+  const studySessions = studentData.study_sessions || [];
+  const recentSessions = studySessions.filter((s: any) => {
+    const date = new Date(s.session_date);
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    return date >= weekAgo;
+  });
+
+  if (recentSessions.length >= 5) {
+    insights.push({
+      type: 'success',
+      icon: '🔥',
+      title: 'Süper Disiplin!',
+      message: `Bu hafta ${recentSessions.length} gün çalıştın! Tutarlılık anahtardır.`,
+      action: 'Streaki kırma!'
+    });
+  } else if (recentSessions.length === 0) {
+    insights.push({
+      type: 'danger',
+      icon: '⚠️',
+      title: 'Hey ',
+      message: 'Bu hafta çıkmış sorulardan soru çözmediğini biliyorum, Haydi başlayalım!',
+      action: 'Hemen son yıllarda çıkmış konulardan soru çöz🚀'
+    });
+  }
+
+  // Subject balance
+  const subjectHours: Record<string, number> = {};
+  studySessions.forEach((s: any) => {
+    subjectHours[s.subject] = (subjectHours[s.subject] || 0) + s.duration_minutes / 60;
+  });
+
+  const subjects = Object.keys(subjectHours);
+  if (subjects.length > 0) {
+    const maxSubject = subjects.reduce((a, b) => subjectHours[a] > subjectHours[b] ? a : b);
+    const minSubject = subjects.reduce((a, b) => subjectHours[a] < subjectHours[b] ? a : b);
+
+    if (subjects.length > 1 && subjectHours[maxSubject] / subjectHours[minSubject] > 3) {
+      insights.push({
+        type: 'info',
+        icon: '⚖️',
+        title: 'Denge Kur',
+        message: `${maxSubject} dersine çok, ${minSubject} dersine az zaman ayırıyorsun.`,
+        action: 'Çalışma saatlerini dengele'
+      });
+    }
+  }
+
+  // Exam readiness
+  if (studentData.target_exam_date) {
+    const daysLeft = calculateDaysUntilExam(studentData.target_exam_date);
+    if (daysLeft <= 30 && daysLeft > 0) {
+      insights.push({
+        type: 'warning',
+        icon: '⏰',
+        title: 'Sınav Yaklaşıyor!',
+        message: `Sınavına ${daysLeft} gün kaldı. Son sprint zamanı!`,
+        action: 'Deneme sayısını artır'
+      });
+    }
+  }
+
+  return insights.length > 0 ? insights : [{
+    type: 'info',
+    icon: '🎯',
+    title: 'Yeni Başlangıç',
+    message: 'Daha fazla veri toplandıkça kişiselleştirilmiş öneriler göreceksin!',
+    action: 'İlk denemeni ekle'
+  }];
+};
+
+// ============================================
+// DAILY CHALLENGE SYSTEM
+// ============================================
+
+export const generateDailyChallenge = (studentData: any) => {
+  const hour = new Date().getHours();
+  const performanceLevel = calculatePerformanceLevel(studentData);
+
+  const challenges = [
+    {
+      id: 'morning_study',
+      title: 'Sabah Kahramanı',
+      description: 'Saat 09:00\'dan önce 30 dakika çalış',
+      points: 60,
+      difficulty: 'medium',
+      subject: null,
+      timeRestriction: { before: 9 }, // Saat 9'dan önce
+      available: hour < 9 // Sadece sabah 9'dan önce göster
+    },
+    {
+      id: 'math_sprint',
+      title: '20 Dakika Matematik Sprintı',
+      description: '20 dakika boyunca sadece matematik çöz',
+      points: 50,
+      difficulty: 'easy',
+      subject: 'Matematik',
+      available: true
+    },
+    {
+      id: 'weak_topic_focus',
+      title: 'Zayıf Konuya Odaklan',
+      description: 'En zayıf olduğun konudan 10 soru çöz',
+      points: 75,
+      difficulty: 'medium',
+      subject: null,
+      available: true
+    },
+    {
+      id: 'full_exam',
+      title: 'Tam Deneme Sınavı',
+      description: 'Zaman tutarak tam bir deneme çöz',
+      points: 150,
+      difficulty: 'hard',
+      subject: 'Tüm Dersler',
+      available: true
+    },
+    {
+      id: 'no_mistake',
+      title: 'Mükemmel Performans',
+      description: '10 soru çöz, hiç yanlış yapma',
+      points: 100,
+      difficulty: 'hard',
+      subject: null,
+      available: true
+    },
+    {
+      id: 'evening_study',
+      title: 'Gece Kahramanı',
+      description: 'Saat 20:00-23:00 arası 1 saat çalış',
+      points: 70,
+      difficulty: 'medium',
+      subject: null,
+      timeRestriction: { between: [20, 23] },
+      available: hour >= 20 && hour < 23
+    }
+  ];
+
+  // Mevcut saate göre uygun challenge'ları filtrele
+  const availableChallenges = challenges.filter(c => c.available);
+
+  if (availableChallenges.length === 0) {
+    return challenges[1]; // Varsayılan: matematik sprint
+  }
+
+  // Performansa göre zorluk filtrele
+  let filteredChallenges = availableChallenges;
+  if (performanceLevel === 'struggling' || performanceLevel === 'needsWork') {
+    filteredChallenges = availableChallenges.filter(c => c.difficulty !== 'hard');
+  } else if (performanceLevel === 'excellent') {
+    filteredChallenges = availableChallenges.filter(c => c.difficulty !== 'easy');
+  }
+
+  if (filteredChallenges.length === 0) {
+    filteredChallenges = availableChallenges;
+  }
+
+  // Günün challenge'ını seç (her gün aynı olsun)
+  const dayIndex = new Date().getDay();
+  return filteredChallenges[dayIndex % filteredChallenges.length];
 };
