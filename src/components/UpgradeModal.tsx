@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, ArrowUp, CheckCircle, Loader } from 'lucide-react';
-import { calculateProration, upgradeSubscription } from '../lib/subscriptionUpgrade';
+import { calculateProration } from '../lib/subscriptionUpgrade';
 import { useAuth } from '../hooks/useAuth';
 
 interface UpgradeModalProps {
@@ -9,6 +9,7 @@ interface UpgradeModalProps {
   targetPlanId: string;
   targetPlanName: string;
   targetPlanPrice: { monthly: string; yearly: string };
+  currentBillingCycle: 'monthly' | 'yearly';
   onSuccess: () => void;
 }
 
@@ -17,11 +18,11 @@ export default function UpgradeModal({
   onClose,
   targetPlanId,
   targetPlanName,
-  targetPlanPrice,
-  onSuccess
-}: UpgradeModalProps) {
+  currentBillingCycle}: UpgradeModalProps) {
   const { user } = useAuth();
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+
+  const billingCycle = currentBillingCycle;
+  
   const [calculation, setCalculation] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -30,7 +31,7 @@ export default function UpgradeModal({
     if (isOpen && user?.id) {
       loadCalculation();
     }
-  }, [isOpen, user?.id, billingCycle]);
+  }, [isOpen, user?.id]);
 
   const loadCalculation = async () => {
     if (!user?.id) return;
@@ -42,9 +43,19 @@ export default function UpgradeModal({
   };
 
   const handleUpgrade = async () => {
-    if (!user?.id) return;
+  if (!user?.id) return;
 
-    setProcessing(true);
+  setProcessing(true);
+
+  // ✅ DEMO MOD: Gerçek upgrade yapmadan ödeme simülasyonu
+  setTimeout(() => {
+    setProcessing(false);
+    alert(`✅ Demo Başarılı!\n\n💳 Ödeme Detayları:\nPaket: ${targetPlanName}\nTutar: ${calculation?.amountToPay.toFixed(2)}₺\n\n⚠️ Gerçek ödeme entegrasyonu eklenecek.`);
+    onClose();
+  }, 2000);
+
+  /* GERÇEK UPGRADE - Ödeme sonrası aktif olacak
+  try {
     const result = await upgradeSubscription({
       userId: user.id,
       newPlanId: targetPlanId,
@@ -60,7 +71,12 @@ export default function UpgradeModal({
     } else {
       alert('❌ Hata: ' + result.error);
     }
-  };
+  } catch (error: any) {
+    setProcessing(false);
+    alert('❌ Beklenmeyen hata: ' + error.message);
+  }
+  */
+};
 
   if (!isOpen) return null;
 
@@ -89,40 +105,11 @@ export default function UpgradeModal({
         </div>
 
         <div className="p-6">
-          {/* Billing Cycle Selection */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              Faturalama Dönemi
-            </label>
-            <div className="grid grid-cols-2 gap-4">
-              <button
-                onClick={() => setBillingCycle('monthly')}
-                className={`p-4 border-2 rounded-lg text-center transition-all ${
-                  billingCycle === 'monthly'
-                    ? 'border-blue-600 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <div className="font-semibold text-lg">{targetPlanPrice.monthly}₺</div>
-                <div className="text-sm text-gray-600">Aylık</div>
-              </button>
-              <button
-                onClick={() => setBillingCycle('yearly')}
-                className={`p-4 border-2 rounded-lg text-center transition-all relative ${
-                  billingCycle === 'yearly'
-                    ? 'border-blue-600 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <span className="absolute -top-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full">
-                  %20 İndirim
-                </span>
-                <div className="font-semibold text-lg">{targetPlanPrice.yearly}₺</div>
-                <div className="text-sm text-gray-600">Yıllık</div>
-              </button>
-            </div>
+          <div className="mb-4 text-center">
+            <span className="inline-block bg-blue-100 text-blue-800 px-4 py-2 rounded-lg font-semibold">
+              {billingCycle === 'monthly' ? '📅 Aylık Paket' : '📅 Yıllık Paket'}
+            </span>
           </div>
-
           {/* Calculation Summary */}
           {loading ? (
             <div className="flex justify-center py-8">

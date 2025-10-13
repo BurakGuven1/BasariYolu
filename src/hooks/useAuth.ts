@@ -1,125 +1,79 @@
-import { useState, useEffect } from 'react';
-import { User } from '@supabase/supabase-js';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 
-interface AuthUser extends User {
-  profile?: any;
-  isParentLogin?: boolean;
-  connectedStudents?: any[];
-}
-
 export const useAuth = () => {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [initialized, setInitialized] = useState(false);
+  const isInitialized = useRef(false);
+  const lastAuthState = useRef<string>('');
 
-  // 🚀 İlk yüklemede session kontrolü
   useEffect(() => {
-    if (initialized) return;
+    // Sadece bir kere çalışsın
+    if (isInitialized.current) return;
+    isInitialized.current = true;
 
-    const initializeAuth = async () => {
-      setLoading(true);
-      try {
-        // 🔹 Geçici veli oturumu kontrolü
-        const tempParent = localStorage.getItem('tempParentUser');
-        if (tempParent) {
-          const parentUser = JSON.parse(tempParent);
-          setUser(parentUser);
-          return;
-        }
+    console.log('🔵 useAuth initialized');
 
-        // 🔹 Supabase oturumu kontrolü
-        const { data: { session } } = await supabase.auth.getSession();
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUser({
+          id: session.user.id,
+          email: session.user.email,
+          profile: session.user.user_metadata
+        });
+      }
+      setLoading(false);
+    });
 
-        if (session?.user) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
+    // Listen to auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const newState = session?.user?.id || 'signed_out';
+      
+      // Aynı state tekrar geliyorsa ignore et
+      if (lastAuthState.current === newState) return;
+      lastAuthState.current = newState;
 
-          setUser({
-            ...session.user,
-            profile,
-          });
-        } else {
-          setUser(null);
-        }
-      } catch (err) {
-        console.error('Auth init error:', err);
+      console.log('🔔 Auth changed:', _event);
+
+      if (session?.user) {
+        setUser({
+          id: session.user.id,
+          email: session.user.email,
+          profile: session.user.user_metadata
+        });
+      } else {
         setUser(null);
-      } finally {
-        setLoading(false);
-        setInitialized(true);
       }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+      isInitialized.current = false;
     };
+  }, []);
 
-    initializeAuth();
-  }, [initialized]);
-
-  // 🎧 Auth state değişimlerini dinle
-  useEffect(() => {
-    if (!initialized) return;
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event);
-
-        // 🔹 Eğer veli login varsa, Supabase state'i ezmesin
-        const tempParent = localStorage.getItem('tempParentUser');
-        if (tempParent) {
-          setUser(JSON.parse(tempParent));
-          return;
-        }
-
-        // 🔹 Supabase logout
-        if (event === 'SIGNED_OUT') {
-          localStorage.removeItem('tempParentUser');
-          setUser(null);
-          return;
-        }
-
-        // 🔹 Supabase login
-        if (session?.user) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-
-          setUser({
-            ...session.user,
-            profile,
-          });
-        } else {
-          setUser(null);
-        }
-      }
-    );
-
-    return () => subscription.unsubscribe();
-  }, [initialized]);
-
-  // 👨‍👩‍👧 Geçici veli oturumu
-  const setParentUser = (parentUser: any) => {
-    if (parentUser?.isParentLogin) {
-      localStorage.setItem('tempParentUser', JSON.stringify(parentUser));
-    }
-    setUser(parentUser);
-  };
-
-  // 🚪 Logout fonksiyonu (App tarafından çağrılacak)
   const clearUser = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (err) {
-      console.error('Logout error:', err);
-    } finally {
-      localStorage.removeItem('tempParentUser');
-      setInitialized(false);
-      setUser(null);
-    }
+    console.log('🔴 clearUser called');
+    await supabase.auth.signOut();
+    setUser(null);
+    window.location.href = '/';
   };
 
-  return { user, loading, setParentUser, clearUser };
+  const setParentUser = (parentData: any) => {
+    console.log('👨‍👩‍👧 Setting parent user:', parentData);
+    setUser({
+      id: parentData.id || `parent_${Date.now()}`,
+      email: parentData.email || '',
+      profile: {
+        full_name: parentData.full_name || 'Veli',
+        user_type: 'parent'
+      },
+      isParentLogin: true,
+      connectedStudents: parentData.connectedStudents || []
+    });
+    localStorage.setItem('tempParentUser', JSON.stringify(parentData));
+  };
+
+  return { user, loading, clearUser, setParentUser };
 };

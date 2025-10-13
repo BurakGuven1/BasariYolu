@@ -8,23 +8,23 @@ import HomeworkForm from './HomeworkForm';
 import ExamTopicsSection from './ExamTopicsSection';
 import AIInsights from './AIInsights';
 import { useFeatureAccess } from '../hooks/useFeatureAccess';
-import SubscriptionBadge from './SubscriptionBadge';
 import ExamLimitBadge from './ExamLimitBadge';
 import FeatureGate from './FeatureGate';
-import SmartStudyPlan from './SmartStudyPlan';
 import ExamCountdown from './ExamCountdown';
 import UpgradeModal from './UpgradeModal';
-import UpgradeHistory from './UpgradeHistory';
 import PointsDisplay from './PointsDisplay';
+import AIRecommendations from './AIRecommendations';
+import SubscriptionManagement from './SubscriptionManagement';
 import { addStudySessionPoints, completeChallenge, isChallengeCompletedToday } from '../lib/pointsSystem';
 import { packages } from '../data/packages';
 import { generatePerformanceInsights, generateDailyChallenge } from '../lib/ai';
-import { getStudentInviteCode, signOut, deleteExamResult, updateHomework, deleteHomework, addStudySession, getWeeklyStudyGoal, createWeeklyStudyGoal, updateWeeklyStudyGoal, getWeeklyStudySessions } from '../lib/supabase';
+import { getStudentInviteCode, deleteExamResult, updateHomework, deleteHomework, addStudySession, getWeeklyStudyGoal, createWeeklyStudyGoal, updateWeeklyStudyGoal, getWeeklyStudySessions } from '../lib/supabase';
 
 export default function StudentDashboard() {
   const [insights, setInsights] = useState<any[]>([]);
   const [dailyChallenge, setDailyChallenge] = useState<any>(null);
-  const { planName, isFreeTier } = useFeatureAccess();
+  const { planName} = useFeatureAccess();
+  const { user, clearUser } = useAuth();
   const [activeTab, setActiveTab] = useState<'overview' | 'exams' | 'homeworks' | 'analysis' | 'classes' | 'smartplan'| 'subscription'>('overview');
   const [showExamForm, setShowExamForm] = useState(false);
   const [showHomeworkForm, setShowHomeworkForm] = useState(false);
@@ -62,6 +62,7 @@ export default function StudentDashboard() {
   const [showJoinClassModal, setShowJoinClassModal] = useState(false);
   const [classInviteCodeInput, setClassInviteCodeInput] = useState('');
   const [showExamTopics, setShowExamTopics] = useState(false);
+  const { subscription } = useFeatureAccess();
 
   const handleCreateWeeklyGoal = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -123,7 +124,6 @@ export default function StudentDashboard() {
 
   const [weeklyStudyHours, setWeeklyStudyHours] = useState(0);
   
-  const { user } = useAuth();
   const { 
     studentData, 
     examResults, 
@@ -220,12 +220,9 @@ export default function StudentDashboard() {
     loadWeeklyData();
   }, [studentData]);
 
-  const handleLogout = async () => {
-    const { error } = await signOut();
-    if (error) {
-      console.error('Logout error:', error);
-    }
-    // Auth hook will handle the state change automatically
+  const handleLogout = () => {
+    console.log('🔴 StudentDashboard logout başlatıldı');
+    clearUser();
   };
 
   const handleUpgradeClick = (planName: 'advanced' | 'professional') => {
@@ -240,7 +237,6 @@ export default function StudentDashboard() {
   <FeatureGate
     feature="ai_analysis"
     onUpgrade={() => handleUpgradeClick('advanced')}
-    showPaywall={true}
   ></FeatureGate>
 
   const handleShowInviteCode = async () => {
@@ -483,12 +479,7 @@ const chartData = filteredExamResults
                   +{dailyChallenge.points} puan
                 </span>
               </div>
-              <button className="bg-white text-purple-600 px-6 py-2 rounded-full font-semibold hover:bg-purple-50">
-                Başla
-              </button>
-            </div>
-          </div>
-          <button
+                    <button
             onClick={async () => {
               if (!studentData) return;
               
@@ -499,7 +490,6 @@ const chartData = filteredExamResults
                 alert('🎯 Bu görevi bugün zaten tamamladınız!');
                 return;
               }
-              
               // Challenge tamamla
               const result = await completeChallenge(
                 studentData.id,
@@ -517,8 +507,10 @@ const chartData = filteredExamResults
             }}
             className="bg-white text-purple-600 px-6 py-2 rounded-full font-semibold hover:bg-purple-50"
           >
-            Başla
+            Görevi Tamamladım
           </button>
+            </div>
+          </div>   
         </div>
       )}
     </div>
@@ -790,10 +782,10 @@ const chartData = filteredExamResults
               Veli Davet Kodu
             </button>
           </div>
+          
+          {/* Points ve Logout Birlikte */}
           <div className="flex flex-col items-end gap-2">
-            {studentData && <PointsDisplay studentId={studentData.id} />}      
-          </div>
-          <div className="flex flex-col items-end space-y-2">
+            {studentData && <PointsDisplay studentId={studentData.id} />}
             <button
               onClick={handleLogout}
               className="flex items-center space-x-2 bg-red-100 text-red-700 px-4 py-2 rounded-lg hover:bg-red-200 transition-colors"
@@ -844,7 +836,7 @@ const chartData = filteredExamResults
         {activeTab === 'exams' && renderExams()}
         {activeTab === 'analysis' && renderAnalysis()}
         {activeTab === 'smartplan' && studentData && (
-          <SmartStudyPlan studentData={studentData} />
+          <AIRecommendations studentId={studentData.id} />
         )}
         {activeTab === 'classes' && (
           <div className="bg-white rounded-lg p-6 shadow-sm">
@@ -1143,23 +1135,24 @@ const chartData = filteredExamResults
         )}
 
         {showUpgradeModal && targetPlan && (
-        <UpgradeModal
-          isOpen={showUpgradeModal}
-          onClose={() => {
-            setShowUpgradeModal(false);
-            setTargetPlan(null);
-          }}
-          targetPlanId={targetPlan.id}
-          targetPlanName={targetPlan.name}
-          targetPlanPrice={{
-            monthly: targetPlan.monthlyPrice.toString(),
-            yearly: targetPlan.yearlyPrice.toString()
-          }}
-          onSuccess={() => {
-            refetch(); // Subscription'ı yeniden yükle
-          }}
-        />
-      )}
+          <UpgradeModal
+            isOpen={showUpgradeModal}
+            onClose={() => {
+              setShowUpgradeModal(false);
+              setTargetPlan(null);
+            }}
+            targetPlanId={targetPlan.id}
+            targetPlanName={targetPlan.name}
+            targetPlanPrice={{
+              monthly: targetPlan.monthlyPrice.toString(),
+              yearly: targetPlan.yearlyPrice.toString()
+            }}
+            currentBillingCycle={subscription?.billing_cycle || 'monthly'}
+            onSuccess={() => {
+              refetch();
+            }}
+          />
+        )}
 
         {/* Exam Topics Modal */}
         {showExamTopics && (
@@ -1184,50 +1177,17 @@ const chartData = filteredExamResults
             </div>
           </div>
         )}
-        {!isFreeTier && (
-          <div className="mb-6">
-            <SubscriptionBadge />
-          </div>
-        )}
+        
 
         {planName === 'basic' && (
           <div className="mb-6">
             <ExamLimitBadge onUpgrade={() => setShowUpgradeModal(true)} />
           </div>
         )}
-        {activeTab === 'analysis' && (
-          <FeatureGate
-            feature="ai_analysis"
-            onUpgrade={() => setShowUpgradeModal(true)}
-            showPaywall={true}
-          >
-            <div>
-              {/* AI Önerileri */}
-              <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-                <h3 className="text-lg font-semibold mb-4 flex items-center">
-                  <Brain className="h-5 w-5 mr-2 text-purple-600" />
-                  AI Önerileri
-                </h3>
-                {/* ... AI içeriği ... */}
-              </div>
-
-              {/* Kişiselleştirilmiş Çalışma Planı */}
-              <div className="bg-white rounded-xl shadow-sm p-6">
-                <h3 className="text-lg font-semibold mb-4 flex items-center">
-                  <Target className="h-5 w-5 mr-2 text-orange-600" />
-                  Kişiselleştirilmiş Çalışma Planı
-                </h3>
-                {/* ... plan içeriği ... */}
-              </div>
-            </div>
-          </FeatureGate>
-        )}
+        
 
         {activeTab === 'subscription' && (
-          <div className="space-y-6">
-            <SubscriptionBadge />
-            <UpgradeHistory />
-          </div>
+          <SubscriptionManagement />
         )}
       </div>
 

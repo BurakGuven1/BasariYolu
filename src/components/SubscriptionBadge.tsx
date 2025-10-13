@@ -1,16 +1,25 @@
-import React, { useState } from 'react';
-import { Crown, ArrowUp, Clock } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Crown, Clock, ArrowUp } from 'lucide-react';
 import { useFeatureAccess } from '../hooks/useFeatureAccess';
 import UpgradeModal from './UpgradeModal';
 import { packages } from '../data/packages';
 
 export default function SubscriptionBadge() {
+  // ✅ 1. TÜM HOOK'LAR EN ÜSTTE (return'den önce)
   const { planName, planDisplayName, subscription } = useFeatureAccess();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [targetPlan, setTargetPlan] = useState<any>(null);
 
-  if (!subscription || !planName) return null;
+  // ✅ 2. useMemo hook'u da en üstte
+  const daysRemaining = useMemo(() => {
+    if (!subscription?.current_period_end) return 0;
+    const today = new Date();
+    const endDate = new Date(subscription.current_period_end);
+    const diff = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    return Math.max(0, diff);
+  }, [subscription?.current_period_end]);
 
+  // ✅ 3. Normal değişkenler ve fonksiyonlar
   const canUpgrade = planName === 'basic' || planName === 'advanced';
 
   const getNextPlan = () => {
@@ -45,14 +54,10 @@ export default function SubscriptionBadge() {
     }
   };
 
-  // Kalan gün hesaplama
-  const daysRemaining = React.useMemo(() => {
-    if (!subscription.current_period_end) return 0;
-    const today = new Date();
-    const endDate = new Date(subscription.current_period_end);
-    const diff = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    return Math.max(0, diff);
-  }, [subscription.current_period_end]);
+  // ✅ 4. ŞİMDİ early return güvenli
+  if (!subscription || !planName) {
+    return null;
+  }
 
   return (
     <>
@@ -140,8 +145,9 @@ export default function SubscriptionBadge() {
             monthly: targetPlan.monthlyPrice.toString(),
             yearly: targetPlan.yearlyPrice.toString()
           }}
+          currentBillingCycle={subscription?.billing_cycle || 'monthly'} // ✅ EKLE
           onSuccess={() => {
-            window.location.reload(); // Sayfayı yenile
+            window.location.reload();
           }}
         />
       )}

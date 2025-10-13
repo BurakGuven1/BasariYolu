@@ -7,11 +7,11 @@ export function useFeatureAccess() {
   const { user } = useAuth();
   const [subscription, setSubscription] = useState<UserSubscription | null>(null);
   const [loading, setLoading] = useState(true);
-const [examStats, setExamStats] = useState<{ count: number; limit: number; remaining: number }>({ 
-  count: 0, 
-  limit: 0, 
-  remaining: 0 
-});
+  const [examStats, setExamStats] = useState<{ count: number; limit: number; remaining: number }>({ 
+    count: 0, 
+    limit: 0, 
+    remaining: 0 
+  });
 
   useEffect(() => {
     if (user?.id) {
@@ -24,10 +24,12 @@ const [examStats, setExamStats] = useState<{ count: number; limit: number; remai
 
   const loadSubscription = async () => {
     try {
+      console.log('🔍 Loading subscription for user:', user?.id);
       const { data } = await getUserSubscription(user!.id);
+      console.log('✅ Subscription loaded:', data);
       setSubscription(data);
     } catch (error) {
-      console.error('Error loading subscription:', error);
+      console.error('❌ Error loading subscription:', error);
     } finally {
       setLoading(false);
     }
@@ -42,50 +44,69 @@ const [examStats, setExamStats] = useState<{ count: number; limit: number; remai
     }
   };
 
-const hasFeature = useCallback((featureName: string): boolean => {
-  if (!subscription?.plan?.features) return false;
-  
-  // Feature name mapping
-  const featureMap: Record<string, string> = {
-    'ai_analysis': 'ai_support',
-    'exam_topics': 'limited_content',
-    'advanced_reports': 'advanced_reports',
-    'custom_goals': 'priority_support'
-  };
-  
-  const mappedName = featureMap[featureName] || featureName;
-  const featureValue = subscription.plan.features[mappedName];
-  
-  if (featureName === 'exam_topics') {
-    return featureValue === false;
-  }
-  
-  return featureValue === true;
-}, [subscription]);
+  const hasFeature = useCallback((featureName: string): boolean => {
+    if (!subscription?.plan?.features) return false;
+    
+    // Feature name mapping
+    const featureMap: Record<string, string> = {
+      'ai_analysis': 'ai_support',
+      'exam_topics': 'limited_content',
+      'advanced_reports': 'advanced_reports',
+      'custom_goals': 'priority_support'
+    };
+    
+    const mappedName = featureMap[featureName] || featureName;
+    const featureValue = subscription.plan.features[mappedName];
+    
+    // exam_topics için ters mantık: limited_content = false ise tüm konular açık
+    if (featureName === 'exam_topics') {
+      return featureValue === false;
+    }
+    
+    return featureValue === true;
+  }, [subscription]);
 
   const canAccessExamTopics = useCallback((year: string): boolean => {
-    const freeYears = ['2018', '2019', '2020'];
+    const freeYears = ['2018', '2019', '2020']; // Temel paket için ücretsiz yıllar
+    
+    // Ücretsiz yıllar herkese açık
     if (freeYears.includes(year)) return true;
-    return hasFeature('exam_topics');
-  }, [hasFeature]);
+    
+    // Plan kontrolü
+    const planName = subscription?.plan?.name;
+    
+    // Gelişmiş paket: 2021-2025 açık
+    if (planName === 'advanced' || planName === 'gelismis') {
+      const advancedYears = ['2021', '2022', '2023', '2024', '2025'];
+      return advancedYears.includes(year);
+    }
+    
+    // Profesyonel paket: Tüm yıllar açık
+    if (planName === 'professional' || planName === 'profesyonel') {
+      return true;
+    }
+    
+    // Temel paket: Sadece ücretsiz yıllar
+    return false;
+  }, [subscription]);
 
   const canAddExam = useCallback((): boolean => {
-  if (!subscription) return false;
-  
-  const planName = subscription.plan?.name;
-  
-  // Profesyonel paketler için sınırsız
-  if (planName === 'professional' || planName === 'profesyonel') {
-    return true;
-  }
-  
-  const features = subscription.plan?.features as any;
-  const maxExams = features?.max_exams || 0;
-  
-  if (maxExams === -1) return true;
-  
-  return examStats.count < maxExams;
-    }, [subscription, examStats]);
+    if (!subscription) return false;
+    
+    const planName = subscription.plan?.name;
+    
+    // Profesyonel paketler için sınırsız
+    if (planName === 'professional' || planName === 'profesyonel') {
+      return true;
+    }
+    
+    const features = subscription.plan?.features as any;
+    const maxExams = features?.max_exams || 0;
+    
+    if (maxExams === -1) return true;
+    
+    return examStats.count < maxExams;
+  }, [subscription, examStats]);
 
   const getFeatureLimit = useCallback((featureName: string): number => {
     if (!subscription?.plan?.features) return 0;
@@ -109,14 +130,14 @@ const hasFeature = useCallback((featureName: string): boolean => {
   }, [subscription]);
 
   const getPlanDisplayName = () => {
-  if (!subscription?.plan) return 'Ücretsiz';
-  const planNameMap: Record<string, string> = {
-    'basic': 'Temel Paket',
-    'advanced': 'Gelişmiş Paket',
-    'professional': 'Profesyonel Paket'
-  };
-  return planNameMap[subscription.plan.name] || subscription.plan.display_name;
+    if (!subscription?.plan) return 'Ücretsiz';
+    const planNameMap: Record<string, string> = {
+      'basic': 'Temel Paket',
+      'advanced': 'Gelişmiş Paket',
+      'professional': 'Profesyonel Paket'
     };
+    return planNameMap[subscription.plan.name] || subscription.plan.display_name;
+  };
 
   return {
     subscription,
@@ -128,10 +149,11 @@ const hasFeature = useCallback((featureName: string): boolean => {
     isTrialActive,
     getDaysUntilExpiry,
     examStats,
+    setExamStats, // Bu da export edilmeli
     planName: subscription?.plan?.name || 'free',
-  planDisplayName: getPlanDisplayName(),
+    planDisplayName: getPlanDisplayName(),
     isFreeTier: !subscription || subscription.status !== 'active',
-    isPremium: subscription?.status === 'active' && subscription?.plan?.name !== 'temel',
+    isPremium: subscription?.status === 'active' && subscription?.plan?.name !== 'basic',
     refresh: () => {
       loadSubscription();
       loadExamStats();

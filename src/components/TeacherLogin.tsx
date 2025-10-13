@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
-import { X, Mail, Lock, GraduationCap, Eye, EyeOff, Users } from 'lucide-react';
+import { X, Mail, Lock, GraduationCap, Eye, EyeOff } from 'lucide-react';
 import { loginTeacher } from '../lib/teacherApi';
-import { joinClassWithCode } from '../lib/teacherApi';
-import { supabase } from '../lib/supabase';
 
 interface TeacherLoginProps {
   isOpen: boolean;
@@ -11,7 +9,7 @@ interface TeacherLoginProps {
 }
 
 export default function TeacherLogin({ isOpen, onClose, onSuccess }: TeacherLoginProps) {
-  const [loginType, setLoginType] = useState<'teacher' | 'class'>('teacher');
+  const [] = useState<'teacher' | 'class'>('teacher');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -52,61 +50,6 @@ export default function TeacherLogin({ isOpen, onClose, onSuccess }: TeacherLogi
     }
   };
 
-  const handleClassLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-
-    try {
-      // Find class by invite code
-      const { data: classData, error: classError } = await supabase
-        .from('classes')
-        .select(`
-          *,
-          teachers(*),
-          class_students(
-            *,
-            students(
-              *,
-              profiles(*)
-            )
-          ),
-          class_assignments(*),
-          class_announcements(*),
-          class_exams(*)
-        `)
-        .eq('invite_code', formData.classCode.toUpperCase())
-        .single();
-
-      if (classError || !classData) {
-        throw new Error('Geçersiz sınıf kodu');
-      }
-
-      if (classData.status !== 'active') {
-        throw new Error('Sınıf aktif değil');
-      }
-
-      // Create a class viewer session
-      const classSession = {
-        type: 'class_viewer',
-        class: classData,
-        loginTime: new Date().toISOString()
-      };
-
-      localStorage.setItem('classViewerSession', JSON.stringify(classSession));
-      
-      // Redirect to class view
-      window.location.href = `/#class-${classData.id}`;
-      window.location.reload();
-      
-      onClose();
-      setFormData({ email: '', password: '', classCode: '' });
-    } catch (error: any) {
-      setError(error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -150,6 +93,7 @@ export default function TeacherLogin({ isOpen, onClose, onSuccess }: TeacherLogi
                 <input
                   type="email"
                   name="email"
+                  autoComplete="email"
                   value={formData.email}
                   onChange={handleInputChange}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
@@ -168,6 +112,7 @@ export default function TeacherLogin({ isOpen, onClose, onSuccess }: TeacherLogi
                 <input
                   type={showPassword ? 'text' : 'password'}
                   name="password"
+                  autoComplete="current-password"
                   value={formData.password}
                   onChange={handleInputChange}
                   className="w-full pl-10 pr-12 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"

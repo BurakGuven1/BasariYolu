@@ -31,7 +31,7 @@ export const calculateProration = async (
       .from('user_subscriptions')
       .select(`
         *,
-        plan:subscription_plans(*)
+        plan:subscription_plans!user_subscriptions_plan_id_fkey(*)
       `)
       .eq('user_id', userId)
       .eq('status', 'active')
@@ -46,7 +46,7 @@ export const calculateProration = async (
     const { data: newPlan, error: planError } = await supabase
       .from('subscription_plans')
       .select('*')
-      .eq('id', newPlanId)
+      .eq('name', newPlanId)
       .single();
 
     if (planError || !newPlan) {
@@ -104,86 +104,100 @@ export const calculateProration = async (
 /**
  * Upgrade işlemini gerçekleştir
  */
-export const upgradeSubscription = async ({
-  userId,
-  newPlanId,
-  newBillingCycle
-}: UpgradeParams): Promise<{ success: boolean; error?: string }> => {
-  try {
-    // 1. Proration hesapla
-    const calculation = await calculateProration(userId, newPlanId, newBillingCycle);
-    
-    if (!calculation) {
-      return { success: false, error: 'Hesaplama yapılamadı' };
+  export const upgradeSubscription = async ({
+    userId,
+    newPlanId,
+    newBillingCycle
+  }: UpgradeParams): Promise<{ success: boolean; error?: string }> => {
+    try {
+      // 1. Proration hesapla
+      const calculation = await calculateProration(userId, newPlanId, newBillingCycle);
+      
+      if (!calculation) {
+        return { success: false, error: 'Hesaplama yapılamadı' };
+      }
+
+      // 2. Mevcut subscription'ı al
+      const { data: currentSub } = await supabase
+        .from('user_subscriptions')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('status', 'active')
+        .single();
+
+      if (!currentSub) {
+        return { success: false, error: 'Aktif abonelik bulunamadı' };
+      }
+
+      // ✅ 2.5. newPlanId'yi UUID'ye çevir (name → id)
+      const { data: newPlan } = await supabase
+        .from('subscription_plans')
+        .select('id')
+        .eq('name', newPlanId)
+        .single();
+
+      if (!newPlan) {
+        return { success: false, error: 'Yeni plan bulunamadı' };
+      }
+
+      const newPlanUUID = newPlan.id;
+
+      // 3. Upgrade history kaydet (UUID kullan)
+      const { error: historyError } = await supabase
+        .from('subscription_upgrades')
+        .insert({
+          user_id: userId,
+          from_plan_id: currentSub.plan_id,
+          to_plan_id: newPlanUUID, // ✅ UUID kullan
+          from_billing_cycle: currentSub.billing_cycle,
+          to_billing_cycle: newBillingCycle,
+          credit_amount: calculation.creditAmount,
+          amount_paid: calculation.amountToPay,
+          original_price: calculation.newPlanPrice
+        });
+
+      if (historyError) {
+        console.error('❌ History insert error:', historyError);
+        // History hatasını görmezden gel, devam et
+      }
+
+      // 4. Subscription'ı güncelle (UUID kullan)
+      const today = new Date();
+      const newPeriodEnd = new Date(today);
+      
+      if (newBillingCycle === 'monthly') {
+        newPeriodEnd.setMonth(newPeriodEnd.getMonth() + 1);
+      } else {
+        newPeriodEnd.setFullYear(newPeriodEnd.getFullYear() + 1);
+      }
+
+      const { error: updateError } = await supabase
+        .from('user_subscriptions')
+        .update({
+          plan_id: newPlanUUID, // ✅ UUID kullan
+          billing_cycle: newBillingCycle,
+          current_period_start: today.toISOString(),
+          current_period_end: newPeriodEnd.toISOString(),
+          upgrade_credit: calculation.creditAmount,
+          discount_applied: calculation.creditAmount,
+          original_price: calculation.newPlanPrice,
+          proration_date: today.toISOString(),
+          updated_at: today.toISOString()
+        })
+        .eq('user_id', userId)
+        .eq('status', 'active');
+
+      if (updateError) {
+        console.error('❌ Subscription update error:', updateError);
+        return { success: false, error: 'Abonelik güncellenemedi: ' + updateError.message };
+      }
+
+      return { success: true };
+    } catch (error: any) {
+      console.error('❌ Upgrade error:', error);
+      return { success: false, error: error.message };
     }
-
-    // 2. Mevcut subscription'ı al
-    const { data: currentSub } = await supabase
-      .from('user_subscriptions')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('status', 'active')
-      .single();
-
-    if (!currentSub) {
-      return { success: false, error: 'Aktif abonelik bulunamadı' };
-    }
-
-    // 3. Upgrade history kaydet
-    const { error: historyError } = await supabase
-      .from('subscription_upgrades')
-      .insert({
-        user_id: userId,
-        from_plan_id: currentSub.plan_id,
-        to_plan_id: newPlanId,
-        from_billing_cycle: currentSub.billing_cycle,
-        to_billing_cycle: newBillingCycle,
-        credit_amount: calculation.creditAmount,
-        amount_paid: calculation.amountToPay,
-        original_price: calculation.newPlanPrice
-      });
-
-    if (historyError) {
-      console.error('History insert error:', historyError);
-    }
-
-    // 4. Subscription'ı güncelle
-    const today = new Date();
-    const newPeriodEnd = new Date(today);
-    
-    if (newBillingCycle === 'monthly') {
-      newPeriodEnd.setMonth(newPeriodEnd.getMonth() + 1);
-    } else {
-      newPeriodEnd.setFullYear(newPeriodEnd.getFullYear() + 1);
-    }
-
-    const { error: updateError } = await supabase
-      .from('user_subscriptions')
-      .update({
-        plan_id: newPlanId,
-        billing_cycle: newBillingCycle,
-        current_period_start: today.toISOString(),
-        current_period_end: newPeriodEnd.toISOString(),
-        upgrade_credit: calculation.creditAmount,
-        discount_applied: calculation.creditAmount,
-        original_price: calculation.newPlanPrice,
-        proration_date: today.toISOString(),
-        updated_at: today.toISOString()
-      })
-      .eq('user_id', userId)
-      .eq('status', 'active');
-
-    if (updateError) {
-      console.error('Subscription update error:', updateError);
-      return { success: false, error: 'Abonelik güncellenemedi' };
-    }
-
-    return { success: true };
-  } catch (error: any) {
-    console.error('Upgrade error:', error);
-    return { success: false, error: error.message };
-  }
-};
+  };
 
 /**
  * Downgrade işlemini gerçekleştir (period sonunda)
@@ -206,7 +220,7 @@ export const scheduleDowngrade = async ({
       return { success: false, error: 'Aktif abonelik bulunamadı' };
     }
 
-    // scheduled_plan_change alanına kaydet (yeni alan eklemen gerekebilir)
+    // scheduled_plan_change alanına kaydet
     const { error } = await supabase
       .from('user_subscriptions')
       .update({
@@ -236,8 +250,8 @@ export const getUpgradeHistory = async (userId: string) => {
     .from('subscription_upgrades')
     .select(`
       *,
-      from_plan:from_plan_id(name, display_name),
-      to_plan:to_plan_id(name, display_name)
+      from_plan:subscription_plans!subscription_upgrades_from_plan_id_fkey(name, display_name),
+      to_plan:subscription_plans!subscription_upgrades_to_plan_id_fkey(name, display_name)
     `)
     .eq('user_id', userId)
     .order('upgrade_date', { ascending: false });

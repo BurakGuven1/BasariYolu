@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { X, Calendar, BookOpen, Target } from 'lucide-react';
-import { addExamResult } from '../lib/supabase';
+import { addExamResult, supabase } from '../lib/supabase';
+import { examData } from './ExamTopicsSection';
+import type { WeakTopic } from '../lib/aiTopicAnalyzer';
 
 interface ExamFormProps {
   isOpen: boolean;
@@ -64,6 +66,8 @@ export default function ExamForm({ isOpen, onClose, studentId, onSuccess, editDa
   });
   const [loading, setLoading] = useState(false);
   const [aytType, setAytType] = useState<'sayisal' | 'esit_agirlik' | 'sozel'>('sayisal');
+  const [weakTopics, setWeakTopics] = useState<WeakTopic[]>([]);
+  const [showWeakTopics, setShowWeakTopics] = useState(false);
 
   // Load edit data when editing
   useEffect(() => {
@@ -287,102 +291,187 @@ export default function ExamForm({ isOpen, onClose, studentId, onSuccess, editDa
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  e.preventDefault();
+  
+  if (loading) {
+    console.log('⏳ Already submitting...');
+    return;
+  }
+  
+  setLoading(true);
+  console.log('📝 Submitting exam form');
+
+  try {
+    const examDataToSave = {
+      student_id: studentId,
+      exam_name: formData.exam_name,
+      exam_type: formData.exam_type,
+      exam_date: formData.exam_date,
+      total_score: formData.exam_type === 'AYT' ? calculateYKSScore() : calculateTotalScore(),
+      notes: formData.notes,
+      exam_details: JSON.stringify({
+        ...formData,
+        ayt_type: aytType,
+        tyt_score: formData.exam_type === 'AYT' ? calculateTYTScore() : null,
+        ayt_score: formData.exam_type === 'AYT' ? calculateAYTScore() : null,
+        yks_score: formData.exam_type === 'AYT' ? calculateYKSScore() : null
+      })
+    };
+
+    console.log('📡 Sending to database...');
+    const result = await addExamResult(examDataToSave);
     
-    if (loading) {
-      console.log('Form already submitting, ignoring...');
+    console.log('📦 Database result:', result);
+    
+    if (result.error) {
+      console.error('❌ Error:', result.error);
+      alert(`Hata: ${result.error.message}`);
+      setLoading(false);
       return;
     }
-    
-    setLoading(true);
-    console.log('Submitting exam form with data:', formData);
 
-    try {
-      const examData = {
-        student_id: studentId,
-        exam_name: formData.exam_name,
-        exam_type: formData.exam_type,
-        exam_date: formData.exam_date,
-        total_score: formData.exam_type === 'AYT' ? calculateYKSScore() : calculateTotalScore(),
-        notes: formData.notes,
-        // Store raw data as JSON for detailed analysis
-        exam_details: JSON.stringify({
-          ...formData,
-          ayt_type: aytType,
-          tyt_score: formData.exam_type === 'AYT' ? calculateTYTScore() : null,
-          ayt_score: formData.exam_type === 'AYT' ? calculateAYTScore() : null,
-          yks_score: formData.exam_type === 'AYT' ? calculateYKSScore() : null
-        })
-      };
-
-      console.log('Calling addExamResult with:', examData);
-      const { error } = await addExamResult(examData);
-      
-      if (error) {
-        console.error('Database error:', error);
-        throw error;
-      }
-
-      console.log('Exam result added successfully');
-      onSuccess();
-      onClose();
-      // Reset form
-      setFormData({
-        exam_name: '',
-        exam_type: 'TYT',
-        exam_date: '',
-        tyt_turkce_dogru: '',
-        tyt_turkce_yanlis: '',
-        tyt_matematik_dogru: '',
-        tyt_matematik_yanlis: '',
-        tyt_fen_dogru: '',
-        tyt_fen_yanlis: '',
-        tyt_sosyal_dogru: '',
-        tyt_sosyal_yanlis: '',
-        ayt_edebiyat_dogru: '',
-        ayt_edebiyat_yanlis: '',
-        ayt_tarih1_dogru: '',
-        ayt_tarih1_yanlis: '',
-        ayt_cografya1_dogru: '',
-        ayt_cografya1_yanlis: '',
-        ayt_tarih2_dogru: '',
-        ayt_tarih2_yanlis: '',
-        ayt_cografya2_dogru: '',
-        ayt_cografya2_yanlis: '',
-        ayt_felsefe_dogru: '',
-        ayt_felsefe_yanlis: '',
-        ayt_dkab_dogru: '',
-        ayt_dkab_yanlis: '',
-        ayt_matematik_dogru: '',
-        ayt_matematik_yanlis: '',
-        ayt_fizik_dogru: '',
-        ayt_fizik_yanlis: '',
-        ayt_kimya_dogru: '',
-        ayt_kimya_yanlis: '',
-        ayt_biyoloji_dogru: '',
-        ayt_biyoloji_yanlis: '',
-        lgs_turkce_dogru: '',
-        lgs_turkce_yanlis: '',
-        lgs_matematik_dogru: '',
-        lgs_matematik_yanlis: '',
-        lgs_fen_dogru: '',
-        lgs_fen_yanlis: '',
-        lgs_inkılap_dogru: '',
-        lgs_inkılap_yanlis: '',
-        lgs_din_dogru: '',
-        lgs_din_yanlis: '',
-        lgs_ingilizce_dogru: '',
-        lgs_ingilizce_yanlis: '',
-        notes: ''
-      });
-      setAytType('sayisal');
-    } catch (error) {
-      console.error('Error adding exam result:', error);
-      alert('Deneme sonucu eklenirken hata oluştu');
-    } finally {
+    if (!result.data || result.data.length === 0) {
+      console.error('❌ No data returned');
+      alert('Kayıt yapılamadı');
       setLoading(false);
+      return;
     }
-  };
+
+    const examId = result.data[0].id;
+    console.log('✅ Exam saved with ID:', examId);
+
+    // Zayıf konuları kaydet
+    // Zayıf konuları kaydet
+const validTopics = weakTopics.filter(t => 
+  t.subject && t.topic && t.totalCount > 0
+);
+
+if (validTopics.length > 0) {
+  console.log('💡 Saving weak topics:', validTopics);
+  
+  try {
+    // 1. Weak topics'i kaydet
+    const inserts = validTopics.map(t => ({
+      exam_result_id: examId,
+      student_id: studentId,
+      subject: t.subject,
+      topic: t.topic,
+      wrong_count: t.wrongCount,
+      total_count: t.totalCount,
+      percentage_wrong: parseFloat(((t.wrongCount / t.totalCount) * 100).toFixed(2))
+    }));
+
+    const { error: topicsError } = await supabase
+      .from('exam_weak_topics')
+      .insert(inserts);
+
+    if (topicsError) {
+      console.error('⚠️ Topics error:', topicsError);
+      throw topicsError;
+    }
+    
+    console.log('✅ Weak topics saved successfully');
+    
+    // 2. AI recommendations oluştur
+    console.log('🤖 Generating AI recommendations...');
+    
+    const { generateTopicRecommendations, saveTopicRecommendations } = await import(
+      '../lib/aiTopicAnalyzer'
+    );
+    
+    console.log('📊 Calling generateTopicRecommendations with:', {
+      studentId,
+      validTopics
+    });
+    
+    const recommendations = await generateTopicRecommendations(studentId, validTopics);
+    
+    console.log('📋 Generated recommendations:', recommendations);
+    
+    if (recommendations.length === 0) {
+      console.warn('⚠️ No recommendations generated!');
+    }
+    
+    const saveResult = await saveTopicRecommendations(studentId, recommendations);
+    
+    console.log('💾 Save result:', saveResult);
+    
+    if (saveResult.success) {
+      console.log('✅ AI recommendations saved successfully');
+    } else {
+      console.error('❌ Failed to save recommendations:', saveResult.error);
+    }
+  } catch (topicError: any) {
+    console.error('❌ Topic/AI error:', topicError);
+    console.error('Stack:', topicError.stack);
+  }
+}
+
+    // Success!
+    alert('✅ Deneme başarıyla kaydedildi!');
+    
+    // Reset everything
+    setFormData({
+      exam_name: '',
+      exam_type: 'TYT',
+      exam_date: '',
+      tyt_turkce_dogru: '',
+      tyt_turkce_yanlis: '',
+      tyt_matematik_dogru: '',
+      tyt_matematik_yanlis: '',
+      tyt_fen_dogru: '',
+      tyt_fen_yanlis: '',
+      tyt_sosyal_dogru: '',
+      tyt_sosyal_yanlis: '',
+      ayt_edebiyat_dogru: '',
+      ayt_edebiyat_yanlis: '',
+      ayt_tarih1_dogru: '',
+      ayt_tarih1_yanlis: '',
+      ayt_cografya1_dogru: '',
+      ayt_cografya1_yanlis: '',
+      ayt_tarih2_dogru: '',
+      ayt_tarih2_yanlis: '',
+      ayt_cografya2_dogru: '',
+      ayt_cografya2_yanlis: '',
+      ayt_felsefe_dogru: '',
+      ayt_felsefe_yanlis: '',
+      ayt_dkab_dogru: '',
+      ayt_dkab_yanlis: '',
+      ayt_matematik_dogru: '',
+      ayt_matematik_yanlis: '',
+      ayt_fizik_dogru: '',
+      ayt_fizik_yanlis: '',
+      ayt_kimya_dogru: '',
+      ayt_kimya_yanlis: '',
+      ayt_biyoloji_dogru: '',
+      ayt_biyoloji_yanlis: '',
+      lgs_turkce_dogru: '',
+      lgs_turkce_yanlis: '',
+      lgs_matematik_dogru: '',
+      lgs_matematik_yanlis: '',
+      lgs_fen_dogru: '',
+      lgs_fen_yanlis: '',
+      lgs_inkılap_dogru: '',
+      lgs_inkılap_yanlis: '',
+      lgs_din_dogru: '',
+      lgs_din_yanlis: '',
+      lgs_ingilizce_dogru: '',
+      lgs_ingilizce_yanlis: '',
+      notes: ''
+    });
+    setAytType('sayisal');
+    setWeakTopics([]);
+    setShowWeakTopics(false);
+    setLoading(false);
+    
+    onSuccess();
+    onClose();
+  } catch (error: any) {
+    console.error('❌ Catch error:', error);
+    alert(`Hata: ${error.message}`);
+    setLoading(false);
+  }
+};
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -639,6 +728,194 @@ export default function ExamForm({ isOpen, onClose, studentId, onSuccess, editDa
                   <div className="text-xs text-blue-600 mt-1">
                     * OBP (Okul Başarı Puanı) dahil değildir. Gerçek yerleştirme puanı için OBP (max 60 puan) eklenmelidir.
                   </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-6 rounded-lg border-2 border-purple-200">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Target className="h-5 w-5 text-purple-600" />
+                <h3 className="font-semibold text-lg text-gray-900">
+                  🎯 AI Çalışma Planı İçin (Opsiyonel)
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowWeakTopics(!showWeakTopics)}
+                className="text-purple-600 text-sm hover:text-purple-700 font-medium"
+              >
+                {showWeakTopics ? 'Gizle' : '🔥 En Çok Yanlış Yaptığınız 3 Konuyu Seçin'}
+              </button>
+            </div>
+
+            {showWeakTopics && (
+              <div className="space-y-4">
+                <div className="bg-white p-4 rounded-lg border border-purple-300">
+                  <p className="text-sm text-gray-700">
+                    💡 <strong>Neden önemli?</strong> AI, zayıf olduğunuz konuları son 8 yılın sınav verisiyle eşleştirerek size özel çalışma planı oluşturur.
+                  </p>
+                </div>
+
+                {[0, 1, 2].map((index) => (
+                  <div
+                    key={index}
+                    className="bg-white rounded-lg p-4 border-2 border-purple-200 hover:border-purple-400 transition-colors"
+                  >
+                    <h4 className="font-medium text-purple-800 mb-3 flex items-center gap-2">
+                      <span className="bg-purple-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-sm">
+                        {index + 1}
+                      </span>
+                      Zayıf Konu #{index + 1}
+                    </h4>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Ders Seçimi */}
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Ders</label>
+                        <select
+                          value={weakTopics[index]?.subject || ''}
+                          onChange={(e) => {
+                            const newTopics = [...weakTopics];
+                            newTopics[index] = {
+                              subject: e.target.value,
+                              topic: '',
+                              wrongCount: newTopics[index]?.wrongCount || 0,
+                              totalCount: newTopics[index]?.totalCount || 0
+                            };
+                            setWeakTopics(newTopics);
+                          }}
+                          className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-purple-500"
+                        >
+                          <option value="">Ders Seçin</option>
+                          {Object.keys(examData).map((subject) => (
+                            <option key={subject} value={subject}>
+                              {subject}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Konu Seçimi */}
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Konu</label>
+                        <select
+                          value={weakTopics[index]?.topic || ''}
+                          onChange={(e) => {
+                            const newTopics = [...weakTopics];
+                            newTopics[index] = {
+                              ...newTopics[index],
+                              subject: weakTopics[index]?.subject || '',
+                              topic: e.target.value,
+                              wrongCount: newTopics[index]?.wrongCount || 0,
+                              totalCount: newTopics[index]?.totalCount || 0
+                            };
+                            setWeakTopics(newTopics);
+                          }}
+                          className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-purple-500"
+                          disabled={!weakTopics[index]?.subject}
+                        >
+                          <option value="">Konu Seçin</option>
+                          {weakTopics[index]?.subject &&
+                            examData[weakTopics[index].subject]?.konular.map((k) => (
+                              <option key={k.konu} value={k.konu}>
+                                {k.konu}
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+
+                      {/* Yanlış Sayısı */}
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          Yanlış Sayısı
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={weakTopics[index]?.wrongCount || ''}
+                          onChange={(e) => {
+                            const newTopics = [...weakTopics];
+                            newTopics[index] = {
+                              ...newTopics[index],
+                              subject: weakTopics[index]?.subject || '',
+                              topic: weakTopics[index]?.topic || '',
+                              wrongCount: parseInt(e.target.value) || 0,
+                              totalCount: newTopics[index]?.totalCount || 0
+                            };
+                            setWeakTopics(newTopics);
+                          }}
+                          className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-purple-500"
+                          placeholder="Örn: 5"
+                        />
+                      </div>
+
+                      {/* Toplam Soru */}
+                      <div>
+                        <label className="block text-sm font-medium mb-2">
+                          Bu Konudan Toplam Soru
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={weakTopics[index]?.totalCount || ''}
+                          onChange={(e) => {
+                            const newTopics = [...weakTopics];
+                            newTopics[index] = {
+                              ...newTopics[index],
+                              subject: weakTopics[index]?.subject || '',
+                              topic: weakTopics[index]?.topic || '',
+                              wrongCount: newTopics[index]?.wrongCount || 0,
+                              totalCount: parseInt(e.target.value) || 0
+                            };
+                            setWeakTopics(newTopics);
+                          }}
+                          className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-purple-500"
+                          placeholder="Örn: 10"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Başarı Oranı Göstergesi */}
+                    {weakTopics[index]?.totalCount > 0 && (
+                      <div className="mt-3 p-3 bg-purple-50 rounded-lg">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-purple-600 font-medium">
+                            Bu Konudaki Başarı Oranınız:
+                          </span>
+                          <span className="text-lg font-bold text-purple-800">
+                            %
+                            {(
+                              ((weakTopics[index].totalCount -
+                                weakTopics[index].wrongCount) /
+                                weakTopics[index].totalCount) *
+                              100
+                            ).toFixed(0)}
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                          <div
+                            className="bg-purple-600 h-2 rounded-full transition-all"
+                            style={{
+                              width: `${(
+                                ((weakTopics[index].totalCount -
+                                  weakTopics[index].wrongCount) /
+                                  weakTopics[index].totalCount) *
+                                100
+                              ).toFixed(0)}%`
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <p className="text-sm text-blue-800">
+                    💡 <strong>İpucu:</strong> Minimum 1 konu seçmeniz yeterli. AI, seçtiğiniz konuların sınavlarda ne kadar sık çıktığını analiz ederek öncelik sıralaması yapacak.
+                  </p>
                 </div>
               </div>
             )}
