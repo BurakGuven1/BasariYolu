@@ -14,17 +14,25 @@ export async function getSubscriptionPlans() {
 
 // Get user's current subscription
 export async function getUserSubscription(userId: string) {
+  console.log('📡 Fetching subscription for user:', userId);
+  
   const { data, error } = await supabase
     .from('user_subscriptions')
     .select(`
       *,
-      plan:subscription_plans(*)
+      plan:subscription_plans!user_subscriptions_plan_id_fkey(*)
     `)
     .eq('user_id', userId)
     .eq('status', 'active')
     .maybeSingle();
 
-  if (error) throw error;
+  if (error) {
+    console.error('❌ Subscription fetch error:', error);
+    throw error;
+  }
+
+  console.log('✅ Subscription data:', data);
+  
   return { data: data as UserSubscription | null };
 }
 
@@ -136,32 +144,64 @@ export async function checkFeatureAccess(userId: string, featureName: string) {
 
 // Get exam count for current period
 export async function getExamCountForPeriod(userId: string) {
-  const { data: subscription } = await getUserSubscription(userId);
-  
-  if (!subscription) {
+  try {
+    // Get subscription with explicit FK relationship
+    const { data: subscription, error: subError } = await supabase
+      .from('user_subscriptions')
+      .select(`
+        *,
+        plan:subscription_plans!user_subscriptions_plan_id_fkey(*)
+      `)
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .maybeSingle();
+
+    if (subError) {
+      console.error('Error fetching subscription:', subError);
+      return { count: 0, limit: 0, remaining: 0 };
+    }
+
+    if (!subscription) {
+      return { count: 0, limit: 0, remaining: 0 };
+    }
+
+    // Get student_id from students table
+    const { data: student } = await supabase
+      .from('students')
+      .select('id')
+      .eq('user_id', userId)
+      .single();
+
+    if (!student) {
+      return { count: 0, limit: 0, remaining: 0 };
+    }
+
+    // Get exam count using student_id
+    const { count, error: countError } = await supabase
+      .from('exam_results')
+      .select('*', { count: 'exact', head: true })
+      .eq('student_id', student.id)
+      .gte('created_at', subscription.current_period_start)
+      .lte('created_at', subscription.current_period_end);
+
+    if (countError) {
+      console.error('Error counting exams:', countError);
+      return { count: 0, limit: 0, remaining: 0 };
+    }
+
+    const features = subscription.plan?.features as any;
+    const maxExams = features?.max_exams || 0;
+    const limit = maxExams === -1 ? Infinity : maxExams;
+    const examCount = count || 0;
+    const remaining = limit === Infinity ? Infinity : Math.max(0, limit - examCount);
+
     return { 
-      count: 0, 
-      limit: 0, 
-      remaining: 0 
+      count: examCount, 
+      limit: limit === Infinity ? -1 : limit,
+      remaining: remaining === Infinity ? -1 : remaining
     };
+  } catch (error) {
+    console.error('Error in getExamCountForPeriod:', error);
+    return { count: 0, limit: 0, remaining: 0 };
   }
-
-  const { count, error } = await supabase
-    .from('exam_results')
-    .select('*', { count: 'exact', head: true })
-    .eq('student_id', userId)
-    .gte('created_at', subscription.current_period_start)
-    .lte('created_at', subscription.current_period_end);
-
-  if (error) throw error;
-
-  const limit = subscription.plan?.features?.max_exams || 0;
-  const examCount = count || 0;
-  const remaining = limit === -1 ? Infinity : Math.max(0, limit - examCount);
-
-  return { 
-    count: examCount, 
-    limit: limit === -1 ? Infinity : limit,
-    remaining: remaining
-  };
 }

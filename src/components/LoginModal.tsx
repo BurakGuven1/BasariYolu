@@ -6,10 +6,11 @@ import PaymentPage from './PaymentPage';
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLogin: (user: any) => void;
+  onLogin: (userData: any) => void;
+  setUserState?: (userData: any) => void;
 }
 
-export default function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
+export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: LoginModalProps) {
   const [activeTab, setActiveTab] = useState<'student' | 'parent'>('student');
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [userType] = useState<'student' | 'parent'>('student');
@@ -75,175 +76,106 @@ export default function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps
   };
 
   const handleLogin = async () => {
-    if (activeTab === 'parent') {
-      // Parent login with invite code and phone
-      if (!formData.parentCode.trim()) {
-        alert('Lütfen davet kodunu girin');
-        setLoading(false);
-        return;
-      }
-      
-      if (!formData.parentPhone.trim()) {
-        alert('Lütfen telefon numaranızı girin');
-        setLoading(false);
-        return;
-      }
-      
-      try {
-        console.log('=== PARENT LOGIN STARTED ===');
-        console.log('Invite code:', formData.parentCode.trim());
-        console.log('Phone:', formData.parentPhone.trim());
-        
-        // Find student by invite code
-        const { data: student, error: studentError } = await supabase
-          .from('students')
-          .select(`
-            *,
-            profiles!inner(*)
-          `)
-          .eq('invite_code', formData.parentCode.trim())
-          .single();
+  if (activeTab === 'parent') {
+  if (!formData.parentCode.trim()) {
+    alert('Lütfen davet kodunu girin');
+    setLoading(false);
+    return;
+  }
+  
+  try {
+    console.log('👨‍👩‍👧 Parent login started with code:', formData.parentCode.trim());
+    
+    // Find student
+    const { data: student, error: studentError } = await supabase
+      .from('students')
+      .select(`
+        *,
+        profiles!inner(*)
+      `)
+      .eq('invite_code', formData.parentCode.trim())
+      .single();
 
-        console.log('Student query result:', { student, studentError });
-
-        if (studentError || !student) {
-          throw new Error('Geçersiz davet kodu');
-        }
-
-        console.log('Found student:', student);
-
-        // Get ALL data for this student immediately
-        console.log('=== FETCHING ALL STUDENT DATA ===');
-        
-        // Get weekly study goal
-        console.log('=== FETCHING WEEKLY STUDY GOAL ===');
-        const { data: weeklyGoal, error: goalError } = await supabase
-          .from('weekly_study_goals')
-          .select('*')
-          .eq('student_id', student.id)
-          .eq('is_active', true)
-          .maybeSingle();
-        
-        console.log('Weekly goal query completed:', {
-          data: weeklyGoal,
-          error: goalError
-        });
-        
-        // Get exam results
-        console.log('=== FETCHING EXAM RESULTS ===');
-        console.log('Student ID for queries:', student.id);
-        
-        const { data: examResults, error: examError } = await supabase
-          .from('exam_results')
-          .select('*')
-          .eq('student_id', student.id)
-          .order('exam_date', { ascending: false });
-        
-        console.log('Exam results query completed:', {
-          data: examResults,
-          error: examError,
-          count: examResults?.length || 0
-        });
-
-        console.log('=== FETCHING HOMEWORKS ===');
-        const { data: homeworks, error: homeworkError } = await supabase
-          .from('homeworks')
-          .select('*')
-          .eq('student_id', student.id)
-          .order('due_date', { ascending: true });
-        
-        console.log('Homeworks query completed:', {
-          data: homeworks,
-          error: homeworkError,
-          count: homeworks?.length || 0
-        });
-
-        console.log('=== FETCHING STUDY SESSIONS ===');
-        const { data: studySessions, error: studyError } = await supabase
-          .from('study_sessions')
-          .select('*')
-          .eq('student_id', student.id)
-          .order('session_date', { ascending: false });
-        
-        console.log('Study sessions query completed:', {
-          data: studySessions,
-          error: studyError,
-          count: studySessions?.length || 0
-        });
-        
-        // Test if there's any data in the database at all
-        console.log('=== TESTING DATABASE ACCESS ===');
-        const { data: allExams, error: allExamsError } = await supabase
-          .from('exam_results')
-          .select('*')
-          .limit(1);
-        
-        console.log('Database access test:', {
-          allExams,
-          allExamsError,
-          hasData: allExams && allExams.length > 0
-        });
-
-        // Create complete student object with all data
-        const completeStudent = {
-          ...student,
-          exam_results: examResults || [],
-          homeworks: homeworks || [],
-          study_sessions: studySessions || [],
-          weekly_study_goal: weeklyGoal
-        };
-
-        console.log('=== COMPLETE STUDENT DATA ===');
-        console.log('Complete student:', completeStudent);
-        console.log('Final exam results count:', (examResults || []).length);
-        console.log('Final homeworks count:', (homeworks || []).length);
-        console.log('Final study sessions count:', (studySessions || []).length);
-
-        // Create parent user object
-        const parentUser = {
-          id: `parent_${student.id}`,
-          email: `parent_${student.id}@temp.com`,
-          profile: {
-            id: `parent_${student.id}`,
-            full_name: 'Veli',
-            role: 'parent',
-            email: `parent_${student.id}@temp.com`,
-            phone: formData.parentPhone.trim()
-          },
-          isParentLogin: true,
-          connectedStudents: [completeStudent]
-        };
-
-        console.log('=== PARENT USER CREATED ===');
-        console.log('Parent user:', parentUser);
-        console.log('Connected students:', parentUser.connectedStudents);
-
-        // Store in localStorage
-        localStorage.setItem('tempParentUser', JSON.stringify(parentUser));
-
-        onLogin(parentUser);
-        onClose();
-        setFormData({
-          email: '',
-          password: '',
-          name: '',
-          confirmPassword: '',
-          grade: '',
-          schoolName: '',
-          parentCode: '',
-          parentPhone: '',
-          classCode: '',
-          packageType: 'basic',
-          billingCycle: 'monthly'
-        });
-        return;
-      } catch (error: any) {
-        console.error('Parent login error:', error);
-        alert('Veli girişi hatası: ' + (error.message || 'Bilinmeyen hata'));
-        setLoading(false);
-        return;
-      }
+    if (studentError || !student) {
+      throw new Error('Geçersiz davet kodu');
     }
+
+    console.log('✅ Student found:', student.id, student.profiles?.full_name);
+
+    // Get all student data
+    const [examResults, homeworks, studySessions, weeklyGoal] = await Promise.all([
+      supabase.from('exam_results').select('*').eq('student_id', student.id).order('exam_date', { ascending: false }),
+      supabase.from('homeworks').select('*').eq('student_id', student.id).order('due_date', { ascending: true }),
+      supabase.from('study_sessions').select('*').eq('student_id', student.id).order('session_date', { ascending: false }),
+      supabase.from('weekly_study_goals').select('*').eq('student_id', student.id).eq('is_active', true).maybeSingle()
+    ]);
+
+    console.log('📊 Data loaded:', {
+      exams: examResults.data?.length || 0,
+      homeworks: homeworks.data?.length || 0,
+      sessions: studySessions.data?.length || 0,
+      hasGoal: !!weeklyGoal.data
+    });
+
+    // Complete student object
+    const completeStudent = {
+      ...student,
+      exam_results: examResults.data || [],
+      homeworks: homeworks.data || [],
+      study_sessions: studySessions.data || [],
+      weekly_study_goal: weeklyGoal.data
+    };
+
+    // Parent user object
+    const parentUser = {
+      id: `parent_${student.id}_${Date.now()}`,
+      email: `parent_${student.id}@temp.com`,
+      profile: {
+        full_name: 'Veli',
+        user_type: 'parent'
+      },
+      isParentLogin: true,
+      connectedStudents: [completeStudent]
+    };
+
+    console.log('✅ Parent user created');
+
+    // Save to localStorage
+    localStorage.setItem('tempParentUser', JSON.stringify(parentUser));
+    
+    // ✅ setUserState kullan
+    if (setUserState) {
+      console.log('✅ Using setUserState directly');
+      setUserState(parentUser);
+    } else {
+      console.log('✅ Using onLogin callback');
+      onLogin(parentUser);
+    }
+    
+    // Reset form
+    setFormData({
+      email: '',
+      password: '',
+      name: '',
+      confirmPassword: '',
+      grade: '',
+      schoolName: '',
+      parentCode: '',
+      parentPhone: '',
+      classCode: '',
+      packageType: 'basic',
+      billingCycle: 'monthly'
+    });
+    
+    onClose();
+  } catch (error: any) {
+    console.error('❌ Parent login error:', error);
+    alert('Veli girişi hatası: ' + (error.message || 'Bilinmeyen hata'));
+  } finally {
+    setLoading(false);
+  }
+  return;
+}
 
     // Student login
     try {

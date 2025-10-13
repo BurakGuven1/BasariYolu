@@ -14,17 +14,9 @@ export default function ParentDashboard() {
   const { user, clearUser } = useAuth();
   const { children, loading: dataLoading } = useParentData(user?.id);
 
-  const handleLogout = async () => {
-    // For temp parent, just clear the user
-    if (user?.isParentLogin) {
-      clearUser();
-    } else {
-      const { error } = await signOut();
-      if (error) {
-        console.error('Logout error:', error);
-      }
-    }
-  };
+  const handleLogout = () => {
+  clearUser();
+};
 
   const handleAddChild = async (e: React.FormEvent) => {
     e.preventDefault();

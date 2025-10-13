@@ -19,7 +19,6 @@ import ProductShowcase from './components/ProductShowcase';
 import SocialProof from './components/SocialProof';
 import CTASection from './components/CTASection';
 import UpgradeModal from './components/UpgradeModal';
-import { supabase } from './lib/supabase';
 
 function App() {
   const { user, loading, setParentUser, clearUser } = useAuth();
@@ -53,18 +52,22 @@ function App() {
   }, []);
 
   const handleLogout = async () => {
-    try {
-      console.log('Logging out...');
-      await supabase.auth.signOut();
-      localStorage.removeItem('teacherSession');
-      localStorage.removeItem('classViewerSession');
-      await clearUser();
-      setTeacherUser(null);
-      setCurrentView('home');
-    } catch (err) {
-      console.error('Logout error:', err);
-    }
-  };
+  try {
+    console.log('🔴 App handleLogout');
+    
+    localStorage.removeItem('teacherSession');
+    localStorage.removeItem('classViewerSession');
+    setTeacherUser(null);
+    
+    await clearUser();
+    
+    console.log('✅ Logout tamamlandı');
+  } catch (err) {
+    console.error('❌ Logout failed:', err);
+    localStorage.clear();
+    window.location.href = '/';
+  }
+};
 
   const handleLogin = (loginUser?: any) => {
     console.log('handleLogin called');
@@ -221,6 +224,7 @@ function App() {
         isOpen={showStudentParentLoginModal}
         onClose={() => setShowStudentParentLoginModal(false)}
         onLogin={handleLogin}
+        setUserState={setParentUser}
       />
       
       <TeacherLogin
@@ -248,6 +252,7 @@ function App() {
             monthly: targetUpgradePlan.monthlyPrice,
             yearly: targetUpgradePlan.yearlyPrice
           }}
+          currentBillingCycle={targetUpgradePlan.billingCycle || 'monthly'}
           onSuccess={() => {
             window.location.reload();
           }}

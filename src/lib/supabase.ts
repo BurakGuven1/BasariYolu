@@ -180,13 +180,14 @@ export const getStudySession = async (studentId: string) => {
 };
 
 export const addExamResult = async (examData: any) => {
-  console.log('addExamResult called with:', examData);
+  console.log('📝 addExamResult called with:', examData);
   
   const { data, error } = await supabase
     .from('exam_results')
-    .insert([examData]);
+    .insert([examData])
+    .select(); // ✅ MUTLAKA .select() EKLE
     
-  console.log('Database response:', { data, error });
+  console.log('📡 Database response:', { data, error });
   return { data, error };
 };
 

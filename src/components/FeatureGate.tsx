@@ -1,12 +1,11 @@
 import { ReactNode } from 'react';
 import { useFeatureAccess } from '../hooks/useFeatureAccess';
-import Paywall from './Paywall';
+
 
 interface FeatureGateProps {
   feature: string;
   children?: ReactNode;
   fallback?: ReactNode;
-  showPaywall?: boolean;
   onUpgrade?: () => void;
 }
 
@@ -14,8 +13,6 @@ export default function FeatureGate({
   feature, 
   children, 
   fallback, 
-  showPaywall = true,
-  onUpgrade 
 }: FeatureGateProps) {
   const { hasFeature, loading } = useFeatureAccess();
 
@@ -30,9 +27,7 @@ export default function FeatureGate({
   const hasAccess = hasFeature(feature);
 
     if (!hasAccess) {
-    if (showPaywall && onUpgrade) {
-        return <Paywall feature={feature} onUpgrade={onUpgrade} />;
-    }
+
     return <>{fallback || null}</>;
     }
 

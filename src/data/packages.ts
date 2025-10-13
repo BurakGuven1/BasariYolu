@@ -1,6 +1,7 @@
 interface Package {
   id: string;
   name: string;
+  description?: string;
   monthlyPrice: number;
   yearlyPrice: number;
   maxParents: number;

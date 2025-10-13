@@ -142,6 +142,94 @@ const examData: { [key: string]: SubjectData } = {
   'AYT Coğrafya 1': {"konular":[{"konu":"Ekosistemlerin Özellikleri ve İşleyişi","yillar":{"2018":0,"2019":0,"2020":1,"2021":0,"2022":0,"2023":1,"2024":0,"2025":1}},{"konu":"Ekstrem Doğa Olayları","yillar":{"2018":1,"2019":1,"2020":0,"2021":1,"2022":1,"2023":1,"2024":0,"2025":0}},{"konu":"Küresel İklim Değişikliği ve Doğa Olaylarının Geleceği","yillar":{"2018":0,"2019":0,"2020":0,"2021":0,"2022":1,"2023":0,"2024":0,"2025":0}},{"konu":"Nüfus Politikaları ve Projeksiyonları","yillar":{"2018":0,"2019":0,"2020":1,"2021":0,"2022":0,"2023":0,"2024":1,"2025":0}},{"konu":"Şehirler ve Kırsal Yerleşmeler","yillar":{"2018":0,"2019":0,"2020":1,"2021":1,"2022":1,"2023":1,"2024":0,"2025":1}},{"konu":"Dünyada Doğal Kaynak ve Ekonomi","yillar":{"2018":0,"2019":1,"2020":0,"2021":0,"2022":0,"2023":0,"2024":0,"2025":0}},{"konu":"Türkiye'de Tarım, Sanayi, Maden ve Enerji Kaynakları","yillar":{"2018":1,"2019":1,"2020":0,"2021":0,"2022":0,"2023":1,"2024":0,"2025":1}},{"konu":"Ekonomi, Şehirleşme ve Göç","yillar":{"2018":1,"2019":1,"2020":0,"2021":0,"2022":0,"2023":0,"2024":1,"2025":0}},{"konu":"İşlevsel Bölge ve Kalkınma Projeleri","yillar":{"2018":0,"2019":0,"2020":1,"2021":0,"2022":0,"2023":0,"2024":0,"2025":0}},{"konu":"Hizmet Sektörünün Ekonomideki Yeri ve Ulaşım","yillar":{"2018":0,"2019":0,"2020":0,"2021":0,"2022":1,"2023":0,"2024":0,"2025":0}},{"konu":"Türkiye'de ve Dünyada Ticaret","yillar":{"2018":1,"2019":0,"2020":0,"2021":0,"2022":0,"2023":0,"2024":0,"2025":0}},{"konu":"Türkiye'de Turizm","yillar":{"2018":1,"2019":0,"2020":0,"2021":1,"2022":0,"2023":0,"2024":0,"2025":1}},{"konu":"Kültür Bölgeleri ve Türk Kültürü","yillar":{"2018":0,"2019":0,"2020":0,"2021":0,"2022":1,"2023":0,"2024":1,"2025":1}},{"konu":"Küreselleşen Dünya","yillar":{"2018":0,"2019":0,"2020":0,"2021":1,"2022":0,"2023":0,"2024":0,"2025":0}},{"konu":"Uluslararası Örgütler","yillar":{"2018":0,"2019":1,"2020":1,"2021":0,"2022":0,"2023":1,"2024":0,"2025":0}},{"konu":"Ülkeler Arası Etkileşim","yillar":{"2018":0,"2019":0,"2020":0,"2021":1,"2022":1,"2023":0,"2024":0,"2025":0}},{"konu":"Jeopolitik Konum","yillar":{"2018":0,"2019":0,"2020":0,"2021":0,"2022":0,"2023":0,"2024":0,"2025":1}},{"konu":"Çevre Sorunları ve Geri Dönüşüm","yillar":{"2018":1,"2019":1,"2020":1,"2021":1,"2022":0,"2023":1,"2024":2,"2025":0}},{"konu":"Çevre Sorunlarının Çözümüne Yönelik Yaklaşımlar","yillar":{"2018":0,"2019":0,"2020":0,"2021":0,"2022":0,"2023":0,"2024":1,"2025":0}}],"toplamSoru":{"2018":6,"2019":6,"2020":6,"2021":6,"2022":6,"2023":6,"2024":6,"2025":6}},
   'AYT Felsefe': {"konular":[{"konu":"Felsefi Düşüncenin Ortaya Çıkışı ve Özellikleri","yillar":{"2018":0,"2019":1,"2020":0,"2021":0,"2022":2,"2023":1,"2024":1,"2025":1}},{"konu":"Düşünme ve Dil İlişkisi","yillar":{"2018":0,"2019":0,"2020":0,"2021":0,"2022":0,"2023":0,"2024":1,"2025":0}},{"konu":"Bilgi Felsefesinin Konusu ve Bilginin İmkânı Problemi","yillar":{"2018":0,"2019":0,"2020":0,"2021":1,"2022":0,"2023":0,"2024":0,"2025":0}},{"konu":"Bilginin Sınırları, Ölçütü- Doğruluk ve Gerçeklik Bilginin Değeri ve Güvenirliği","yillar":{"2018":0,"2019":1,"2020":0,"2021":0,"2022":1,"2023":0,"2024":1,"2025":0}},{"konu":"Bilimin Değeri-Bilim Felsefe İlişkisi-Bilim ve Hayat İlişkisi","yillar":{"2018":1,"2019":0,"2020":0,"2021":0,"2022":0,"2023":0,"2024":0,"2025":0}},{"konu":"Ahlak Felsefesinin Konusu ve Temel Kavramları","yillar":{"2018":1,"2019":0,"2020":0,"2021":0,"2022":0,"2023":0,"2024":0,"2025":0}},{"konu":"Ahlak Felsefesinde Özgürlük ve Sorumluluk","yillar":{"2018":0,"2019":0,"2020":0,"2021":1,"2022":0,"2023":0,"2024":0,"2025":0}},{"konu":"Ahlak Felsefesinde İyilik ve Mutluluk İlişkisi","yillar":{"2018":0,"2019":0,"2020":1,"2021":0,"2022":0,"2023":0,"2024":0,"2025":0}},{"konu":"Din Felsefesinin Konusu ve Soruları","yillar":{"2018":0,"2019":0,"2020":0,"2021":0,"2022":0,"2023":0,"2024":1,"2025":0}},{"konu":"Siyaset Felsefesinin Konusu ve Problemleri","yillar":{"2018":0,"2019":1,"2020":0,"2021":0,"2022":0,"2023":0,"2024":0,"2025":0}},{"konu":"Sanat Felsefesinin Konusu ve Problemleri","yillar":{"2018":1,"2019":1,"2020":0,"2021":0,"2022":0,"2023":0,"2024":1,"2025":1}},{"konu":"Felsefi Metin Analizi","yillar":{"2018":0,"2019":0,"2020":0,"2021":0,"2022":0,"2023":1,"2024":0,"2025":0}},{"konu":"Sofistler ile Sokrates'in Bilgi ve Değer Anlayışları","yillar":{"2018":0,"2019":0,"2020":1,"2021":1,"2022":0,"2023":0,"2024":0,"2025":1}},{"konu":"Platon ve Aristoteles'in Varlık, Bilgi ve Değer Anlayışı","yillar":{"2018":0,"2019":0,"2020":1,"2021":0,"2022":0,"2023":1,"2024":0,"2025":0}},{"konu":"İslam Felsefesinin Özellikleri, İnanç Akıl İlişkisi ve Filozofların Görüşleri","yillar":{"2018":0,"2019":1,"2020":0,"2021":0,"2022":0,"2023":0,"2024":0,"2025":0}},{"konu":"15-17. Yüzyıl Felsefesinde Öne Çıkan Görüşler","yillar":{"2018":0,"2019":0,"2020":1,"2021":1,"2022":1,"2023":0,"2024":0,"2025":1}},{"konu":"18-19. Yüzyıl Felsefesinde Öne Çıkan Problemler ve Görüşler","yillar":{"2018":1,"2019":0,"2020":0,"2021":0,"2022":0,"2023":0,"2024":0,"2025":0}},{"konu":"20. Yüzyıl Felsefesinde Bazı Ana Akımlar","yillar":{"2018":1,"2019":0,"2020":2,"2021":2,"2022":1,"2023":1,"2024":0,"2025":0}},{"konu":"20. Yüzyıl Filozoflarının Görüşleri","yillar":{"2018":0,"2019":0,"2020":0,"2021":0,"2022":0,"2023":0,"2024":0,"2025":1}}],"toplamSoru":{"2018":5,"2019":5,"2020":6,"2021":6,"2022":5,"2023":4,"2024":5,"2025":5}},
   'YDT İngilizce': {"konular":[{"konu":"Vocabulary","yillar":{"2018":5,"2019":5,"2020":5,"2021":5,"2022":5,"2023":5,"2024":5,"2025":5}},{"konu":"Grammar","yillar":{"2018":10,"2019":10,"2020":10,"2021":10,"2022":10,"2023":10,"2024":10,"2025":10}},{"konu":"Cloze Test","yillar":{"2018":5,"2019":5,"2020":5,"2021":5,"2022":5,"2023":5,"2024":5,"2025":5}},{"konu":"Sentence Completion","yillar":{"2018":8,"2019":8,"2020":8,"2021":8,"2022":8,"2023":8,"2024":8,"2025":8}},{"konu":"Paragraph Comprehension","yillar":{"2018":15,"2019":15,"2020":15,"2021":15,"2022":15,"2023":15,"2024":15,"2025":15}},{"konu":"Dialogue Completion","yillar":{"2018":5,"2019":5,"2020":5,"2021":5,"2022":5,"2023":5,"2024":5,"2025":5}},{"konu":"Restatement","yillar":{"2018":5,"2019":5,"2020":5,"2021":5,"2022":5,"2023":5,"2024":5,"2025":5}},{"konu":"Situation","yillar":{"2018":5,"2019":5,"2020":5,"2021":5,"2022":5,"2023":5,"2024":5,"2025":5}},{"konu":"Paragraph Completion","yillar":{"2018":5,"2019":5,"2020":5,"2021":5,"2022":5,"2023":5,"2024":5,"2025":5}},{"konu":"Translation (Eng. – Tur.)","yillar":{"2018":6,"2019":6,"2020":6,"2021":6,"2022":6,"2023":6,"2024":6,"2025":6}},{"konu":"Translation (Tur. – Eng.)","yillar":{"2018":6,"2019":6,"2020":6,"2021":6,"2022":6,"2023":6,"2024":6,"2025":6}},{"konu":"Irrelevant Sentence","yillar":{"2018":5,"2019":5,"2020":5,"2021":5,"2022":5,"2023":5,"2024":5,"2025":5}}],"toplamSoru":{"2018":80,"2019":80,"2020":80,"2021":80,"2022":80,"2023":80,"2024":80,"2025":80}}
+  ,"LGS Türkçe": {
+    "konular": [
+      {"konu": "Sözcükte Anlam", "yillar": {"2023": 2, "2024": 2, "2025": 2}},
+      {"konu": "Cümlede Anlam", "yillar": {"2023": 3, "2024": 3, "2025": 2}},
+      {"konu": "Parçada Anlam", "yillar": {"2023": 4, "2024": 3, "2025": 5}},
+      {"konu": "Parçada Anlatım", "yillar": {"2023": 3, "2024": 1, "2025": 2}},
+      {"konu": "Parçada Yapı", "yillar": {"2023": 1, "2024": 1, "2025": 0}},
+      {"konu": "Sözel Mantık", "yillar": {"2023": 1, "2024": 0, "2025": 0}},
+      {"konu": "Tablo, Grafik ve Görsel Yorumlama", "yillar": {"2023": 3, "2024": 3, "2025": 3}},
+      {"konu": "Yazım Kuralları", "yillar": {"2023": 1, "2024": 1, "2025": 1}},
+      {"konu": "Noktalama İşaretleri", "yillar": {"2023": 1, "2024": 1, "2025": 1}},
+      {"konu": "Metin Türleri", "yillar": {"2023": 0, "2024": 1, "2025": 0}},
+      {"konu": "Söz Sanatları", "yillar": {"2023": 0, "2024": 0, "2025": 1}},
+      {"konu": "Fiilimsiler", "yillar": {"2023": 0, "2024": 0, "2025": 1}},
+      {"konu": "Cümlenin Öğeleri", "yillar": {"2023": 0, "2024": 0, "2025": 0}},
+      {"konu": "Fiilde Çatı", "yillar": {"2023": 0, "2024": 0, "2025": 1}},
+      {"konu": "Cümle Türleri", "yillar": {"2023": 0, "2024": 1, "2025": 1}},
+      {"konu": "Anlatım Bozuklukları", "yillar": {"2023": 0, "2024": 1, "2025": 1}},
+      {"konu": "Deyim ve Atasözleri", "yillar": {"2023": 0, "2024": 1, "2025": 0}}
+    ],
+    "toplamSoru": {"2023": 20, "2024": 20, "2025": 20}
+  },
+  "LGS Matematik": {
+    "konular": [
+      {"konu": "Çarpanlar ve Katlar", "yillar": {"2023": 4, "2024": 1, "2025": 1}},
+      {"konu": "Üslü İfadeler", "yillar": {"2023": 3, "2024": 2, "2025": 2}},
+      {"konu": "Kareköklü İfadeler", "yillar": {"2023": 5, "2024": 3, "2025": 3}},
+      {"konu": "Veri Analizi", "yillar": {"2023": 2, "2024": 1, "2025": 1}},
+      {"konu": "Olasılık", "yillar": {"2023": 2, "2024": 1, "2025": 1}},
+      {"konu": "Cebirsel İfadeler", "yillar": {"2023": 4, "2024": 2, "2025": 2}},
+      {"konu": "Doğrusal Denklemler", "yillar": {"2023": 0, "2024": 3, "2025": 3}},
+      {"konu": "Eşitsizlikler", "yillar": {"2023": 0, "2024": 2, "2025": 2}},
+      {"konu": "Üçgenler", "yillar": {"2023": 0, "2024": 2, "2025": 2}},
+      {"konu": "Eşlik ve Benzerlik", "yillar": {"2023": 0, "2024": 1, "2025": 1}},
+      {"konu": "Dönüşüm Geometrisi", "yillar": {"2023": 0, "2024": 1, "2025": 1}},
+      {"konu": "Geometrik Cisimler", "yillar": {"2023": 0, "2024": 1, "2025": 1}}
+    ],
+    "toplamSoru": {"2023": 20, "2024": 20, "2025": 20}
+  },
+  "LGS Fen Bilimleri": {
+    "konular": [
+      {"konu": "Mevsimler ve İklim", "yillar": {"2023": 3, "2024": 2, "2025": 1}},
+      {"konu": "DNA ve Genetik Kod", "yillar": {"2023": 8, "2024": 4, "2025": 3}},
+      {"konu": "Basınç", "yillar": {"2023": 5, "2024": 2, "2025": 2}},
+      {"konu": "Madde ve Endüstri", "yillar": {"2023": 4, "2024": 5, "2025": 5}},
+      {"konu": "Basit Makineler", "yillar": {"2023": 0, "2024": 2, "2025": 2}},
+      {"konu": "Enerji Dönüşümleri ve Çevre Bilimi", "yillar": {"2023": 0, "2024": 3, "2025": 4}},
+      {"konu": "Elektrik Yükleri ve Elektrik Enerjisi", "yillar": {"2023": 0, "2024": 2, "2025": 3}}
+    ],
+    "toplamSoru": {"2023": 20, "2024": 20, "2025": 20}
+  },
+  "LGS İnkılap Tarihi": {
+    "konular": [
+      {"konu": "Bir Kahraman Doğuyor", "yillar": {"2023": 3, "2024": 1, "2025": 1}},
+      {"konu": "Milli Uyanış: Bağımsızlık Yolunda Atılan Adımlar", "yillar": {"2023": 4, "2024": 2, "2025": 2}},
+      {"konu": "Ya İstiklal Ya Ölüm!", "yillar": {"2023": 3, "2024": 2, "2025": 2}},
+      {"konu": "Atatürkçülük ve Çağdaşlaşan Türkiye", "yillar": {"2023": 0, "2024": 3, "2025": 3}},
+      {"konu": "Demokratikleşme Çabaları", "yillar": {"2023": 0, "2024": 1, "2025": 1}},
+      {"konu": "Atatürk Dönemi Türk Dış Politikası", "yillar": {"2023": 0, "2024": 1, "2025": 1}},
+      {"konu": "Atatürk'ün Vefatı ve Sonrası", "yillar": {"2023": 0, "2024": 0, "2025": 0}}
+    ],
+    "toplamSoru": {"2023": 10, "2024": 10, "2025": 10}
+  },
+  "LGS İngilizce": {
+    "konular": [
+      {"konu": "Friendship", "yillar": {"2023": 4, "2024": 2, "2025": 2}},
+      {"konu": "Teen Life", "yillar": {"2023": 0, "2024": 1, "2025": 1}},
+      {"konu": "In The Kitchen", "yillar": {"2023": 2, "2024": 1, "2025": 1}},
+      {"konu": "On The Phone", "yillar": {"2023": 2, "2024": 1, "2025": 1}},
+      {"konu": "The Internet", "yillar": {"2023": 2, "2024": 1, "2025": 1}},
+      {"konu": "Adventures", "yillar": {"2023": 0, "2024": 1, "2025": 1}},
+      {"konu": "Tourism", "yillar": {"2023": 0, "2024": 1, "2025": 1}},
+      {"konu": "Chores", "yillar": {"2023": 0, "2024": 1, "2025": 1}},
+      {"konu": "Science", "yillar": {"2023": 0, "2024": 1, "2025": 1}},
+      {"konu": "Natural Forces", "yillar": {"2023": 0, "2024": 0, "2025": 0}}
+    ],
+    "toplamSoru": {"2023": 10, "2024": 10, "2025": 10}
+  },
+  "LGS Din Kültürü ve Ahlak Bilgisi": {
+    "konular": [
+      {"konu": "Kader İnancı", "yillar": {"2023": 4, "2024": 3, "2025": 3}},
+      {"konu": "Zekât ve Sadaka", "yillar": {"2023": 3, "2024": 3, "2025": 2}},
+      {"konu": "Din ve Hayat", "yillar": {"2023": 3, "2024": 2, "2025": 2}},
+      {"konu": "Hz. Muhammed'in Örnekliği", "yillar": {"2023": 0, "2024": 1, "2025": 2}},
+      {"konu": "Kur'an-ı Kerim ve Özellikleri", "yillar": {"2023": 0, "2024": 1, "2025": 1}}
+    ],
+    "toplamSoru": {"2023": 10, "2024": 10, "2025": 10}
+  }  
 };
 
 const allYears = ['2018', '2019', '2020', '2021', '2022', '2023', '2024', '2025'];
@@ -190,31 +278,30 @@ export default function ExamTopicsSection({ user, hasClassViewerSession = false,
   const totalQuestions = filteredTopics.reduce((sum, topic) => sum + topic.total, 0);
 
   const toggleYear = (year: string) => {
-
-    const isPremium = premiumYears.includes(year);
-    
-    // Premium yıllar için erişim kontrolü
-    if (isPremium && !canAccessExamTopics(year)) {
-      onUpgrade();
-      return;
+  const isPremium = premiumYears.includes(year);
+  
+  if (isPremium && !canAccessExamTopics(year)) {
+    onUpgrade();
+    return;
+  }
+  
+  if (selectedYears.includes(year)) {
+    if (selectedYears.length > 1) {
+      setSelectedYears(selectedYears.filter(y => y !== year));
     }
-    if (selectedYears.includes(year)) {
-      if (selectedYears.length > 1) {
-        setSelectedYears(selectedYears.filter(y => y !== year));
-      }
-    } else {
-      setSelectedYears([...selectedYears, year].sort());
-    }
-  };
+  } else {
+    setSelectedYears([...selectedYears, year].sort());
+  }
+};
 
   const chartData = selectedTopic
-    ? allYears
-        .filter(year => hasAccess || freeYears.includes(year))
-        .map(year => ({
-          year,
-          soru: currentSubjectData.konular.find(k => k.konu === selectedTopic)?.yillar[year] || 0,
-        }))
-    : [];
+  ? allYears
+      .filter(year => canAccessExamTopics(year))
+      .map(year => ({
+        year,
+        soru: currentSubjectData.konular.find(k => k.konu === selectedTopic)?.yillar[year] || 0,
+      }))
+  : [];
 
   const handleSort = (field: 'name' | 'total') => {
     if (sortBy === field) {
@@ -285,39 +372,39 @@ export default function ExamTopicsSection({ user, hasClassViewerSession = false,
             <div className="flex flex-wrap gap-2">
               {allYears.map(year => {
                 const isPremium = premiumYears.includes(year);
-                const isLocked = isPremium && !hasAccess;
+                const hasYearAccess = canAccessExamTopics(year); // Hook'tan kontrol
+                const isLocked = isPremium && !hasYearAccess;
                 const isSelected = selectedYears.includes(year);
 
-                return isLocked ? (
-                  <div
-                    key={year}
-                    className="relative px-4 py-2 rounded-lg font-medium bg-gray-100 text-gray-400 border-2 border-gray-300 border-dashed opacity-60 cursor-not-allowed"
-                    title="Bu yıl için premium paket gereklidir"
-                  >
-                    <span className="flex items-center gap-1">
-                      {year}
-                      <Lock className="h-4 w-4 text-gray-500" />
-                    </span>
-                  </div>
-                ) : (
+                return (
                   <button
                     key={year}
                     onClick={() => toggleYear(year)}
+                    disabled={isLocked}
                     className={`relative px-4 py-2 rounded-lg font-medium transition-all ${
                       isSelected
                         ? 'bg-blue-600 text-white shadow-md'
+                        : isLocked
+                        ? 'bg-gray-100 text-gray-400 border-2 border-gray-300 border-dashed cursor-not-allowed opacity-60'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
+                    title={isLocked ? 'Bu yıl için premium paket gereklidir' : ''}
                   >
                     <span className="flex items-center gap-1">
                       {year}
+                      {isLocked && <Lock className="h-4 w-4" />}
                     </span>
+                    {isPremium && !isLocked && (
+                      <span className="absolute -top-1 -right-1 bg-amber-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                        PRO
+                      </span>
+                    )}
                   </button>
                 );
               })}
             </div>
             <p className="text-xs text-gray-500 mt-2">
-              2021-2025 yılları premium kullanıcılar için
+              💎 2021-2025 yılları Gelişmiş ve Profesyonel paketler için 👑 (LGS'de son 3 yıl verisi önemli olduğu için 2023-2025 verileri sunulmaktadır.)
             </p>
           </div>
         </div>
@@ -503,49 +590,106 @@ export default function ExamTopicsSection({ user, hasClassViewerSession = false,
 
         {/* Premium CTA */}
         {!hasAccess && (
-          <div className="mt-8 bg-gradient-to-br from-yellow-50 to-orange-50 rounded-2xl p-8 border-2 border-yellow-200">
-            <div className="text-center mb-6">
-              <Crown className="h-16 w-16 text-yellow-600 mx-auto mb-4" />
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">Premium Özellikleri Açmak İçin</h3>
-              <p className="text-gray-600">
-                2021-2025 yıllarını görüntülemek ve detaylı analiz yapmak için kayıt olun.
-              </p>
+        <div className="mt-8 bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-8 border-2 border-blue-200">
+          <div className="text-center mb-6">
+            <Crown className="h-16 w-16 text-blue-600 mx-auto mb-4" />
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">
+              Tüm Yılları Görmek İster misin?
+            </h3>
+            <p className="text-gray-600">
+              2021-2025 yıllarını görüntülemek ve detaylı analiz yapmak için kayıt olun.
+            </p>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-3 mb-6">
+            {/* Temel Paket */}
+            <div className="bg-white rounded-xl p-6 border-2 border-gray-200">
+              <div className="text-center mb-4">
+                <span className="text-2xl">📘</span>
+                <h4 className="text-lg font-semibold mt-2">Temel Paket</h4>
+              </div>
+              <ul className="space-y-2 text-sm text-gray-700">
+                <li className="flex items-start">
+                  <span className="text-green-500 mr-2">✓</span>
+                  2018-2020 yılları
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-500 mr-2">✓</span>
+                  Temel konu analizi
+                </li>
+                <li className="flex items-start">
+                  <span className="text-red-500 mr-2">✗</span>
+                  <span className="text-gray-400">2021-2025 yılları</span>
+                </li>
+              </ul>
             </div>
 
-            <div className="grid gap-6 lg:grid-cols-2 mb-6">
-              <div className="bg-white rounded-xl p-6 border-2 border-gray-200">
-                <h4 className="text-lg font-semibold mb-4">Ücretsiz</h4>
-                <ul className="space-y-2 text-sm text-gray-700">
-                  <li>• 2018-2020 yılları</li>
-                  <li>• Temel konu analizi</li>
-                  <li>• Sınırlı grafik görünümü</li>
-                </ul>
+            {/* Gelişmiş Paket */}
+            <div className="bg-gradient-to-br from-purple-100 to-blue-100 rounded-xl p-6 border-2 border-purple-400">
+              <div className="text-center mb-4">
+                <span className="text-2xl">⭐</span>
+                <h4 className="text-lg font-semibold mt-2">Gelişmiş Paket</h4>
+                <span className="text-xs bg-purple-200 text-purple-800 px-2 py-1 rounded-full">
+                  Önerilen
+                </span>
               </div>
-
-              <div className="bg-gradient-to-br from-yellow-100 to-orange-100 rounded-xl p-6 border-2 border-yellow-400">
-                <div className="flex items-center mb-4">
-                  <Crown className="h-5 w-5 text-yellow-600 mr-2" />
-                  <h4 className="text-lg font-semibold">Premium</h4>
-                </div>
-                <ul className="space-y-2 text-sm text-gray-900 font-medium">
-                  <li>• 2018-2025 tüm yıllar</li>
-                  <li>• Detaylı trend analizi</li>
-                  <li>• Gelişmiş filtreleme</li>
-                  <li>• AI destekli öneriler</li>
-                </ul>
-              </div>
+              <ul className="space-y-2 text-sm text-gray-900 font-medium">
+                <li className="flex items-start">
+                  <span className="text-green-600 mr-2">✓</span>
+                  2018-2020 yılları
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-600 mr-2">✓</span>
+                  <strong>2021-2025 yılları</strong>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-600 mr-2">✓</span>
+                  Detaylı trend analizi
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-600 mr-2">✓</span>
+                  AI destekli öneriler
+                </li>
+              </ul>
             </div>
 
-            <div className="text-center">
-              <button
-                onClick={onUpgrade}
-                className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-8 py-3 rounded-lg font-semibold hover:from-yellow-600 hover:to-orange-600 transition-all transform hover:scale-105 shadow-lg"
-              >
-                Paket Seç
-              </button>
+            {/* Profesyonel Paket */}
+            <div className="bg-gradient-to-br from-amber-100 to-orange-100 rounded-xl p-6 border-2 border-amber-400">
+              <div className="text-center mb-4">
+                <span className="text-2xl">👑</span>
+                <h4 className="text-lg font-semibold mt-2">Profesyonel</h4>
+              </div>
+              <ul className="space-y-2 text-sm text-gray-900 font-medium">
+                <li className="flex items-start">
+                  <span className="text-green-600 mr-2">✓</span>
+                  Tüm yıllar (2018-2025)
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-600 mr-2">✓</span>
+                  Sınırsız analiz
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-600 mr-2">✓</span>
+                  Gelişmiş filtreleme
+                </li>
+                <li className="flex items-start">
+                  <span className="text-green-600 mr-2">✓</span>
+                  Öncelikli destek
+                </li>
+              </ul>
             </div>
           </div>
-        )}
+
+          <div className="text-center">
+            <button
+              onClick={onUpgrade}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-3 rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all transform hover:scale-105 shadow-lg"
+            >
+              Paketleri İncele
+            </button>
+          </div>
+        </div>
+      )}
 
         {/* How to Use */}
         <div className="mt-12 bg-blue-50 rounded-xl p-6">
@@ -570,7 +714,6 @@ export default function ExamTopicsSection({ user, hasClassViewerSession = false,
       <FeatureGate
         feature="exam_topics"
         onUpgrade={onUpgrade}
-        showPaywall={true}
         fallback={<div>Bu özelliğe erişiminiz yok</div>}
       >
         {/* Chart ve premium içerik */}
@@ -583,3 +726,5 @@ export default function ExamTopicsSection({ user, hasClassViewerSession = false,
     </div>
   );
 }
+
+export { examData };
