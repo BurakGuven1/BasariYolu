@@ -1211,12 +1211,12 @@ const chartData = filteredExamResults
         <FeatureGate 
           feature="pomodoro_timer"
           fallback={
-            <div className="bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20 rounded-xl p-8 text-center border-2 border-orange-200 dark:border-orange-700">
+            <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-xl p-8 text-center border-2 border-orange-200">
               <Clock className="h-16 w-16 text-orange-400 mx-auto mb-4" />
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+              <h3 className="text-2xl font-bold text-gray-900 ">
                 Pomodoro Timer
               </h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
+              <p className="text-gray-600 mb-6">
                 Pomodoro tekniği ile çalışma verimliliğinizi artırın! Bu özellik Gelişmiş ve Profesyonel paketlerde kullanılabilir.
               </p>
               <button
@@ -1229,13 +1229,7 @@ const chartData = filteredExamResults
           }
         >
           <div>
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Pomodoro Timer</h2>
-              <p className="text-gray-600 dark:text-gray-400">
-                25 dakika odaklan, 5 dakika mola ver. Çalışma disiplininizi geliştirin.
-              </p>
-            </div>
-            <PomodoroTimer studentId={studentData.id} /> {/* ✅ studentData.id geç */}
+            <PomodoroTimer studentId={studentData.id} />
           </div>
         </FeatureGate>
       )}

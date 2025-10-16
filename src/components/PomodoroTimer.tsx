@@ -185,24 +185,24 @@ export default function PomodoroTimer({ studentId }: PomodoroTimerProps) {
         return {
           label: 'Odaklanma Zamanı',
           color: 'from-red-500 to-orange-500',
-          bgColor: 'bg-red-50 dark:bg-red-900/20',
-          textColor: 'text-red-700 dark:text-red-300',
+          bgColor: 'bg-red-50',
+          textColor: 'text-red-700 ',
           icon: Zap
         };
       case 'shortBreak':
         return {
           label: 'Kısa Mola',
           color: 'from-green-500 to-teal-500',
-          bgColor: 'bg-green-50 dark:bg-green-900/20',
-          textColor: 'text-green-700 dark:text-green-300',
+          bgColor: 'bg-green-50',
+          textColor: 'text-green-700',
           icon: Coffee
         };
       case 'longBreak':
         return {
           label: 'Uzun Mola',
           color: 'from-blue-500 to-purple-500',
-          bgColor: 'bg-blue-50 dark:bg-blue-900/20',
-          textColor: 'text-blue-700 dark:text-blue-300',
+          bgColor: 'bg-blue-50',
+          textColor: 'text-blue-700',
           icon: Coffee
         };
     }
@@ -229,7 +229,7 @@ export default function PomodoroTimer({ studentId }: PomodoroTimerProps) {
           </div>
           <button
             onClick={() => setShowSettings(true)}
-            className={`p-2 rounded-lg ${modeConfig.textColor} hover:bg-white/50 dark:hover:bg-black/20 transition-colors`}
+            className={`p-2 rounded-lg ${modeConfig.textColor} hover:bg-white/50 transition-colors`}
           >
             <Settings className="h-5 w-5" />
           </button>
@@ -246,7 +246,7 @@ export default function PomodoroTimer({ studentId }: PomodoroTimerProps) {
               stroke="currentColor"
               strokeWidth="8"
               fill="none"
-              className="text-gray-300 dark:text-gray-700"
+              className="text-gray-300"
             />
             <circle
               cx="128"
@@ -274,7 +274,7 @@ export default function PomodoroTimer({ studentId }: PomodoroTimerProps) {
         <div className="flex items-center justify-center gap-4 mb-6">
           <button
             onClick={resetTimer}
-            className={`p-4 rounded-full ${modeConfig.textColor} hover:bg-white/50 dark:hover:bg-black/20 transition-colors`}
+            className={`p-4 rounded-full ${modeConfig.textColor} hover:bg-white/50 transition-colors`}
             title="Sıfırla"
           >
             <RotateCcw className="h-6 w-6" />
@@ -293,7 +293,7 @@ export default function PomodoroTimer({ studentId }: PomodoroTimerProps) {
 
           <button
             onClick={skipToNext}
-            className={`p-4 rounded-full ${modeConfig.textColor} hover:bg-white/50 dark:hover:bg-black/20 transition-colors`}
+            className={`p-4 rounded-full ${modeConfig.textColor} hover:bg-white/50 transition-colors`}
             title="Sonraki Aşamaya Geç"
           >
             <span className="text-xl font-bold">⏭️</span>
@@ -308,7 +308,7 @@ export default function PomodoroTimer({ studentId }: PomodoroTimerProps) {
               className={`w-3 h-3 rounded-full ${
                 i < completedSessions % settings.sessionsBeforeLongBreak
                   ? `bg-gradient-to-r ${modeConfig.color}`
-                  : 'bg-gray-300 dark:bg-gray-700'
+                  : 'bg-gray-300'
               }`}
             />
           ))}
@@ -320,23 +320,23 @@ export default function PomodoroTimer({ studentId }: PomodoroTimerProps) {
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 mt-6">
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 text-center shadow-md">
-          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+        <div className="bg-white rounded-xl p-4 text-center shadow-md">
+          <div className="text-2xl font-bold text-blue-600">
             {todayStats.focusSessions}
           </div>
-          <div className="text-sm text-gray-600 dark:text-gray-400">Pomodoro</div>
+          <div className="text-sm text-gray-600">Pomodoro</div>
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 text-center shadow-md">
-          <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+        <div className="bg-white rounded-xl p-4 text-center shadow-md">
+          <div className="text-2xl font-bold text-green-600">
             {todayStats.totalMinutes}
           </div>
-          <div className="text-sm text-gray-600 dark:text-gray-400">Dakika</div>
+          <div className="text-sm text-gray-600">Dakika</div>
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 text-center shadow-md">
-          <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+        <div className="bg-white rounded-xl p-4 text-center shadow-md">
+          <div className="text-2xl font-bold text-orange-600">
             {todayStats.currentStreak}
           </div>
-          <div className="text-sm text-gray-600 dark:text-gray-400">Seri</div>
+          <div className="text-sm text-gray-600">Seri</div>
         </div>
       </div>
 
@@ -372,14 +372,14 @@ function PomodoroSettings({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-6">
-        <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+      <div className="bg-white rounded-2xl max-w-md w-full p-6">
+        <h3 className="text-2xl font-bold text-gray-900 mb-6">
           Pomodoro Ayarları
         </h3>
 
         {/* Presets */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
             Hazır Şablonlar
           </label>
           <div className="grid grid-cols-3 gap-2">
@@ -392,7 +392,7 @@ function PomodoroSettings({
                   longBreakMinutes: preset.long,
                   sessionsBeforeLongBreak: preset.sessions
                 })}
-                className="px-4 py-2 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors text-sm font-medium"
+                className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium"
               >
                 {preset.name}
               </button>
@@ -403,7 +403,7 @@ function PomodoroSettings({
         {/* Custom Settings */}
         <div className="space-y-4 mb-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Odaklanma Süresi (dakika)
             </label>
             <input
@@ -412,12 +412,12 @@ function PomodoroSettings({
               max="120"
               value={settings.focusMinutes}
               onChange={(e) => setSettings({ ...settings, focusMinutes: parseInt(e.target.value) || 25 })}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Kısa Mola (dakika)
             </label>
             <input
@@ -426,12 +426,12 @@ function PomodoroSettings({
               max="30"
               value={settings.shortBreakMinutes}
               onChange={(e) => setSettings({ ...settings, shortBreakMinutes: parseInt(e.target.value) || 5 })}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Uzun Mola (dakika)
             </label>
             <input
@@ -440,12 +440,12 @@ function PomodoroSettings({
               max="60"
               value={settings.longBreakMinutes}
               onChange={(e) => setSettings({ ...settings, longBreakMinutes: parseInt(e.target.value) || 15 })}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Uzun Mola Öncesi Oturum Sayısı
             </label>
             <input
@@ -454,7 +454,7 @@ function PomodoroSettings({
               max="10"
               value={settings.sessionsBeforeLongBreak}
               onChange={(e) => setSettings({ ...settings, sessionsBeforeLongBreak: parseInt(e.target.value) || 4 })}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900"
             />
           </div>
         </div>
@@ -463,7 +463,7 @@ function PomodoroSettings({
         <div className="flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+            className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
           >
             İptal
           </button>
