@@ -349,3 +349,54 @@ export const getWeeklyStudySessions = async (studentId: string, startDate: strin
     .lte('session_date', endDate);
   return { data, error };
 };
+
+// Pomodoro Sessions
+export const savePomodoroSession = async (sessionData: {
+  student_id: string;
+  session_type: 'focus' | 'short_break' | 'long_break';
+  duration_minutes: number;
+  completed: boolean;
+  started_at: string;
+  completed_at?: string;
+  notes?: string;
+}) => {
+  const { data, error } = await supabase
+    .from('pomodoro_sessions')
+    .insert([sessionData])
+    .select();
+  return { data, error };
+};
+
+export const getPomodoroSessions = async (studentId: string, startDate?: string, endDate?: string) => {
+  let query = supabase
+    .from('pomodoro_sessions')
+    .select('*')
+    .eq('student_id', studentId)
+    .order('started_at', { ascending: false });
+
+  if (startDate) {
+    query = query.gte('started_at', startDate);
+  }
+  if (endDate) {
+    query = query.lte('started_at', endDate);
+  }
+
+  const { data, error } = await query;
+  return { data, error };
+};
+
+export const getPomodoroStats = async (studentId: string) => {
+  // Today's stats
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const { data, error } = await supabase
+    .from('pomodoro_sessions')
+    .select('*')
+    .eq('student_id', studentId)
+    .eq('session_type', 'focus')
+    .eq('completed', true)
+    .gte('started_at', today.toISOString());
+
+  return { data, error };
+};

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BookOpen, Plus, TrendingUp, Calendar, Target, Award, Clock, CheckCircle, AlertCircle, LogOut, CreditCard as Edit, Trash2, MoreVertical, Users, X, Brain,Crown, Trophy } from 'lucide-react';
+import { BookOpen, Plus, TrendingUp, Calendar, Target, Award, Clock, CheckCircle, AlertCircle, LogOut, CreditCard as Edit, Trash2, MoreVertical, Users, X, Brain,Crown, Trophy, Timer } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer} from 'recharts';
 import { useAuth } from '../hooks/useAuth';
 import { useStudentData } from '../hooks/useStudentData';
@@ -19,13 +19,14 @@ import { addStudySessionPoints, completeChallenge, isChallengeCompletedToday } f
 import { packages } from '../data/packages';
 import { generatePerformanceInsights, generateDailyChallenge } from '../lib/ai';
 import { getStudentInviteCode, deleteExamResult, updateHomework, deleteHomework, addStudySession, getWeeklyStudyGoal, createWeeklyStudyGoal, updateWeeklyStudyGoal, getWeeklyStudySessions } from '../lib/supabase';
+import PomodoroTimer from './PomodoroTimer';
 
 export default function StudentDashboard() {
   const [insights, setInsights] = useState<any[]>([]);
   const [dailyChallenge, setDailyChallenge] = useState<any>(null);
   const { planName} = useFeatureAccess();
   const { user, clearUser } = useAuth();
-  const [activeTab, setActiveTab] = useState<'overview' | 'exams' | 'homeworks' | 'analysis' | 'classes' | 'smartplan'| 'subscription'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'exams' | 'homeworks' | 'pomodoro' | 'analysis' | 'classes' | 'smartplan'| 'subscription'>('overview');
   const [showExamForm, setShowExamForm] = useState(false);
   const [showHomeworkForm, setShowHomeworkForm] = useState(false);
   const [showInviteCode, setShowInviteCode] = useState(false);
@@ -291,6 +292,20 @@ export default function StudentDashboard() {
       }
     }
   };
+
+  <FeatureGate feature="pomodoro_timer">
+    <button
+      onClick={() => setActiveTab('pomodoro')}
+      className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+        activeTab === 'pomodoro'
+          ? 'bg-orange-100 text-orange-700'
+          : 'text-gray-700 hover:bg-gray-100'
+      }`}
+    >
+      <Clock className="h-5 w-5" />
+      <span className="font-medium">Pomodoro</span>
+    </button>
+  </FeatureGate>
 
   // Calculate real statistics from user's data
   const calculateStats = () => {
@@ -807,6 +822,7 @@ const chartData = filteredExamResults
             { key: 'analysis', label: 'AI Analiz', icon: Target },
             { key: 'smartplan', label: 'Akıllı Plan', icon: Brain },
             { key: 'subscription', label: 'Aboneliğim', icon: Crown },
+            { key: 'pomodoro', label: 'Pomodoro', icon: Timer },
           ].map(({ key, label, icon: Icon }) => (
             <button
               key={key}
@@ -1191,6 +1207,32 @@ const chartData = filteredExamResults
         )}
       </div>
 
+      {activeTab === 'pomodoro' && (
+        <FeatureGate 
+          feature="pomodoro_timer"
+          fallback={
+            <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-xl p-8 text-center border-2 border-orange-200">
+              <Clock className="h-16 w-16 text-orange-400 mx-auto mb-4" />
+              <h3 className="text-2xl font-bold text-gray-900 ">
+                Pomodoro Timer
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Pomodoro tekniği ile çalışma verimliliğinizi artırın! Bu özellik Gelişmiş ve Profesyonel paketlerde kullanılabilir.
+              </p>
+              <button
+                onClick={() => setActiveTab('subscription')}
+                className="bg-orange-600 text-white px-6 py-3 rounded-lg hover:bg-orange-700 transition-colors font-medium"
+              >
+                Paketi Yükselt
+              </button>
+            </div>
+          }
+        >
+          <div>
+            <PomodoroTimer studentId={studentData.id} />
+          </div>
+        </FeatureGate>
+      )}
       {/* Study Session Form */}
       {showStudyForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">

@@ -9,12 +9,8 @@ interface FeatureGateProps {
   onUpgrade?: () => void;
 }
 
-export default function FeatureGate({ 
-  feature, 
-  children, 
-  fallback, 
-}: FeatureGateProps) {
-  const { hasFeature, loading } = useFeatureAccess();
+export default function FeatureGate({ feature, children, fallback }: FeatureGateProps) {
+  const { hasFeature, canUsePomodoro, loading } = useFeatureAccess();
 
   if (loading) {
     return (
@@ -24,12 +20,17 @@ export default function FeatureGate({
     );
   }
 
-  const hasAccess = hasFeature(feature);
+  let hasAccess = false;
+  
+  if (feature === 'pomodoro_timer') {
+    hasAccess = canUsePomodoro();
+  } else {
+    hasAccess = hasFeature(feature);
+  }
 
-    if (!hasAccess) {
+  if (!hasAccess) {
+    return fallback ? <>{fallback}</> : null;
+  }
 
-    return <>{fallback || null}</>;
-    }
-
-    return <>{children || null}</>;
+  return <>{children}</>;
 }

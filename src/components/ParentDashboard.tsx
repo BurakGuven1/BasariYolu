@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { User, TrendingUp, Clock, Award, BookOpen, AlertTriangle, Plus, UserPlus, LogOut } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useAuth } from '../hooks/useAuth';
-import { useParentData } from '../hooks/useParentData';
-import { signOut, supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 
 export default function ParentDashboard() {
   const [selectedChild, setSelectedChild] = useState<string>('');
@@ -12,11 +11,20 @@ export default function ParentDashboard() {
   const [loading, setLoading] = useState(false);
   
   const { user, clearUser } = useAuth();
-  const { children, loading: dataLoading } = useParentData(user?.id);
+  
+  // ✅ user.connectedStudents'tan al
+  const children = user?.connectedStudents || [];
+
+  console.log('👨‍👩‍👧 ParentDashboard:', {
+    userId: user?.id,
+    isParent: user?.isParentLogin,
+    childrenCount: children.length
+  });
 
   const handleLogout = () => {
-  clearUser();
-};
+    console.log('🔴 Parent logout');
+    clearUser();
+  };
 
   const handleAddChild = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,7 +32,8 @@ export default function ParentDashboard() {
 
     setLoading(true);
     try {
-      // Find student by invite code
+      console.log('🔍 Searching for student:', inviteCode.trim());
+      
       const { data: student, error: studentError } = await supabase
         .from('students')
         .select(`
@@ -35,61 +44,61 @@ export default function ParentDashboard() {
         .single();
 
       if (studentError || !student) {
-        throw new Error('Geçersiz davet kodu');
+        alert('Geçersiz davet kodu');
+        setLoading(false);
+        return;
       }
 
-      // For temporary parent login, we'll add the student to the current session
-      // Update the user object to include this new child
-      const updatedUser = {
-        ...user,
-        connectedStudents: Array.isArray(user?.connectedStudents) 
-          ? [...user.connectedStudents, student]
-          : [student]
+      console.log('✅ Student found:', student.profiles?.full_name);
+
+      // Get all data
+      const [examResults, homeworks, studySessions, weeklyGoal] = await Promise.all([
+        supabase.from('exam_results').select('*').eq('student_id', student.id).order('exam_date', { ascending: false }),
+        supabase.from('homeworks').select('*').eq('student_id', student.id).order('due_date', { ascending: true }),
+        supabase.from('study_sessions').select('*').eq('student_id', student.id).order('session_date', { ascending: false }),
+        supabase.from('weekly_study_goals').select('*').eq('student_id', student.id).eq('is_active', true).maybeSingle()
+      ]);
+
+      const completeStudent = {
+        ...student,
+        exam_results: examResults.data || [],
+        homeworks: homeworks.data || [],
+        study_sessions: studySessions.data || [],
+        weekly_study_goal: weeklyGoal.data
+      };
+
+      // ✅ Update localStorage
+      const currentParentData = JSON.parse(localStorage.getItem('tempParentUser') || '{}');
+      const updatedParentData = {
+        ...currentParentData,
+        connectedStudents: [...(currentParentData.connectedStudents || []), completeStudent]
       };
       
-      // Update the auth context
-      localStorage.setItem('tempParentUser', JSON.stringify(updatedUser));
-      window.location.reload(); // Refresh to load new data
+      localStorage.setItem('tempParentUser', JSON.stringify(updatedParentData));
       
+      console.log('✅ Child added, reloading...');
       alert('Çocuk başarıyla eklendi!');
-      setShowAddChild(false);
-      setInviteCode('');
-    } catch (error) {
-      alert('Beklenmeyen bir hata oluştu');
+      window.location.reload();
+      
+    } catch (error: any) {
+      console.error('❌ Add child error:', error);
+      alert('Bir hata oluştu');
     } finally {
       setLoading(false);
     }
   };
 
-  // Auto-select first child if none selected
+  // Auto-select first child
   React.useEffect(() => {
-    console.log('Children updated:', children);
     if (children.length > 0 && !selectedChild) {
-      console.log('Auto-selecting first child:', children[0].id);
+      console.log('✅ Auto-selecting first child:', children[0].id);
       setSelectedChild(children[0].id);
     }
-  }, [children, selectedChild]);
+  }, [children.length, selectedChild]);
 
-  const selectedChildData = children.find(child => child.id === selectedChild);
-  
-  console.log('Selected child ID:', selectedChild);
-  console.log('Selected child data:', selectedChildData);
-  console.log('All children:', children.map(c => ({ id: c.id, name: c.profiles?.full_name })));
-  
-  // Debug selected child data
-  if (selectedChildData) {
-    console.log('=== SELECTED CHILD DEBUG ===');
-    console.log('Selected child full object:', selectedChildData);
-    console.log('Selected child exam_results:', selectedChildData.exam_results);
-    console.log('Selected child homeworks:', selectedChildData.homeworks);
-    console.log('Selected child study_sessions:', selectedChildData.study_sessions);
-    console.log('Exam results type:', typeof selectedChildData.exam_results);
-    console.log('Exam results is array:', Array.isArray(selectedChildData.exam_results));
-    console.log('Homeworks type:', typeof selectedChildData.homeworks);
-    console.log('Homeworks is array:', Array.isArray(selectedChildData.homeworks));
-  }
+  const selectedChildData = children.find((child: any) => child.id === selectedChild);
 
-  // Calculate stats for selected child
+  // Calculate stats
   const calculateChildStats = () => {
     if (!selectedChildData) return { 
       averageScore: 0, 
@@ -104,33 +113,6 @@ export default function ParentDashboard() {
     const homeworks = selectedChildData.homeworks || [];
     const studySessions = selectedChildData.study_sessions || [];
     
-    console.log('=== CALCULATING STATS FOR CHILD ===');
-    console.log('Child ID:', selectedChildData.id);
-    console.log('Child name:', selectedChildData.profiles?.full_name);
-    console.log('Weekly goal:', selectedChildData.weekly_study_goal);
-    console.log('Raw data for calculations:', {
-      examResults: examResults.length,
-      homeworks: homeworks.length,
-      studySessions: studySessions.length,
-      examData: examResults?.map((e: any) => ({ 
-        name: e.exam_name, 
-        score: e.total_score, 
-        date: e.exam_date 
-      })) || [],
-
-      homeworkData: homeworks?.map((h: any) => ({ 
-        title: h.title, 
-        completed: h.completed, 
-        due: h.due_date 
-      })) || [],
-
-      studyData: studySessions?.map((s: any) => ({ 
-        subject: s.subject, 
-        minutes: s.duration_minutes, 
-        date: s.session_date 
-      })) || []
-    });
-    
     const averageScore = examResults.length > 0 
       ? examResults.reduce((sum: number, exam: any) => sum + (exam.total_score || 0), 0) / examResults.length 
       : 0;
@@ -138,29 +120,26 @@ export default function ParentDashboard() {
     const completedHomeworks = homeworks.filter((hw: any) => hw.completed).length;
     const totalHomeworks = homeworks.length;
     
-    // Calculate study hours from actual study sessions
     const studyHours = studySessions.reduce((total: number, session: any) => {
-      return total + (session.duration_minutes || 0) / 60; // Convert minutes to hours
+      return total + (session.duration_minutes || 0) / 60;
     }, 0);
     
-    // Get the actual weekly target from the child's goal, or use a reasonable default
     const targetHours = selectedChildData.weekly_study_goal?.weekly_hours_target || 0;
     const studyPercentage = targetHours > 0 ? Math.round((studyHours / targetHours) * 100) : 0;
     
-    // Calculate improvement percentage from last two exams
     let improvementPercent = 0;
     if (examResults.length >= 2) {
       const sortedExams = examResults
         .sort((a: any, b: any) => new Date(b.exam_date).getTime() - new Date(a.exam_date).getTime());
-      const lastExam = sortedExams[0]; // Most recent
-      const previousExam = sortedExams[1]; // Second most recent
+      const lastExam = sortedExams[0];
+      const previousExam = sortedExams[1];
       
       if (lastExam.total_score && previousExam.total_score && previousExam.total_score > 0) {
         improvementPercent = ((lastExam.total_score - previousExam.total_score) / previousExam.total_score) * 100;
       }
     }
     
-    const calculatedStats = {
+    return {
       averageScore,
       completedHomeworks,
       totalHomeworks,
@@ -168,22 +147,15 @@ export default function ParentDashboard() {
       studyPercentage,
       improvementPercent
     };
-    
-    console.log('=== FINAL CALCULATED STATS ===', calculatedStats);
-    console.log('Target hours from goal:', targetHours);
-    console.log('Actual study hours:', studyHours);
-    console.log('Study percentage:', studyPercentage);
-    return calculatedStats;
   };
 
   const stats = calculateChildStats();
 
-  // Prepare chart data
   const chartData = selectedChildData?.exam_results && selectedChildData.exam_results.length > 0
     ? selectedChildData.exam_results
-      .filter((exam: any) => exam.total_score != null && exam.exam_date) // Filter out invalid data
+      .filter((exam: any) => exam.total_score != null && exam.exam_date)
       .sort((a: any, b: any) => new Date(a.exam_date).getTime() - new Date(b.exam_date).getTime())
-      .slice(-6) // Son 6 deneme
+      .slice(-6)
       .map((exam: any) => ({
         date: new Date(exam.exam_date).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit' }),
         puan: Math.round(exam.total_score || 0),
@@ -192,41 +164,25 @@ export default function ParentDashboard() {
       }))
     : [];
 
-  console.log('Chart data prepared:', chartData);
-  console.log('Selected child exam results:', selectedChildData?.exam_results);
-  console.log('Selected child homeworks:', selectedChildData?.homeworks);
-  console.log('Selected child study sessions:', selectedChildData?.study_sessions);
-  console.log('Selected child full data:', selectedChildData);
-
   const homeworkCompletion = selectedChildData && selectedChildData.homeworks && selectedChildData.homeworks.length > 0 ? [
     { name: 'Tamamlanan', value: stats.completedHomeworks, color: '#10B981' },
     { name: 'Bekleyen', value: stats.totalHomeworks - stats.completedHomeworks, color: '#F59E0B' }
   ] : [];
 
-  if (dataLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Veriler yükleniyor...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Header */}
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:justify-between md:items-start">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Veli Paneli</h1>
             <p className="text-gray-600">
-              Hoş geldiniz, {user?.profile?.full_name}! Çocuğunuzun akademik gelişimini takip edin
+              Hoş geldiniz! Çocuğunuzun akademik gelişimini takip edin
             </p>
           </div>
           <button
             onClick={handleLogout}
-            className="flex items-center space-x-2 bg-red-100 text-red-700 px-4 py-2 rounded-lg hover:bg-red-200 transition-colors"
+            className="flex items-center space-x-2 bg-red-100 text-red-700 px-4 py-2 rounded-lg hover:bg-red-200"
           >
             <LogOut className="h-4 w-4" />
             <span>Çıkış Yap</span>
@@ -237,7 +193,7 @@ export default function ParentDashboard() {
         <div className="mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <h3 className="text-lg font-semibold">Çocuklarım:</h3>
-            {children.map((child) => (
+            {children.map((child: any) => (
               <button
                 key={child.id}
                 onClick={() => setSelectedChild(child.id)}
@@ -258,7 +214,7 @@ export default function ParentDashboard() {
             ))}
             <button
               onClick={() => setShowAddChild(true)}
-              className="p-4 rounded-lg border-2 border-dashed border-gray-300 bg-white hover:border-blue-300 hover:bg-blue-50 transition-colors"
+              className="p-4 rounded-lg border-2 border-dashed border-gray-300 bg-white hover:border-blue-300 hover:bg-blue-50"
             >
               <div className="flex items-center space-x-3">
                 <Plus className="h-8 w-8 text-gray-400" />
