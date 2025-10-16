@@ -19,6 +19,8 @@ import ProductShowcase from './components/ProductShowcase';
 import SocialProof from './components/SocialProof';
 import CTASection from './components/CTASection';
 import UpgradeModal from './components/UpgradeModal';
+import BlogList from './components/BlogList';
+import BlogDetail from './components/BlogDetail';
 
 function App() {
   const { user, loading, setParentUser, clearUser } = useAuth();
@@ -26,7 +28,8 @@ function App() {
   const [targetUpgradePlan, setTargetUpgradePlan] = useState<any>(null);
   const [showStudentParentLoginModal, setShowStudentParentLoginModal] = useState(false);
   const [showTeacherLoginModal, setShowTeacherLoginModal] = useState(false);
-  const [currentView, setCurrentView] = useState<'home' | 'dashboard'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'dashboard' | 'blog' | 'blog-detail'>('home');
+  const [selectedBlogSlug, setSelectedBlogSlug] = useState<string>('');
   const [teacherUser, setTeacherUser] = useState<any>(null);
   const [hasClassViewerSession, setHasClassViewerSession] = useState(false);
 
@@ -41,8 +44,40 @@ function App() {
       console.log('Teacher session found:', teacherData);
       setTeacherUser(teacherData);
       setCurrentView('dashboard');
+      return;
+    }
+
+    // ✅ Check URL for blog routes
+    const path = window.location.pathname;
+    if (path.startsWith('/blog/')) {
+      const slug = path.replace('/blog/', '');
+      setSelectedBlogSlug(slug);
+      setCurrentView('blog-detail');
+    } else if (path === '/blog') {
+      setCurrentView('blog');
     }
   }, []);
+
+  // ✅ Handle browser back/forward
+  React.useEffect(() => {
+  const handlePopState = () => {
+    const path = window.location.pathname;
+    console.log('⬅️ Browser back/forward to:', path);
+    
+    if (path.startsWith('/blog/') && path !== '/blog/') {
+      const slug = path.replace('/blog/', '');
+      setSelectedBlogSlug(slug);
+      setCurrentView('blog-detail');
+    } else if (path === '/blog') {
+      setCurrentView('blog');
+    } else if (path === '/') {
+      setCurrentView('home');
+    }
+  };
+
+  window.addEventListener('popstate', handlePopState);
+  return () => window.removeEventListener('popstate', handlePopState);
+}, []);
 
   // Listen for teacher login modal trigger
   React.useEffect(() => {
@@ -52,22 +87,22 @@ function App() {
   }, []);
 
   const handleLogout = async () => {
-  try {
-    console.log('🔴 App handleLogout');
-    
-    localStorage.removeItem('teacherSession');
-    localStorage.removeItem('classViewerSession');
-    setTeacherUser(null);
-    
-    await clearUser();
-    
-    console.log('✅ Logout tamamlandı');
-  } catch (err) {
-    console.error('❌ Logout failed:', err);
-    localStorage.clear();
-    window.location.href = '/';
-  }
-};
+    try {
+      console.log('🔴 App handleLogout');
+      
+      localStorage.removeItem('teacherSession');
+      localStorage.removeItem('classViewerSession');
+      setTeacherUser(null);
+      
+      await clearUser();
+      
+      console.log('✅ Logout tamamlandı');
+    } catch (err) {
+      console.error('❌ Logout failed:', err);
+      localStorage.clear();
+      window.location.href = '/';
+    }
+  };
 
   const handleLogin = (loginUser?: any) => {
     console.log('handleLogin called');
@@ -92,7 +127,6 @@ function App() {
 
   const handleSelectPackage = (packageId: string, billingCycle: 'monthly' | 'yearly') => {
     if (user) {
-      // Kullanıcı giriş yapmışsa upgrade modal aç
       const selectedPackage = packages.find(pkg => pkg.id === packageId);
       if (selectedPackage) {
         setTargetUpgradePlan({
@@ -105,9 +139,28 @@ function App() {
         setShowUpgradeModal(true);
       }
     } else {
-      // Giriş yapmamışsa login modal aç
       setShowStudentParentLoginModal(true);
     }
+  };
+
+  // ✅ Blog navigation handlers
+  const handleNavigateToBlog = () => {
+    setCurrentView('blog');
+    window.history.pushState({}, '', '/blog');
+    window.scrollTo(0, 0);
+  };
+
+  const handleNavigateToBlogDetail = (slug: string) => {
+    setSelectedBlogSlug(slug);
+    setCurrentView('blog-detail');
+    window.history.pushState({}, '', `/blog/${slug}`);
+    window.scrollTo(0, 0);
+  };
+
+  const handleNavigateHome = () => {
+    setCurrentView('home');
+    window.history.pushState({}, '', '/');
+    window.scrollTo(0, 0);
   };
 
   React.useEffect(() => {
@@ -124,10 +177,10 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Yükleniyor...</p>
+          <p className="text-gray-600 dark:text-gray-300">Yükleniyor...</p>
         </div>
       </div>
     );
@@ -145,7 +198,7 @@ function App() {
   };
 
   const renderHomePage = () => (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white dark:bg-gray-900">
       <HeroV2 onGetStarted={handleGetStarted} />
       <ProblemSection />
       <VisionSection />
@@ -161,7 +214,7 @@ function App() {
       <CTASection onGetStarted={handleGetStarted} />
       
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
+      <footer className="bg-gray-900 dark:bg-gray-950 text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-4 gap-8">
             <div>
@@ -181,12 +234,16 @@ function App() {
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-3">Destek</h4>
+              <h4 className="font-semibold mb-3">İçerik</h4>
               <ul className="space-y-2 text-sm text-gray-400">
-                <li>Yardım Merkezi</li>
-                <li>İletişim</li>
-                <li>Canlı Destek</li>
-                <li>Videolar</li>
+                <li>
+                  <button onClick={handleNavigateToBlog} className="hover:text-white">
+                    Blog
+                  </button>
+                </li>
+                <li>Çalışma Teknikleri</li>
+                <li>Sınav Stratejileri</li>
+                <li>Motivasyon</li>
               </ul>
             </div>
             <div>
@@ -206,19 +263,35 @@ function App() {
     </div>
   );
 
+  // ✅ Render content based on current view
+  const renderContent = () => {
+    if (currentView === 'dashboard') {
+      return renderDashboard();
+    } else if (currentView === 'blog') {
+      return <BlogList onNavigateToDetail={handleNavigateToBlogDetail} />;
+    } else if (currentView === 'blog-detail') {
+      return <BlogDetail slug={selectedBlogSlug} onNavigateBack={handleNavigateToBlog} />;
+    } else {
+      return renderHomePage();
+    }
+  };
+
   return (
     <ErrorBoundary>
-      {(currentView === 'home' && !teacherUser) && (
+      {/* Navbar - Show on home and blog pages */}
+      {(currentView === 'home' || currentView === 'blog' || currentView === 'blog-detail') && !teacherUser && (
         <Navbar 
           user={user} 
           onStudentParentLogin={() => setShowStudentParentLoginModal(true)}
           onTeacherLogin={() => setShowTeacherLoginModal(true)}
           onLogout={handleLogout}
           onMenuToggle={() => {}}
+          onNavigateToBlog={handleNavigateToBlog}
+          onNavigateHome={handleNavigateHome}
         />
       )}
       
-      {(currentView === 'home' && !teacherUser) ? renderHomePage() : renderDashboard()}
+      {renderContent()}
       
       <LoginModal
         isOpen={showStudentParentLoginModal}
@@ -238,7 +311,6 @@ function App() {
         }}
       />
 
-      {/* Upgrade Modal */}
       {showUpgradeModal && targetUpgradePlan && (
         <UpgradeModal
           isOpen={showUpgradeModal}

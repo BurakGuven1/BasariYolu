@@ -14,7 +14,39 @@ export const useAuth = () => {
 
     console.log('🔵 useAuth initialized');
 
-    // Get initial session
+    // ✅ 1. Önce parent user kontrol et
+    const checkParentUser = () => {
+      const tempParentUser = localStorage.getItem('tempParentUser');
+      if (tempParentUser) {
+        try {
+          const parentData = JSON.parse(tempParentUser);
+          console.log('👨‍👩‍👧 Found parent user in localStorage');
+          setUser({
+            id: parentData.id,
+            email: parentData.email,
+            profile: {
+              full_name: parentData.full_name || 'Veli',
+              user_type: 'parent'
+            },
+            isParentLogin: true,
+            connectedStudents: parentData.connectedStudents || []
+          });
+          setLoading(false);
+          return true; // Parent user bulundu
+        } catch (err) {
+          console.error('❌ Error parsing parent user:', err);
+          localStorage.removeItem('tempParentUser');
+        }
+      }
+      return false; // Parent user yok
+    };
+
+    // Parent user varsa normal auth'u atla
+    if (checkParentUser()) {
+      return;
+    }
+
+    // ✅ 2. Normal Supabase auth
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUser({
@@ -43,7 +75,11 @@ export const useAuth = () => {
           profile: session.user.user_metadata
         });
       } else {
-        setUser(null);
+        // ✅ Parent user varsa silme
+        const tempParentUser = localStorage.getItem('tempParentUser');
+        if (!tempParentUser) {
+          setUser(null);
+        }
       }
     });
 
@@ -55,6 +91,16 @@ export const useAuth = () => {
 
   const clearUser = async () => {
     console.log('🔴 clearUser called');
+    
+    // ✅ Parent user ise sadece localStorage temizle
+    if (user?.isParentLogin) {
+      localStorage.removeItem('tempParentUser');
+      setUser(null);
+      window.location.href = '/';
+      return;
+    }
+    
+    // Normal user için Supabase signOut
     await supabase.auth.signOut();
     setUser(null);
     window.location.href = '/';
@@ -62,7 +108,7 @@ export const useAuth = () => {
 
   const setParentUser = (parentData: any) => {
     console.log('👨‍👩‍👧 Setting parent user:', parentData);
-    setUser({
+    const parentUser = {
       id: parentData.id || `parent_${Date.now()}`,
       email: parentData.email || '',
       profile: {
@@ -71,7 +117,9 @@ export const useAuth = () => {
       },
       isParentLogin: true,
       connectedStudents: parentData.connectedStudents || []
-    });
+    };
+    
+    setUser(parentUser);
     localStorage.setItem('tempParentUser', JSON.stringify(parentData));
   };
 
