@@ -20,8 +20,8 @@ export default function FormulaCardsSection({ studentId }: FormulaCardsSectionPr
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   const subjects = [
-    'TYT Matematik', 'TYT Fizik', 'TYT Kimya', 'TYT Biyoloji',
-    'AYT Matematik', 'AYT Fizik', 'AYT Kimya', 'AYT Biyoloji',
+    'TYT Matematik', 'TYT Fizik', 'TYT Kimya',
+    'AYT Matematik', 'AYT Fizik', 'AYT Kimya',
     'LGS Matematik', 'LGS Fen'
   ];
 
