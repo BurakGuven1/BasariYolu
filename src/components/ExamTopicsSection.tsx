@@ -714,7 +714,6 @@ export default function ExamTopicsSection({ user, hasClassViewerSession = false,
       <FeatureGate
         feature="exam_topics"
         onUpgrade={onUpgrade}
-        fallback={<div>Bu özelliğe erişiminiz yok</div>}
       >
         {/* Chart ve premium içerik */}
         <ResponsiveContainer width="100%" height={300}>

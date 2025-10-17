@@ -10,7 +10,7 @@ interface FeatureGateProps {
 }
 
 export default function FeatureGate({ feature, children, fallback }: FeatureGateProps) {
-  const { hasFeature, canUsePomodoro, loading } = useFeatureAccess();
+  const { hasFeature, canUsePomodoro, loading, canUseFormulaCards } = useFeatureAccess();
 
   if (loading) {
     return (
@@ -24,6 +24,8 @@ export default function FeatureGate({ feature, children, fallback }: FeatureGate
   
   if (feature === 'pomodoro_timer') {
     hasAccess = canUsePomodoro();
+  } else if (feature === 'formula_cards') {
+    hasAccess = canUseFormulaCards();
   } else {
     hasAccess = hasFeature(feature);
   }

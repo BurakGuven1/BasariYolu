@@ -53,7 +53,8 @@ export function useFeatureAccess() {
       'exam_topics': 'limited_content',
       'advanced_reports': 'advanced_reports',
       'custom_goals': 'priority_support',
-      'pomodoro_timer': 'pomodoro_timer'
+      'pomodoro_timer': 'pomodoro_timer',
+      'formula_cards': 'formula_cards'
     };
     
     const mappedName = featureMap[featureName] || featureName;
@@ -66,6 +67,13 @@ export function useFeatureAccess() {
     
     return featureValue === true;
   }, [subscription]);
+
+  const canUseFormulaCards = useCallback((): boolean => {
+  if (!subscription?.plan) return false;
+  const planName = subscription.plan.name;
+  // Sadece Profesyonel pakette kullanılabilir
+  return planName === 'professional' || planName === 'profesyonel';
+}, [subscription]);
 
   const canUsePomodoro = useCallback((): boolean => {
   if (!subscription?.plan) return false;
@@ -155,11 +163,12 @@ export function useFeatureAccess() {
     canAccessExamTopics,
     canAddExam,
     canUsePomodoro,
+    canUseFormulaCards,
     getFeatureLimit,
     isTrialActive,
     getDaysUntilExpiry,
     examStats,
-    setExamStats, // Bu da export edilmeli
+    setExamStats,
     planName: subscription?.plan?.name || 'free',
     planDisplayName: getPlanDisplayName(),
     isFreeTier: !subscription || subscription.status !== 'active',
