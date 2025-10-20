@@ -21,6 +21,7 @@ import CTASection from './components/CTASection';
 import UpgradeModal from './components/UpgradeModal';
 import BlogList from './components/BlogList';
 import BlogDetail from './components/BlogDetail';
+import { PomodoroProvider } from './contexts/PomodoroContext';
 
 function App() {
   const { user, loading, setParentUser, clearUser } = useAuth();
@@ -33,7 +34,6 @@ function App() {
   const [teacherUser, setTeacherUser] = useState<any>(null);
   const [hasClassViewerSession, setHasClassViewerSession] = useState(false);
 
-  // Check for teacher session on load
   React.useEffect(() => {
     const teacherSession = localStorage.getItem('teacherSession');
     const classViewerSession = localStorage.getItem('classViewerSession');
@@ -47,7 +47,6 @@ function App() {
       return;
     }
 
-    // ✅ Check URL for blog routes
     const path = window.location.pathname;
     if (path.startsWith('/blog/')) {
       const slug = path.replace('/blog/', '');
@@ -58,28 +57,26 @@ function App() {
     }
   }, []);
 
-  // ✅ Handle browser back/forward
   React.useEffect(() => {
-  const handlePopState = () => {
-    const path = window.location.pathname;
-    console.log('⬅️ Browser back/forward to:', path);
-    
-    if (path.startsWith('/blog/') && path !== '/blog/') {
-      const slug = path.replace('/blog/', '');
-      setSelectedBlogSlug(slug);
-      setCurrentView('blog-detail');
-    } else if (path === '/blog') {
-      setCurrentView('blog');
-    } else if (path === '/') {
-      setCurrentView('home');
-    }
-  };
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      console.log('⬅️ Browser back/forward to:', path);
+      
+      if (path.startsWith('/blog/') && path !== '/blog/') {
+        const slug = path.replace('/blog/', '');
+        setSelectedBlogSlug(slug);
+        setCurrentView('blog-detail');
+      } else if (path === '/blog') {
+        setCurrentView('blog');
+      } else if (path === '/') {
+        setCurrentView('home');
+      }
+    };
 
-  window.addEventListener('popstate', handlePopState);
-  return () => window.removeEventListener('popstate', handlePopState);
-}, []);
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
-  // Listen for teacher login modal trigger
   React.useEffect(() => {
     const handleOpenTeacherLogin = () => setShowTeacherLoginModal(true);
     window.addEventListener('openTeacherLogin', handleOpenTeacherLogin);
@@ -143,7 +140,6 @@ function App() {
     }
   };
 
-  // ✅ Blog navigation handlers
   const handleNavigateToBlog = () => {
     setCurrentView('blog');
     window.history.pushState({}, '', '/blog');
@@ -186,14 +182,19 @@ function App() {
     );
   }
 
+  // ✅ Provider'ı BURADA KULLANMA - renderDashboard içinde kullanıyorduk, YANLIŞ!
   const renderDashboard = () => {
     if (teacherUser) return <TeacherDashboard />;
+    
     if (!user) {
       console.log('No user, redirecting home');
       setTimeout(() => setCurrentView('home'), 0);
       return null;
     }
+    
     if (user.isParentLogin) return <ParentDashboard />;
+    
+    // ✅ Provider'sız döndür, zaten dışarıda sarmalandı
     return <StudentDashboard />;
   };
 
@@ -213,7 +214,6 @@ function App() {
       <TeacherSection />
       <CTASection onGetStarted={handleGetStarted} />
       
-      {/* Footer */}
       <footer className="bg-gray-900 dark:bg-gray-950 text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-4 gap-8">
@@ -263,7 +263,6 @@ function App() {
     </div>
   );
 
-  // ✅ Render content based on current view
   const renderContent = () => {
     if (currentView === 'dashboard') {
       return renderDashboard();
@@ -276,60 +275,62 @@ function App() {
     }
   };
 
+  // ✅ BURADA PROVIDER İLE SARMALAMA - SADECE BİR KEZ MOUNT OLACAK
   return (
     <ErrorBoundary>
-      {/* Navbar - Show on home and blog pages */}
-      {(currentView === 'home' || currentView === 'blog' || currentView === 'blog-detail') && !teacherUser && (
-        <Navbar 
-          user={user} 
-          onStudentParentLogin={() => setShowStudentParentLoginModal(true)}
-          onTeacherLogin={() => setShowTeacherLoginModal(true)}
-          onLogout={handleLogout}
-          onMenuToggle={() => {}}
-          onNavigateToBlog={handleNavigateToBlog}
-          onNavigateHome={handleNavigateHome}
+      <PomodoroProvider studentId={user?.id}>
+        {(currentView === 'home' || currentView === 'blog' || currentView === 'blog-detail') && !teacherUser && (
+          <Navbar 
+            user={user} 
+            onStudentParentLogin={() => setShowStudentParentLoginModal(true)}
+            onTeacherLogin={() => setShowTeacherLoginModal(true)}
+            onLogout={handleLogout}
+            onMenuToggle={() => {}}
+            onNavigateToBlog={handleNavigateToBlog}
+            onNavigateHome={handleNavigateHome}
+          />
+        )}
+        
+        {renderContent()}
+        
+        <LoginModal
+          isOpen={showStudentParentLoginModal}
+          onClose={() => setShowStudentParentLoginModal(false)}
+          onLogin={handleLogin}
+          setUserState={setParentUser}
         />
-      )}
-      
-      {renderContent()}
-      
-      <LoginModal
-        isOpen={showStudentParentLoginModal}
-        onClose={() => setShowStudentParentLoginModal(false)}
-        onLogin={handleLogin}
-        setUserState={setParentUser}
-      />
-      
-      <TeacherLogin
-        isOpen={showTeacherLoginModal}
-        onClose={() => setShowTeacherLoginModal(false)}
-        onSuccess={(teacher) => {
-          setShowTeacherLoginModal(false);
-          setTeacherUser(teacher);
-          setCurrentView('dashboard');
-          console.log('Teacher login success, setting view to dashboard');
-        }}
-      />
+        
+        <TeacherLogin
+          isOpen={showTeacherLoginModal}
+          onClose={() => setShowTeacherLoginModal(false)}
+          onSuccess={(teacher) => {
+            setShowTeacherLoginModal(false);
+            setTeacherUser(teacher);
+            setCurrentView('dashboard');
+            console.log('Teacher login success, setting view to dashboard');
+          }}
+        />
 
-      {showUpgradeModal && targetUpgradePlan && (
-        <UpgradeModal
-          isOpen={showUpgradeModal}
-          onClose={() => {
-            setShowUpgradeModal(false);
-            setTargetUpgradePlan(null);
-          }}
-          targetPlanId={targetUpgradePlan.id}
-          targetPlanName={targetUpgradePlan.name}
-          targetPlanPrice={{
-            monthly: targetUpgradePlan.monthlyPrice,
-            yearly: targetUpgradePlan.yearlyPrice
-          }}
-          currentBillingCycle={targetUpgradePlan.billingCycle || 'monthly'}
-          onSuccess={() => {
-            window.location.reload();
-          }}
-        />
-      )}
+        {showUpgradeModal && targetUpgradePlan && (
+          <UpgradeModal
+            isOpen={showUpgradeModal}
+            onClose={() => {
+              setShowUpgradeModal(false);
+              setTargetUpgradePlan(null);
+            }}
+            targetPlanId={targetUpgradePlan.id}
+            targetPlanName={targetUpgradePlan.name}
+            targetPlanPrice={{
+              monthly: targetUpgradePlan.monthlyPrice,
+              yearly: targetUpgradePlan.yearlyPrice
+            }}
+            currentBillingCycle={targetUpgradePlan.billingCycle || 'monthly'}
+            onSuccess={() => {
+              window.location.reload();
+            }}
+          />
+        )}
+      </PomodoroProvider>
     </ErrorBoundary>
   );
 }

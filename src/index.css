@@ -16,3 +16,129 @@
 .animate-fade-in {
   animation: fade-in 0.3s ease-out;
 }
+
+/* Flip card animations */
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+}
+
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+/* Leaflet Marker Custom Styles */
+.custom-marker {
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.custom-marker:hover {
+  transform: scale(1.2) !important;
+}
+
+/* Leaflet Popup Custom Styles */
+.leaflet-popup-content-wrapper {
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.leaflet-popup-content {
+  margin: 0;
+  font-family: inherit;
+}
+
+/* Timeline Styles */
+.timeline-event {
+  transition: all 0.3s ease;
+}
+
+.timeline-event:hover {
+  transform: translateX(4px);
+}
+
+/* Map Container */
+.leaflet-container {
+  font-family: inherit;
+}
+
+/* Custom scrollbar for modal */
+.overflow-y-auto::-webkit-scrollbar {
+  width: 8px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Markdown Editor Styles */
+.w-md-editor {
+  box-shadow: none !important;
+}
+
+.w-md-editor-toolbar {
+  background: #f9fafb !important;
+  border-bottom: 1px solid #e5e7eb !important;
+}
+
+.w-md-editor-content {
+  background: white !important;
+}
+
+.w-md-editor-preview {
+  background: #f9fafb !important;
+}
+
+/* Markdown preview styles */
+.wmde-markdown {
+  font-family: inherit;
+}
+
+.wmde-markdown h1 {
+  font-size: 2em;
+  font-weight: bold;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+}
+
+.wmde-markdown h2 {
+  font-size: 1.5em;
+  font-weight: bold;
+  margin-top: 0.8em;
+  margin-bottom: 0.4em;
+}
+
+.wmde-markdown h3 {
+  font-size: 1.25em;
+  font-weight: bold;
+  margin-top: 0.6em;
+  margin-bottom: 0.3em;
+}
+
+.wmde-markdown code {
+  background: #f3f4f6;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+}
+
+.wmde-markdown pre {
+  background: #1f2937;
+  color: #f9fafb;
+  padding: 1em;
+  border-radius: 8px;
+  overflow-x: auto;
+}

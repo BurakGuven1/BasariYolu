@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BookOpen, Plus, TrendingUp, Calendar, Target, Award, Clock, CheckCircle, AlertCircle, LogOut, CreditCard as Edit, Trash2, MoreVertical, Users, X, Brain,Crown, Trophy, Timer } from 'lucide-react';
+import { BookOpen, StickyNote, MapIcon, BookmarkCheck, Plus, TrendingUp, Calendar, Target, Award, Clock, CheckCircle, AlertCircle, LogOut, CreditCard as Edit, Trash2, MoreVertical, Users, X, Brain,Crown, Trophy, Timer } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer} from 'recharts';
 import { useAuth } from '../hooks/useAuth';
 import { useStudentData } from '../hooks/useStudentData';
@@ -14,19 +14,22 @@ import ExamCountdown from './ExamCountdown';
 import UpgradeModal from './UpgradeModal';
 import PointsDisplay from './PointsDisplay';
 import AIRecommendations from './AIRecommendations';
+import HistoricalMapsSection from './HistoricalMapsSection';
 import SubscriptionManagement from './SubscriptionManagement';
 import { addStudySessionPoints, completeChallenge, isChallengeCompletedToday } from '../lib/pointsSystem';
 import { packages } from '../data/packages';
 import { generatePerformanceInsights, generateDailyChallenge } from '../lib/ai';
 import { getStudentInviteCode, deleteExamResult, updateHomework, deleteHomework, addStudySession, getWeeklyStudyGoal, createWeeklyStudyGoal, updateWeeklyStudyGoal, getWeeklyStudySessions } from '../lib/supabase';
 import PomodoroTimer from './PomodoroTimer';
+import FormulaCardsSection from './FormulaCardsSection';
+import NotesSection from './NotesSection';
 
 export default function StudentDashboard() {
   const [insights, setInsights] = useState<any[]>([]);
   const [dailyChallenge, setDailyChallenge] = useState<any>(null);
   const { planName} = useFeatureAccess();
   const { user, clearUser } = useAuth();
-  const [activeTab, setActiveTab] = useState<'overview' | 'exams' | 'homeworks' | 'pomodoro' | 'analysis' | 'classes' | 'smartplan'| 'subscription'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'exams' | 'homeworks' | 'pomodoro' | 'formulas' | 'maps' | 'notes' | 'analysis' | 'classes' | 'smartplan'| 'subscription'>('overview');
   const [showExamForm, setShowExamForm] = useState(false);
   const [showHomeworkForm, setShowHomeworkForm] = useState(false);
   const [showInviteCode, setShowInviteCode] = useState(false);
@@ -821,8 +824,12 @@ const chartData = filteredExamResults
             { key: 'classes', label: 'Sınıflarım', icon: Users },
             { key: 'analysis', label: 'AI Analiz', icon: Target },
             { key: 'smartplan', label: 'Akıllı Plan', icon: Brain },
-            { key: 'subscription', label: 'Aboneliğim', icon: Crown },
+            { key: 'formulas', label: 'Formül Kartları', icon: BookmarkCheck },
             { key: 'pomodoro', label: 'Pomodoro', icon: Timer },
+            { key: 'maps', label: 'Tarih/Coğrafya', icon: MapIcon },
+            { key: 'notes', label: 'Notlarım', icon: StickyNote },
+            { key: 'subscription', label: 'Aboneliğim', icon: Crown },
+            
           ].map(({ key, label, icon: Icon }) => (
             <button
               key={key}
@@ -835,6 +842,11 @@ const chartData = filteredExamResults
             >
               <Icon className="h-4 w-4" />
               <span>{label}</span>
+              {(key === 'pomodoro' || key === 'formulas'|| key === 'maps'|| key === 'notes') && (
+              <span className="px-2 py-0.5 bg-gradient-to-r from-purple-500 to-blue-500 text-white text-xs rounded-full font-bold">
+                PRO
+              </span>
+            )}
             </button>
           ))}
         </div>
@@ -1233,6 +1245,129 @@ const chartData = filteredExamResults
           </div>
         </FeatureGate>
       )}
+
+      {activeTab === 'formulas' && (
+      <FeatureGate 
+        feature="formula_cards"
+        fallback={
+          <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl p-8 text-center border-2 border-purple-200">
+            <BookmarkCheck className="h-16 w-16 text-purple-400 mx-auto mb-4" />
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">
+              Formül Kartları
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Sınavda en çok çıkan formülleri flashcard tarzında öğren! Bu özellik Profesyonel pakette kullanılabilir.
+            </p>
+            <div className="mb-6">
+              <div className="flex items-center justify-center gap-8 text-sm text-gray-700">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                  <span>500+ Formül</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                  <span>Flashcard Sistemi</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                  <span>LaTeX Render</span>
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => setActiveTab('subscription')}
+              className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-medium"
+            >
+              Profesyonel Pakete Yükselt
+            </button>
+          </div>
+        }
+      >
+        {studentData && <FormulaCardsSection studentId={studentData.id} />}
+      </FeatureGate>
+    )}
+
+    {activeTab === 'maps' && (
+      <FeatureGate 
+        feature="historical_maps"
+        fallback={
+          <div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-xl p-8 text-center border-2 border-green-200">
+            <MapIcon className="h-16 w-16 text-green-400 mx-auto mb-4" />
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">
+              Tarih & Coğrafya Haritaları
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Türkiye'deki önemli tarihi olayları ve coğrafi özellikleri interaktif harita üzerinde keşfet! Bu özellik Gelişmiş ve Profesyonel paketlerde kullanılabilir.
+            </p>
+            <div className="mb-6">
+              <div className="flex items-center justify-center gap-8 text-sm text-gray-700">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                  <span>50+ Tarihi Olay</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                  <span>İnteraktif Harita</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                  <span>Zaman Çizelgesi</span>
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => setActiveTab('subscription')}
+              className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium"
+            >
+              Paketi Yükselt
+            </button>
+          </div>
+        }
+      >
+        {studentData && <HistoricalMapsSection studentId={studentData.id} />}
+      </FeatureGate>
+    )}
+
+    {activeTab === 'notes' && (
+      <FeatureGate 
+        feature="student_notes"
+        fallback={
+          <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-8 text-center border-2 border-purple-200">
+            <StickyNote className="h-16 w-16 text-purple-400 mx-auto mb-4" />
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">
+              Not Defteri
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Markdown destekli not editörü ile notlarını organize et! Bu özellik Profesyonel pakette kullanılabilir.
+            </p>
+            <div className="mb-6">
+              <div className="flex items-center justify-center gap-8 text-sm text-gray-700">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                  <span>Markdown Editor</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-pink-500"></div>
+                  <span>Etiketleme</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                  <span>Renk Kodlama</span>
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => setActiveTab('subscription')}
+              className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-medium"
+            >
+              Profesyonel Pakete Yükselt
+            </button>
+          </div>
+        }
+      >
+        {studentData && <NotesSection studentId={studentData.id} />}
+      </FeatureGate>
+    )}
       {/* Study Session Form */}
       {showStudyForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
