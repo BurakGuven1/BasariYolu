@@ -54,7 +54,9 @@ export function useFeatureAccess() {
       'advanced_reports': 'advanced_reports',
       'custom_goals': 'priority_support',
       'pomodoro_timer': 'pomodoro_timer',
-      'formula_cards': 'formula_cards'
+      'formula_cards': 'formula_cards',
+      'historical_maps': 'historical_maps',
+      'student_notes': 'student_notes'
     };
     
     const mappedName = featureMap[featureName] || featureName;
@@ -66,6 +68,14 @@ export function useFeatureAccess() {
     }
     
     return featureValue === true;
+  }, [subscription]);
+
+  const canUseHistoricalMaps = useCallback((): boolean => {
+    if (!subscription?.plan) return false;
+    const planName = subscription.plan.name;
+    // Gelişmiş ve Profesyonel paketlerde kullanılabilir
+    return planName === 'advanced' || planName === 'gelismis' || 
+          planName === 'professional' || planName === 'profesyonel';
   }, [subscription]);
 
   const canUseFormulaCards = useCallback((): boolean => {
@@ -81,6 +91,13 @@ export function useFeatureAccess() {
   // Gelişmiş ve Profesyonel paketlerde kullanılabilir
   return planName === 'advanced' || planName === 'gelismis' || 
          planName === 'professional' || planName === 'profesyonel';
+}, [subscription]);
+
+const canUseStudentNotes = useCallback((): boolean => {
+  if (!subscription?.plan) return false;
+  const planName = subscription.plan.name;
+  // Sadece Profesyonel pakette kullanılabilir
+  return planName === 'professional' || planName === 'profesyonel';
 }, [subscription]);
 
   const canAccessExamTopics = useCallback((year: string): boolean => {
@@ -164,6 +181,8 @@ export function useFeatureAccess() {
     canAddExam,
     canUsePomodoro,
     canUseFormulaCards,
+    canUseHistoricalMaps,
+    canUseStudentNotes,
     getFeatureLimit,
     isTrialActive,
     getDaysUntilExpiry,

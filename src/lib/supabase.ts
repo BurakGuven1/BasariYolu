@@ -351,21 +351,48 @@ export const getWeeklyStudySessions = async (studentId: string, startDate: strin
 };
 
 // Pomodoro Sessions
-export const savePomodoroSession = async (sessionData: {
+// Pomodoro session kaydetme
+export async function savePomodoroSession(sessionData: {
   student_id: string;
-  session_type: 'focus' | 'short_break' | 'long_break';
+  session_type: 'focus' | 'shortBreak' | 'longBreak';
   duration_minutes: number;
   completed: boolean;
   started_at: string;
   completed_at?: string;
-  notes?: string;
-}) => {
+}) {
   const { data, error } = await supabase
     .from('pomodoro_sessions')
-    .insert([sessionData])
-    .select();
-  return { data, error };
-};
+    .insert([sessionData]);
+
+  if (error) throw error;
+  return data;
+}
+
+// Bugünün pomodoro istatistiklerini getir
+// Bugünün pomodoro istatistiklerini getir
+export async function getTodayPomodoroStats(studentId: string) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const { data, error } = await supabase
+    .from('pomodoro_sessions')
+    .select('*')
+    .eq('student_id', studentId)
+    .gte('started_at', today.toISOString())
+    .eq('session_type', 'focus')
+    .eq('completed', true);
+
+  if (error) {
+    console.error('Error fetching today stats:', error);
+    throw error;
+  }
+
+  return {
+    focusSessions: data?.length || 0,
+    totalMinutes: data?.reduce((sum, session) => sum + session.duration_minutes, 0) || 0,
+    currentStreak: data?.length || 0
+  };
+}
 
 export const getPomodoroSessions = async (studentId: string, startDate?: string, endDate?: string) => {
   let query = supabase
