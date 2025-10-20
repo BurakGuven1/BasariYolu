@@ -1,18 +1,10 @@
-import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 interface PomodoroSettings {
   focusMinutes: number;
   shortBreakMinutes: number;
   longBreakMinutes: number;
   sessionsBeforeLongBreak: number;
-}
-
-interface PomodoroState {
-  isRunning: boolean;
-  timeLeft: number;
-  mode: 'focus' | 'shortBreak' | 'longBreak';
-  completedSessions: number;
-  startTime: number | null;
 }
 
 interface PomodoroContextType {
@@ -34,290 +26,265 @@ interface PomodoroContextType {
 
 const PomodoroContext = createContext<PomodoroContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'pomodoro-state';
-const SETTINGS_KEY = 'pomodoro-settings';
+// Global state - React lifecycle'dan bağımsız
+let timerInterval: number | null = null;
+let currentTimeLeft = 1500;
+let currentIsRunning = false;
+let currentMode: 'focus' | 'shortBreak' | 'longBreak' = 'focus';
+let currentCompletedSessions = 0;
+let currentStudentId: string | undefined = undefined;
+let currentSettings: PomodoroSettings = {
+  focusMinutes: 25,
+  shortBreakMinutes: 5,
+  longBreakMinutes: 15,
+  sessionsBeforeLongBreak: 4
+};
 
-function getStoredState(): PomodoroState | null {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : null;
-  } catch {
-    return null;
+let stateUpdateCallbacks: {
+  setTimeLeft?: (time: number) => void;
+  setIsRunning?: (running: boolean) => void;
+  setMode?: (mode: 'focus' | 'shortBreak' | 'longBreak') => void;
+  setCompletedSessions?: (sessions: number) => void;
+  setTodayStats?: (updater: (prev: any) => any) => void;
+} = {};
+
+function startGlobalTimer() {
+  if (timerInterval) return;
+  
+  currentIsRunning = true;
+  
+  timerInterval = window.setInterval(() => {
+    currentTimeLeft--;
+    
+    if (stateUpdateCallbacks.setTimeLeft) {
+      stateUpdateCallbacks.setTimeLeft(currentTimeLeft);
+    }
+    
+    if (currentTimeLeft <= 0) {
+      completeTimer();
+    }
+  }, 1000);
+}
+
+function stopGlobalTimer() {
+  currentIsRunning = false;
+  
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+  
+  if (stateUpdateCallbacks.setIsRunning) {
+    stateUpdateCallbacks.setIsRunning(false);
   }
 }
 
-function setStoredState(state: PomodoroState) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch (error) {
-    console.error('Error saving state:', error);
+async function completeTimer() {
+  stopGlobalTimer();
+  playSound();
+  showNotification();
+  
+  if (currentMode === 'focus') {
+    // Save to database
+    if (currentStudentId) {
+      try {
+        const { supabase } = await import('../lib/supabase');
+        const startTime = new Date(Date.now() - currentSettings.focusMinutes * 60 * 1000);
+        
+        const { error } = await supabase.from('pomodoro_sessions').insert([{
+          student_id: currentStudentId,
+          session_type: 'focus',
+          duration_minutes: currentSettings.focusMinutes,
+          completed: true,
+          started_at: startTime.toISOString(),
+          completed_at: new Date().toISOString()
+        }]);
+        
+        if (error) {
+          console.error('❌ Error saving session:', error);
+        }
+      } catch (error) {
+        console.error('❌ Error saving session:', error);
+      }
+    }
+    
+    currentCompletedSessions++;
+    
+    if (stateUpdateCallbacks.setCompletedSessions) {
+      stateUpdateCallbacks.setCompletedSessions(currentCompletedSessions);
+    }
+    
+    if (stateUpdateCallbacks.setTodayStats) {
+      stateUpdateCallbacks.setTodayStats((prev: any) => ({
+        focusSessions: prev.focusSessions + 1,
+        totalMinutes: prev.totalMinutes + currentSettings.focusMinutes,
+        currentStreak: prev.currentStreak + 1
+      }));
+    }
+    
+    if (currentCompletedSessions % currentSettings.sessionsBeforeLongBreak === 0) {
+      currentMode = 'longBreak';
+      currentTimeLeft = currentSettings.longBreakMinutes * 60;
+    } else {
+      currentMode = 'shortBreak';
+      currentTimeLeft = currentSettings.shortBreakMinutes * 60;
+    }
+  } else {
+    currentMode = 'focus';
+    currentTimeLeft = currentSettings.focusMinutes * 60;
+  }
+  
+  if (stateUpdateCallbacks.setMode) {
+    stateUpdateCallbacks.setMode(currentMode);
+  }
+  if (stateUpdateCallbacks.setTimeLeft) {
+    stateUpdateCallbacks.setTimeLeft(currentTimeLeft);
   }
 }
 
-function getStoredSettings(): PomodoroSettings {
+function playSound() {
   try {
-    const stored = localStorage.getItem(SETTINGS_KEY);
-    return stored ? JSON.parse(stored) : {
-      focusMinutes: 25,
-      shortBreakMinutes: 5,
-      longBreakMinutes: 15,
-      sessionsBeforeLongBreak: 4
-    };
-  } catch {
-    return {
-      focusMinutes: 25,
-      shortBreakMinutes: 5,
-      longBreakMinutes: 15,
-      sessionsBeforeLongBreak: 4
-    };
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 800;
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.5);
+  } catch (e) {
+    // Ses çalınamazsa sessizce devam et
+  }
+}
+
+function showNotification() {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    new Notification(
+      currentMode === 'focus' ? '🎉 Pomodoro Tamamlandı!' : '☕ Mola Bitti!',
+      { body: currentMode === 'focus' ? 'Harika iş! Şimdi mola zamanı.' : 'Mola bitti! Tekrar odaklanma zamanı.' }
+    );
   }
 }
 
 export function PomodoroProvider({ children, studentId }: { children: ReactNode; studentId?: string }) {
-  console.log('🍅 PomodoroProvider mounted with studentId:', studentId);
-
-  const [settings, setSettings] = useState<PomodoroSettings>(getStoredSettings());
-  
-  const storedState = getStoredState();
-  const [isRunning, setIsRunning] = useState(storedState?.isRunning || false);
-  const [timeLeft, setTimeLeft] = useState(storedState?.timeLeft || settings.focusMinutes * 60);
-  const [mode, setMode] = useState<'focus' | 'shortBreak' | 'longBreak'>(storedState?.mode || 'focus');
-  const [completedSessions, setCompletedSessions] = useState(storedState?.completedSessions || 0);
+  const [isRunning, setIsRunning] = useState(currentIsRunning);
+  const [timeLeft, setTimeLeft] = useState(currentTimeLeft);
+  const [mode, setMode] = useState(currentMode);
+  const [completedSessions, setCompletedSessions] = useState(currentCompletedSessions);
+  const [settings, setSettings] = useState(currentSettings);
   const [todayStats, setTodayStats] = useState({
     focusSessions: 0,
     totalMinutes: 0,
     currentStreak: 0
   });
-
-  const intervalRef = useRef<number | null>(null);
-  const studentIdRef = useRef(studentId);
-
-  // Update studentIdRef when it changes
+  
+  // Update global values
   useEffect(() => {
-    studentIdRef.current = studentId;
+    currentStudentId = studentId;
   }, [studentId]);
-
-  // Save state to localStorage whenever it changes
+  
   useEffect(() => {
-    setStoredState({
-      isRunning,
-      timeLeft,
-      mode,
-      completedSessions,
-      startTime: isRunning ? Date.now() : null
-    });
-  }, [isRunning, timeLeft, mode, completedSessions]);
-
+    currentSettings = settings;
+  }, [settings]);
+  
+  // Register callbacks
+  useEffect(() => {
+    stateUpdateCallbacks = {
+      setTimeLeft,
+      setIsRunning,
+      setMode,
+      setCompletedSessions,
+      setTodayStats
+    };
+  }, []);
+  
   // Load today stats
   useEffect(() => {
-    const loadTodayStats = async () => {
-      if (!studentId) return;
-      
+    if (!studentId) return;
+    
+    const loadStats = async () => {
       try {
         const { supabase } = await import('../lib/supabase');
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-
-        const { data, error } = await supabase
+        
+        const { data } = await supabase
           .from('pomodoro_sessions')
           .select('*')
           .eq('student_id', studentId)
           .gte('started_at', today.toISOString())
           .eq('session_type', 'focus')
           .eq('completed', true);
-
-        if (error) throw error;
-
-        const stats = {
-          focusSessions: data?.length || 0,
-          totalMinutes: data?.reduce((sum: number, session: any) => sum + session.duration_minutes, 0) || 0,
-          currentStreak: data?.length || 0
-        };
-
-        setTodayStats(stats);
-        console.log('✅ Today stats loaded:', stats);
-      } catch (error) {
-        console.error('❌ Error loading today stats:', error);
+        
+        if (data) {
+          setTodayStats({
+            focusSessions: data.length,
+            totalMinutes: data.reduce((sum: number, s: any) => sum + s.duration_minutes, 0),
+            currentStreak: data.length
+          });
+        }
+      } catch (e) {
+        // Stats yüklenemezse devam et
       }
     };
-
-    loadTodayStats();
+    
+    loadStats();
   }, [studentId]);
-
-  // Timer logic - KRITIK: Bu effect asla unmount olmamalı
-  useEffect(() => {
-    console.log('⏰ Timer effect - isRunning:', isRunning, 'timeLeft:', timeLeft);
-
-    if (isRunning && timeLeft > 0) {
-      console.log('✅ Starting interval');
-      
-      intervalRef.current = window.setInterval(() => {
-        setTimeLeft(prev => {
-          const newTime = prev - 1;
-          console.log('⏰ Tick:', newTime);
-          
-          if (newTime <= 0) {
-            return 0;
-          }
-          return newTime;
-        });
-      }, 1000);
-
-      return () => {
-        console.log('🧹 Cleaning up interval');
-        if (intervalRef.current) {
-          clearInterval(intervalRef.current);
-          intervalRef.current = null;
-        }
-      };
-    } else {
-      console.log('⏹️ Not running or completed');
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    }
-  }, [isRunning, timeLeft]);
-
-  // Watch for timer completion
-  useEffect(() => {
-    if (timeLeft === 0 && isRunning) {
-      console.log('✅ Timer reached 0, completing...');
-      handleTimerComplete();
-    }
-  }, [timeLeft, isRunning]);
-
-  // Notification permission
+  
+  // Request notification permission
   useEffect(() => {
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission();
     }
   }, []);
-
-  const handleTimerComplete = async () => {
-    console.log('✅ Timer complete!');
-    setIsRunning(false);
-    playSound();
-    showNotification();
-
-    const currentStudentId = studentIdRef.current;
-
-    if (mode === 'focus') {
-      // Save session to database
-      if (currentStudentId) {
-        try {
-          const { supabase } = await import('../lib/supabase');
-          const startTime = new Date(Date.now() - settings.focusMinutes * 60 * 1000);
-          
-          const { error } = await supabase
-            .from('pomodoro_sessions')
-            .insert([{
-              student_id: currentStudentId,
-              session_type: 'focus',
-              duration_minutes: settings.focusMinutes,
-              completed: true,
-              started_at: startTime.toISOString(),
-              completed_at: new Date().toISOString()
-            }]);
-
-          if (error) throw error;
-          console.log('✅ Pomodoro session saved');
-        } catch (error) {
-          console.error('❌ Error saving pomodoro session:', error);
-        }
-      }
-
-      const newCompletedSessions = completedSessions + 1;
-      setCompletedSessions(newCompletedSessions);
-      
-      setTodayStats(prev => ({
-        focusSessions: prev.focusSessions + 1,
-        totalMinutes: prev.totalMinutes + settings.focusMinutes,
-        currentStreak: prev.currentStreak + 1
-      }));
-
-      if (newCompletedSessions % settings.sessionsBeforeLongBreak === 0) {
-        setMode('longBreak');
-        setTimeLeft(settings.longBreakMinutes * 60);
-      } else {
-        setMode('shortBreak');
-        setTimeLeft(settings.shortBreakMinutes * 60);
-      }
-    } else {
-      setMode('focus');
-      setTimeLeft(settings.focusMinutes * 60);
-    }
-  };
-
-  const playSound = () => {
-    try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-
-      oscillator.frequency.value = 800;
-      oscillator.type = 'sine';
-
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.5);
-    } catch (error) {
-      console.error('Error playing sound:', error);
-    }
-  };
-
-  const showNotification = () => {
-    if ('Notification' in window && Notification.permission === 'granted') {
-      const title = mode === 'focus' ? '🎉 Pomodoro Tamamlandı!' : '☕ Mola Bitti!';
-      const body = mode === 'focus' 
-        ? 'Harika iş! Şimdi kısa bir mola zamanı.'
-        : 'Mola bitti! Tekrar odaklanma zamanı.';
-      
-      new Notification(title, { body, icon: '/favicon.ico' });
-    }
-  };
-
+  
   const toggleTimer = () => {
-    console.log('🎬 Toggle timer - current:', isRunning, '-> new:', !isRunning);
-    setIsRunning(prev => !prev);
-  };
-
-  const resetTimer = () => {
-    console.log('🔄 Reset timer');
-    setIsRunning(false);
-    const duration = mode === 'focus' 
-      ? settings.focusMinutes 
-      : mode === 'shortBreak' 
-      ? settings.shortBreakMinutes 
-      : settings.longBreakMinutes;
-    setTimeLeft(duration * 60);
-  };
-
-  const skipToNext = () => {
-    console.log('⏭️ Skip to next');
-    handleTimerComplete();
-  };
-
-  const updateSettings = (newSettings: PomodoroSettings) => {
-    console.log('⚙️ Update settings:', newSettings);
-    setSettings(newSettings);
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(newSettings));
-    setIsRunning(false);
-    
-    if (mode === 'focus') {
-      setTimeLeft(newSettings.focusMinutes * 60);
-    } else if (mode === 'shortBreak') {
-      setTimeLeft(newSettings.shortBreakMinutes * 60);
+    if (currentIsRunning) {
+      stopGlobalTimer();
+      setIsRunning(false);
     } else {
-      setTimeLeft(newSettings.longBreakMinutes * 60);
+      currentIsRunning = true;
+      setIsRunning(true);
+      startGlobalTimer();
     }
   };
-
+  
+  const resetTimer = () => {
+    stopGlobalTimer();
+    
+    const duration = currentMode === 'focus' ? currentSettings.focusMinutes :
+                     currentMode === 'shortBreak' ? currentSettings.shortBreakMinutes :
+                     currentSettings.longBreakMinutes;
+    
+    currentTimeLeft = duration * 60;
+    currentIsRunning = false;
+    
+    setTimeLeft(currentTimeLeft);
+    setIsRunning(false);
+  };
+  
+  const skipToNext = () => {
+    stopGlobalTimer();
+    completeTimer();
+  };
+  
+  const updateSettings = (newSettings: PomodoroSettings) => {
+    stopGlobalTimer();
+    
+    currentSettings = newSettings;
+    setSettings(newSettings);
+    localStorage.setItem('pomodoro-settings', JSON.stringify(newSettings));
+    
+    currentTimeLeft = newSettings.focusMinutes * 60;
+    currentIsRunning = false;
+    
+    setTimeLeft(currentTimeLeft);
+    setIsRunning(false);
+  };
+  
   return (
     <PomodoroContext.Provider
       value={{
