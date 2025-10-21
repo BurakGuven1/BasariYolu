@@ -21,6 +21,9 @@ import CTASection from './components/CTASection';
 import UpgradeModal from './components/UpgradeModal';
 import BlogList from './components/BlogList';
 import BlogDetail from './components/BlogDetail';
+import TermsOfService from './pages/TermsOfService';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import RefundPolicy from './pages/RefundPolicy'; 
 import { PomodoroProvider } from './contexts/PomodoroContext';
 
 function App() {
@@ -29,7 +32,10 @@ function App() {
   const [targetUpgradePlan, setTargetUpgradePlan] = useState<any>(null);
   const [showStudentParentLoginModal, setShowStudentParentLoginModal] = useState(false);
   const [showTeacherLoginModal, setShowTeacherLoginModal] = useState(false);
-  const [currentView, setCurrentView] = useState<'home' | 'dashboard' | 'blog' | 'blog-detail'>('home');
+  
+  // ✅ Legal pages ekle
+  const [currentView, setCurrentView] = useState<'home' | 'dashboard' | 'blog' | 'blog-detail' | 'terms' | 'privacy' | 'refund'>('home');
+  
   const [selectedBlogSlug, setSelectedBlogSlug] = useState<string>('');
   const [teacherUser, setTeacherUser] = useState<any>(null);
   const [hasClassViewerSession, setHasClassViewerSession] = useState(false);
@@ -41,12 +47,12 @@ function App() {
 
     if (teacherSession) {
       const teacherData = JSON.parse(teacherSession);
-      console.log('Teacher session found:', teacherData);
       setTeacherUser(teacherData);
       setCurrentView('dashboard');
       return;
     }
 
+    // ✅ URL routing
     const path = window.location.pathname;
     if (path.startsWith('/blog/')) {
       const slug = path.replace('/blog/', '');
@@ -54,13 +60,18 @@ function App() {
       setCurrentView('blog-detail');
     } else if (path === '/blog') {
       setCurrentView('blog');
+    } else if (path === '/terms-of-service' || path === '/sartlar-ve-kosullar') {
+      setCurrentView('terms');
+    } else if (path === '/privacy-policy' || path === '/gizlilik-politikasi') {
+      setCurrentView('privacy');
+    } else if (path === '/refund-policy' || path === '/iade-politikasi') {
+      setCurrentView('refund');
     }
   }, []);
 
   React.useEffect(() => {
     const handlePopState = () => {
       const path = window.location.pathname;
-      console.log('⬅️ Browser back/forward to:', path);
       
       if (path.startsWith('/blog/') && path !== '/blog/') {
         const slug = path.replace('/blog/', '');
@@ -68,6 +79,12 @@ function App() {
         setCurrentView('blog-detail');
       } else if (path === '/blog') {
         setCurrentView('blog');
+      } else if (path === '/terms-of-service' || path === '/sartlar-ve-kosullar') {
+        setCurrentView('terms');
+      } else if (path === '/privacy-policy' || path === '/gizlilik-politikasi') {
+        setCurrentView('privacy');
+      } else if (path === '/refund-policy' || path === '/iade-politikasi') {
+        setCurrentView('refund');
       } else if (path === '/') {
         setCurrentView('home');
       }
@@ -214,6 +231,7 @@ function App() {
       <TeacherSection />
       <CTASection onGetStarted={handleGetStarted} />
       
+      {/* ✅ Footer - Legal links ekle */}
       <footer className="bg-gray-900 dark:bg-gray-950 text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-4 gap-8">
@@ -247,21 +265,64 @@ function App() {
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-3">İletişim</h4>
-              <p className="text-sm text-gray-400">
-                info@basariyolu.com<br />
-                0850 123 45 67<br />
-                7/24 Canlı Destek
-              </p>
+              <h4 className="font-semibold mb-3">Yasal</h4>
+              <ul className="space-y-2 text-sm text-gray-400">
+                <li>
+                  <button onClick={handleNavigateToTerms} className="hover:text-white">
+                    Kullanım Şartları
+                  </button>
+                </li>
+                <li>
+                  <button onClick={handleNavigateToPrivacy} className="hover:text-white">
+                    Gizlilik Politikası
+                  </button>
+                </li>
+                <li>
+                  <button onClick={handleNavigateToRefund} className="hover:text-white">
+                    İptal ve İade
+                  </button>
+                </li>
+              </ul>
             </div>
           </div>
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400 text-sm">
             <p>&copy; {new Date().getFullYear()} BaşarıYolu. Tüm hakları saklıdır.</p>
+            <p className="mt-2 text-xs">
+              <button onClick={handleNavigateToTerms} className="hover:text-white mx-2">
+                Kullanım Şartları
+              </button>
+              |
+              <button onClick={handleNavigateToPrivacy} className="hover:text-white mx-2">
+                Gizlilik
+              </button>
+              |
+              <button onClick={handleNavigateToRefund} className="hover:text-white mx-2">
+                İade Politikası
+              </button>
+            </p>
           </div>
         </div>
       </footer>
     </div>
   );
+
+  const handleNavigateToTerms = () => {
+    setCurrentView('terms');
+    window.history.pushState({}, '', '/terms-of-service');
+    window.scrollTo(0, 0);
+  };
+
+  const handleNavigateToPrivacy = () => {
+    setCurrentView('privacy');
+    window.history.pushState({}, '', '/privacy-policy');
+    window.scrollTo(0, 0);
+  };
+
+  const handleNavigateToRefund = () => {
+    setCurrentView('refund');
+    window.history.pushState({}, '', '/refund-policy');
+    window.scrollTo(0, 0);
+  };
 
   const renderContent = () => {
     if (currentView === 'dashboard') {
@@ -270,6 +331,12 @@ function App() {
       return <BlogList onNavigateToDetail={handleNavigateToBlogDetail} />;
     } else if (currentView === 'blog-detail') {
       return <BlogDetail slug={selectedBlogSlug} onNavigateBack={handleNavigateToBlog} />;
+    } else if (currentView === 'terms') {
+      return <TermsOfService />;
+    } else if (currentView === 'privacy') {
+      return <PrivacyPolicy />;
+    } else if (currentView === 'refund') {
+      return <RefundPolicy />;
     } else {
       return renderHomePage();
     }
@@ -279,7 +346,8 @@ function App() {
   return (
     <ErrorBoundary>
       <PomodoroProvider studentId={user?.id}>
-        {(currentView === 'home' || currentView === 'blog' || currentView === 'blog-detail') && !teacherUser && (
+        {(currentView === 'home' || currentView === 'blog' || currentView === 'blog-detail' || 
+          currentView === 'terms' || currentView === 'privacy' || currentView === 'refund') && !teacherUser && (
           <Navbar 
             user={user} 
             onStudentParentLogin={() => setShowStudentParentLoginModal(true)}

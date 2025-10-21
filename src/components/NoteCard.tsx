@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import MDEditor from '@uiw/react-md-editor';
 import { Star, Pin, Tag, Edit, Trash2, MoreVertical, Calendar, BookOpen } from 'lucide-react';
+import { sanitizeNoteFromDb } from '../utils/security';
 
 interface NoteCardProps {
   note: {
@@ -22,58 +23,57 @@ interface NoteCardProps {
 }
 
 export default function NoteCard({ note, onEdit, onDelete, onToggleFavorite, onTogglePin }: NoteCardProps) {
+  const safeNote = useMemo(() => sanitizeNoteFromDb(note), [note]);
   const [showMenu, setShowMenu] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
-  // Truncate content for preview
-  const previewContent = note.content.length > 150 
-    ? note.content.substring(0, 150) + '...' 
-    : note.content;
+  const previewContent =
+    safeNote.content.length > 150
+      ? `${safeNote.content.substring(0, 150)}...`
+      : safeNote.content;
 
   return (
-    <div 
+    <div
       className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all border-l-4 overflow-hidden group relative"
-      style={{ borderLeftColor: note.color }}
+      style={{ borderLeftColor: safeNote.color }}
     >
-      {/* Header */}
-      <div className="p-4 border-b border-gray-100" style={{ background: `${note.color}10` }}>
+      <div className="p-4 border-b border-gray-100" style={{ background: `${safeNote.color}10` }}>
         <div className="flex items-start justify-between mb-2">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
-              {note.is_pinned && (
-                <Pin className="h-4 w-4 fill-current" style={{ color: note.color }} />
+              {safeNote.is_pinned && (
+                <Pin className="h-4 w-4 fill-current" style={{ color: safeNote.color }} />
               )}
               <h3 className="text-lg font-bold text-gray-900 line-clamp-1">
-                {note.title}
+                {safeNote.title}
               </h3>
             </div>
-            {note.subject && (
-              <span 
+            {safeNote.subject && (
+              <span
                 className="inline-block px-2 py-1 rounded-full text-xs font-medium"
-                style={{ 
-                  background: `${note.color}20`,
-                  color: note.color
+                style={{
+                  background: `${safeNote.color}20`,
+                  color: safeNote.color
                 }}
               >
                 <BookOpen className="h-3 w-3 inline mr-1" />
-                {note.subject}
+                {safeNote.subject}
               </span>
             )}
           </div>
 
-          {/* Actions */}
           <div className="flex items-center gap-1">
             <button
               onClick={onToggleFavorite}
               className={`p-2 rounded-lg transition-colors ${
-                note.is_favorite
+                safeNote.is_favorite
                   ? 'text-yellow-600 bg-yellow-100'
                   : 'text-gray-400 hover:bg-gray-100'
               }`}
             >
-              <Star className={`h-4 w-4 ${note.is_favorite ? 'fill-current' : ''}`} />
+              <Star className={`h-4 w-4 ${safeNote.is_favorite ? 'fill-current' : ''}`} />
             </button>
-            
+
             <div className="relative">
               <button
                 onClick={() => setShowMenu(!showMenu)}
@@ -84,8 +84,8 @@ export default function NoteCard({ note, onEdit, onDelete, onToggleFavorite, onT
 
               {showMenu && (
                 <>
-                  <div 
-                    className="fixed inset-0 z-10" 
+                  <div
+                    className="fixed inset-0 z-10"
                     onClick={() => setShowMenu(false)}
                   />
                   <div className="absolute right-0 top-10 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20 min-w-[150px]">
@@ -97,7 +97,7 @@ export default function NoteCard({ note, onEdit, onDelete, onToggleFavorite, onT
                       className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-2 text-gray-700"
                     >
                       <Edit className="h-4 w-4" />
-                      Düzenle
+                      Duzenle
                     </button>
                     <button
                       onClick={() => {
@@ -107,7 +107,7 @@ export default function NoteCard({ note, onEdit, onDelete, onToggleFavorite, onT
                       className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-2 text-gray-700"
                     >
                       <Pin className="h-4 w-4" />
-                      {note.is_pinned ? 'Sabitlemeyi Kaldır' : 'Sabitle'}
+                      {safeNote.is_pinned ? 'Sabitlemeyi Kaldir' : 'Sabitle'}
                     </button>
                     <button
                       onClick={() => {
@@ -126,11 +126,10 @@ export default function NoteCard({ note, onEdit, onDelete, onToggleFavorite, onT
           </div>
         </div>
 
-        {/* Tags */}
-        {note.tags.length > 0 && (
+        {safeNote.tags.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-2">
-            {note.tags.slice(0, 3).map((tag, idx) => (
-              <span 
+            {safeNote.tags.slice(0, 3).map((tag, idx) => (
+              <span
                 key={idx}
                 className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs flex items-center gap-1"
               >
@@ -138,52 +137,50 @@ export default function NoteCard({ note, onEdit, onDelete, onToggleFavorite, onT
                 #{tag}
               </span>
             ))}
-            {note.tags.length > 3 && (
+            {safeNote.tags.length > 3 && (
               <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">
-                +{note.tags.length - 3}
+                +{safeNote.tags.length - 3}
               </span>
             )}
           </div>
         )}
       </div>
 
-      {/* Content Preview */}
       <div className="p-4">
-        <div 
+        <div
           className="prose prose-sm max-w-none cursor-pointer"
           onClick={() => setExpanded(!expanded)}
         >
-          <MDEditor.Markdown 
-            source={expanded ? note.content : previewContent}
-            style={{ 
+          <MDEditor.Markdown
+            source={expanded ? safeNote.content : previewContent}
+            style={{
               background: 'transparent',
               color: 'inherit'
             }}
           />
         </div>
-        
-        {note.content.length > 150 && (
+
+        {safeNote.content.length > 150 && (
           <button
             onClick={() => setExpanded(!expanded)}
             className="text-sm font-medium mt-2 hover:underline"
-            style={{ color: note.color }}
+            style={{ color: safeNote.color }}
           >
-            {expanded ? 'Daha az göster' : 'Devamını oku'}
+            {expanded ? 'Daha az goster' : 'Devamini oku'}
           </button>
         )}
       </div>
 
-      {/* Footer */}
       <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
         <div className="flex items-center gap-1">
           <Calendar className="h-3 w-3" />
-          <span>{new Date(note.last_edited_at).toLocaleDateString('tr-TR')}</span>
+          <span>{new Date(safeNote.last_edited_at).toLocaleDateString('tr-TR')}</span>
         </div>
         <button
           onClick={onEdit}
           className="text-gray-600 hover:text-gray-900 font-medium"
         >
-          Düzenle →
+          Duzenle
         </button>
       </div>
     </div>
