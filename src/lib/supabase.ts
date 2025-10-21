@@ -12,9 +12,9 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    storage: window.localStorage, // Brave ile uyumlu
-    storageKey: 'basariyolu-auth', // Custom key
-    flowType: 'pkce' // Daha güvenli
+    storage: window.localStorage,
+    storageKey: 'basariyolum-auth',
+    flowType: 'pkce'
   }
 });
 
@@ -427,3 +427,4 @@ export const getPomodoroStats = async (studentId: string) => {
 
   return { data, error };
 };
+

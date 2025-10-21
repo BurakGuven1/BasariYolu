@@ -1,6 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import MDEditor from '@uiw/react-md-editor';
 import { X, Save, Tag, Palette, Star, Pin, BookOpen } from 'lucide-react';
+import {
+  sanitizeNoteForStorage,
+  sanitizeNoteFromDb,
+  sanitizeTagValue
+} from '../utils/security';
 
 interface NoteEditorProps {
   note?: any;
@@ -8,25 +13,25 @@ interface NoteEditorProps {
   onClose: () => void;
 }
 
-const subjects = [
+const SUBJECTS = [
   'Matematik',
   'Fizik',
   'Kimya',
   'Biyoloji',
-  'Türkçe',
+  'Turkce',
   'Edebiyat',
   'Tarih',
-  'Coğrafya',
+  'Cografya',
   'Felsefe',
-  'İngilizce',
+  'Ingilizce',
   'Genel'
 ];
 
-const colors = [
+const COLORS = [
   { name: 'Mavi', value: '#3B82F6' },
-  { name: 'Yeşil', value: '#10B981' },
-  { name: 'Sarı', value: '#F59E0B' },
-  { name: 'Kırmızı', value: '#EF4444' },
+  { name: 'Yesil', value: '#10B981' },
+  { name: 'Sari', value: '#F59E0B' },
+  { name: 'Kirmizi', value: '#EF4444' },
   { name: 'Mor', value: '#8B5CF6' },
   { name: 'Pembe', value: '#EC4899' },
   { name: 'Turuncu', value: '#F97316' },
@@ -34,42 +39,66 @@ const colors = [
 ];
 
 export default function NoteEditor({ note, onSave, onClose }: NoteEditorProps) {
-  const [title, setTitle] = useState(note?.title || '');
-  const [content, setContent] = useState(note?.content || '');
-  const [subject, setSubject] = useState(note?.subject || '');
-  const [tags, setTags] = useState<string[]>(note?.tags || []);
+  const safeNote = useMemo(() => (note ? sanitizeNoteFromDb(note) : undefined), [note]);
+
+  const [title, setTitle] = useState(safeNote?.title ?? '');
+  const [content, setContent] = useState(safeNote?.content ?? '');
+  const [subject, setSubject] = useState(safeNote?.subject ?? '');
+  const [tags, setTags] = useState<string[]>(safeNote?.tags ?? []);
   const [tagInput, setTagInput] = useState('');
-  const [color, setColor] = useState(note?.color || '#3B82F6');
-  const [isFavorite, setIsFavorite] = useState(note?.is_favorite || false);
-  const [isPinned, setIsPinned] = useState(note?.is_pinned || false);
+  const [color, setColor] = useState(safeNote?.color ?? COLORS[0].value);
+  const [isFavorite, setIsFavorite] = useState<boolean>(safeNote?.is_favorite ?? false);
+  const [isPinned, setIsPinned] = useState<boolean>(safeNote?.is_pinned ?? false);
+
+  useEffect(() => {
+    if (safeNote) {
+      setTitle(safeNote.title ?? '');
+      setContent(safeNote.content ?? '');
+      setSubject(safeNote.subject ?? '');
+      setTags(safeNote.tags ?? []);
+      setColor(safeNote.color ?? COLORS[0].value);
+      setIsFavorite(Boolean(safeNote.is_favorite));
+      setIsPinned(Boolean(safeNote.is_pinned));
+    } else {
+      setTitle('');
+      setContent('');
+      setSubject('');
+      setTags([]);
+      setColor(COLORS[0].value);
+      setIsFavorite(false);
+      setIsPinned(false);
+    }
+    setTagInput('');
+  }, [safeNote]);
 
   const handleAddTag = () => {
-    if (tagInput.trim() && !tags.includes(tagInput.trim())) {
-      setTags([...tags, tagInput.trim()]);
-      setTagInput('');
+    const value = sanitizeTagValue(tagInput);
+    if (value && !tags.includes(value)) {
+      setTags(prev => [...prev, value]);
     }
+    setTagInput('');
   };
 
   const handleRemoveTag = (tagToRemove: string) => {
-    setTags(tags.filter(tag => tag !== tagToRemove));
+    setTags(prev => prev.filter(tag => tag !== tagToRemove));
   };
 
   const handleSave = () => {
     if (!title.trim()) {
-      alert('Lütfen not başlığı girin');
+      alert('Lutfen not basligini girin');
       return;
     }
 
-    const noteData = {
+    const noteData = sanitizeNoteForStorage({
       title: title.trim(),
-      content: content,
+      content,
       subject: subject || null,
-      tags: tags,
-      color: color,
+      tags,
+      color,
       is_favorite: isFavorite,
       is_pinned: isPinned,
       last_edited_at: new Date().toISOString()
-    };
+    });
 
     onSave(noteData);
   };
@@ -77,10 +106,12 @@ export default function NoteEditor({ note, onSave, onClose }: NoteEditorProps) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200" style={{ background: `${color}15` }}>
+        <div
+          className="flex items-center justify-between p-6 border-b border-gray-200"
+          style={{ background: `${color}15` }}
+        >
           <div className="flex items-center gap-3">
-            <div 
+            <div
               className="w-12 h-12 rounded-lg flex items-center justify-center"
               style={{ background: color }}
             >
@@ -88,9 +119,9 @@ export default function NoteEditor({ note, onSave, onClose }: NoteEditorProps) {
             </div>
             <div>
               <h2 className="text-2xl font-bold text-gray-900">
-                {note ? 'Notu Düzenle' : 'Yeni Not'}
+                {note ? 'Notu Duzenle' : 'Yeni Not'}
               </h2>
-              <p className="text-sm text-gray-600">Markdown destekli not editörü</p>
+              <p className="text-sm text-gray-600">Markdown destekli not editoru</p>
             </div>
           </div>
           <button
@@ -101,26 +132,22 @@ export default function NoteEditor({ note, onSave, onClose }: NoteEditorProps) {
           </button>
         </div>
 
-        {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* Title */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Not Başlığı *
+              Not Basligi *
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Örn: İntegral Formülleri"
+              placeholder="Orn: Integral formulleri"
               className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg font-semibold"
               style={{ borderColor: color }}
             />
           </div>
 
-          {/* Settings Row */}
           <div className="grid md:grid-cols-2 gap-4">
-            {/* Subject */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Ders
@@ -128,48 +155,50 @@ export default function NoteEditor({ note, onSave, onClose }: NoteEditorProps) {
               <select
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                <option value="">Ders Seç</option>
-                {subjects.map(s => (
-                  <option key={s} value={s}>{s}</option>
+                <option value="">Seciniz</option>
+                {SUBJECTS.map(name => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
                 ))}
               </select>
             </div>
 
-            {/* Quick Actions */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Hızlı İşlemler
+            <div className="flex flex-col gap-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Ozellikler
               </label>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <button
-                  onClick={() => setIsFavorite(!isFavorite)}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                  type="button"
+                  onClick={() => setIsFavorite(prev => !prev)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${
                     isFavorite
-                      ? 'bg-yellow-100 text-yellow-700 border-2 border-yellow-300'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'border-yellow-400 bg-yellow-50 text-yellow-700'
+                      : 'border-gray-300 text-gray-600 hover:bg-gray-100'
                   }`}
                 >
                   <Star className={`h-4 w-4 ${isFavorite ? 'fill-current' : ''}`} />
-                  <span className="text-sm font-medium">Favori</span>
+                  Favori
                 </button>
                 <button
-                  onClick={() => setIsPinned(!isPinned)}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                  type="button"
+                  onClick={() => setIsPinned(prev => !prev)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${
                     isPinned
-                      ? 'bg-blue-100 text-blue-700 border-2 border-blue-300'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'border-blue-400 bg-blue-50 text-blue-700'
+                      : 'border-gray-300 text-gray-600 hover:bg-gray-100'
                   }`}
                 >
                   <Pin className={`h-4 w-4 ${isPinned ? 'fill-current' : ''}`} />
-                  <span className="text-sm font-medium">Sabitle</span>
+                  Sabitle
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Tags */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
               <Tag className="h-4 w-4" />
@@ -180,12 +209,18 @@ export default function NoteEditor({ note, onSave, onClose }: NoteEditorProps) {
                 type="text"
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddTag();
+                  }
+                }}
                 placeholder="Etiket ekle (Enter'a bas)"
                 className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
               <button
                 onClick={handleAddTag}
+                type="button"
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
               >
                 Ekle
@@ -193,14 +228,15 @@ export default function NoteEditor({ note, onSave, onClose }: NoteEditorProps) {
             </div>
             {tags.length > 0 && (
               <div className="flex flex-wrap gap-2">
-                {tags.map((tag, idx) => (
+                {tags.map(tag => (
                   <span
-                    key={idx}
+                    key={tag}
                     className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm flex items-center gap-2 font-medium"
                   >
                     #{tag}
                     <button
                       onClick={() => handleRemoveTag(tag)}
+                      type="button"
                       className="hover:text-blue-900 transition-colors"
                     >
                       <X className="h-3 w-3" />
@@ -211,80 +247,80 @@ export default function NoteEditor({ note, onSave, onClose }: NoteEditorProps) {
             )}
           </div>
 
-          {/* Color */}
-        <div>
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                <Palette className="h-4 w-4" />
-                Not Rengi
+              <Palette className="h-4 w-4" />
+              Not Rengi
             </label>
-            <div className="flex gap-3">
-                {colors.map(c => (
+            <div className="flex gap-3 flex-wrap">
+              {COLORS.map(c => (
                 <button
-                    key={c.value}
-                    onClick={() => setColor(c.value)}
-                    className={`w-12 h-12 rounded-lg transition-all hover:scale-110 ${
+                  key={c.value}
+                  onClick={() => setColor(c.value)}
+                  type="button"
+                  className={`w-12 h-12 rounded-lg transition-all hover:scale-110 ${
                     color === c.value ? 'scale-110' : ''
-                    }`}
-                    style={{ 
+                  }`}
+                  style={{
                     background: c.value,
-                    boxShadow: color === c.value ? `0 0 0 4px ${c.value}40` : 'none', // ✅ ringColor yerine boxShadow
-                    transform: color === c.value ? 'scale(1.1)' : 'scale(1)'
-                    }}
-                    title={c.name}
+                    boxShadow: color === c.value ? `0 0 0 4px ${c.value}40` : 'none'
+                  }}
+                  title={c.name}
                 >
-                    {color === c.value && (
+                  {color === c.value && (
                     <span className="text-white text-xl font-bold">✓</span>
-                    )}
+                  )}
                 </button>
-                ))}
+              ))}
             </div>
-        </div>
+          </div>
 
-          {/* Markdown Editor */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Not İçeriği
+              Not Icerigi
             </label>
             <div className="border-2 rounded-lg overflow-hidden" style={{ borderColor: color }}>
               <MDEditor
                 value={content}
-                onChange={(val) => setContent(val || '')}
+                onChange={(val) => setContent(val ?? '')}
                 height={400}
                 preview="live"
                 hideToolbar={false}
-                enableScroll={true}
+                enableScroll
                 visibleDragbar={false}
                 textareaProps={{
-                  placeholder: '# Başlık\n\n**Kalın metin** - Ctrl+B\n\n*İtalik metin* - Ctrl+I\n\n- Liste öğesi\n\n1. Numaralı liste\n\n> Alıntı\n\n```javascript\nkod bloğu\n```\n\n[Link](https://example.com)\n\n![Resim](url)'
+                  placeholder:
+                    '# Baslik\n\n**Kalın metin** - Ctrl+B\n\n*Italic metin* - Ctrl+I\n\n- Liste oge\n\n1. Numarali liste\n\n> Alinti\n\n```javascript\nkod blogu\n```\n\n[Link](https://example.com)\n\n![Resim](url)'
                 }}
               />
             </div>
-            <div className="mt-2 text-xs text-gray-500 flex items-center gap-4">
-              <span>💡 İpucu: Markdown ile yazın</span>
-              <span>📝 Canlı önizleme aktif</span>
-              <span>⌨️ Ctrl+B = Kalın, Ctrl+I = İtalik</span>
+            <div className="mt-2 text-xs text-gray-500 flex items-center gap-4 flex-wrap">
+              <span>Markdown destekli editor</span>
+              <span>Canli onizleme aktif</span>
+              <span>Ctrl+B = Kalin, Ctrl+I = Italik</span>
             </div>
           </div>
         </div>
 
-        {/* Footer */}
         <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
           <div className="text-sm text-gray-600">
-            {note ? (
-              <span>Son düzenleme: {new Date(note.last_edited_at).toLocaleString('tr-TR')}</span>
+            {safeNote ? (
+              <span>Son duzenleme: {new Date(safeNote.last_edited_at).toLocaleString('tr-TR')}</span>
             ) : (
-              <span>Yeni not oluşturuluyor</span>
+              <span>Yeni not olusturuluyor</span>
             )}
           </div>
           <div className="flex gap-3">
             <button
               onClick={onClose}
+              type="button"
               className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
             >
-              İptal
+              Iptal
             </button>
             <button
               onClick={handleSave}
+              type="button"
               className="px-6 py-2 text-white rounded-lg hover:opacity-90 transition-opacity font-medium flex items-center gap-2"
               style={{ background: color }}
             >

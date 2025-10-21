@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { Play, Pause, RotateCcw, Settings, Coffee, Zap } from 'lucide-react';
-import { savePomodoroSession } from '../lib/supabase';
+import { usePomodoro } from '../contexts/PomodoroContext';
 
 interface PomodoroSettings {
   focusMinutes: number;
@@ -9,169 +9,21 @@ interface PomodoroSettings {
   sessionsBeforeLongBreak: number;
 }
 
-interface PomodoroTimerProps {
-  studentId: string;
-}
-
-export default function PomodoroTimer({ studentId }: PomodoroTimerProps) {
-  const [settings, setSettings] = useState<PomodoroSettings>({
-    focusMinutes: 25,
-    shortBreakMinutes: 5,
-    longBreakMinutes: 15,
-    sessionsBeforeLongBreak: 4
-  });
+export default function PomodoroTimer() {
+  const {
+    settings,
+    isRunning,
+    timeLeft,
+    mode,
+    completedSessions,
+    todayStats,
+    toggleTimer,  // ✅ Context'ten al
+    resetTimer,
+    skipToNext,
+    updateSettings
+  } = usePomodoro();
 
   const [showSettings, setShowSettings] = useState(false);
-  const [isRunning, setIsRunning] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(settings.focusMinutes * 60);
-  const [mode, setMode] = useState<'focus' | 'shortBreak' | 'longBreak'>('focus');
-  const [completedSessions, setCompletedSessions] = useState(0);
-  const [todayStats, setTodayStats] = useState({
-    focusSessions: 0,
-    totalMinutes: 0,
-    currentStreak: 0
-  });
-
-  const intervalRef = useRef<number | null>(null);
-
-  // Timer logic
-  useEffect(() => {
-    if (isRunning && timeLeft > 0) {
-      intervalRef.current = window.setInterval(() => {
-        setTimeLeft(prev => {
-          if (prev <= 1) {
-            handleTimerComplete();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    }
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, [isRunning, timeLeft]);
-
-  // Notification permission
-  useEffect(() => {
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
-  }, []);
-
-  const handleTimerComplete = async () => {
-  setIsRunning(false);
-  playSound();
-  showNotification();
-
-  if (mode === 'focus') {
-    // ✅ Save session to database
-    try {
-      const startTime = new Date(Date.now() - settings.focusMinutes * 60 * 1000);
-      await savePomodoroSession({
-        student_id: studentId, // ✅ Props'tan gelen studentId
-        session_type: 'focus',
-        duration_minutes: settings.focusMinutes,
-        completed: true,
-        started_at: startTime.toISOString(),
-        completed_at: new Date().toISOString()
-      });
-      console.log('✅ Pomodoro session saved');
-    } catch (error) {
-      console.error('❌ Error saving pomodoro session:', error);
-    }
-
-    const newCompletedSessions = completedSessions + 1;
-    setCompletedSessions(newCompletedSessions);
-    
-    setTodayStats(prev => ({
-      focusSessions: prev.focusSessions + 1,
-      totalMinutes: prev.totalMinutes + settings.focusMinutes,
-      currentStreak: prev.currentStreak + 1
-    }));
-
-    if (newCompletedSessions % settings.sessionsBeforeLongBreak === 0) {
-      setMode('longBreak');
-      setTimeLeft(settings.longBreakMinutes * 60);
-    } else {
-      setMode('shortBreak');
-      setTimeLeft(settings.shortBreakMinutes * 60);
-    }
-  } else {
-    setMode('focus');
-    setTimeLeft(settings.focusMinutes * 60);
-  }
-};
-
-  const playSound = () => {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-
-    oscillator.frequency.value = 800;
-    oscillator.type = 'sine';
-
-    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.5);
-  };
-
-  const showNotification = () => {
-    if ('Notification' in window && Notification.permission === 'granted') {
-      const title = mode === 'focus' ? '🎉 Pomodoro Tamamlandı!' : '☕ Mola Bitti!';
-      const body = mode === 'focus' 
-        ? 'Harika iş! Şimdi kısa bir mola zamanı.'
-        : 'Mola bitti! Tekrar odaklanma zamanı.';
-      
-      new Notification(title, { body, icon: '/favicon.ico' });
-    }
-  };
-
-  const toggleTimer = () => {
-    setIsRunning(!isRunning);
-  };
-
-  const resetTimer = () => {
-    setIsRunning(false);
-    const duration = mode === 'focus' 
-      ? settings.focusMinutes 
-      : mode === 'shortBreak' 
-      ? settings.shortBreakMinutes 
-      : settings.longBreakMinutes;
-    setTimeLeft(duration * 60);
-  };
-
-  const skipToNext = () => {
-    handleTimerComplete();
-  };
-
-  const saveSettings = (newSettings: PomodoroSettings) => {
-    setSettings(newSettings);
-    setShowSettings(false);
-    
-    // Reset timer with new settings
-    if (mode === 'focus') {
-      setTimeLeft(newSettings.focusMinutes * 60);
-    } else if (mode === 'shortBreak') {
-      setTimeLeft(newSettings.shortBreakMinutes * 60);
-    } else {
-      setTimeLeft(newSettings.longBreakMinutes * 60);
-    }
-    
-    setIsRunning(false);
-  };
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -186,7 +38,8 @@ export default function PomodoroTimer({ studentId }: PomodoroTimerProps) {
           label: 'Odaklanma Zamanı',
           color: 'from-red-500 to-orange-500',
           bgColor: 'bg-red-50',
-          textColor: 'text-red-700 ',
+          textColor: 'text-red-700',
+          borderColor: 'border-red-500',
           icon: Zap
         };
       case 'shortBreak':
@@ -195,6 +48,7 @@ export default function PomodoroTimer({ studentId }: PomodoroTimerProps) {
           color: 'from-green-500 to-teal-500',
           bgColor: 'bg-green-50',
           textColor: 'text-green-700',
+          borderColor: 'border-green-500',
           icon: Coffee
         };
       case 'longBreak':
@@ -203,22 +57,28 @@ export default function PomodoroTimer({ studentId }: PomodoroTimerProps) {
           color: 'from-blue-500 to-purple-500',
           bgColor: 'bg-blue-50',
           textColor: 'text-blue-700',
+          borderColor: 'border-blue-500',
           icon: Coffee
         };
     }
   };
 
   const modeConfig = getModeConfig();
-  const progress = mode === 'focus'
-    ? ((settings.focusMinutes * 60 - timeLeft) / (settings.focusMinutes * 60)) * 100
+  const maxTime = mode === 'focus'
+    ? settings.focusMinutes * 60
     : mode === 'shortBreak'
-    ? ((settings.shortBreakMinutes * 60 - timeLeft) / (settings.shortBreakMinutes * 60)) * 100
-    : ((settings.longBreakMinutes * 60 - timeLeft) / (settings.longBreakMinutes * 60)) * 100;
+    ? settings.shortBreakMinutes * 60
+    : settings.longBreakMinutes * 60;
+  const progress = ((maxTime - timeLeft) / maxTime) * 100;
+
+  const handleToggle = () => {
+    toggleTimer();
+  };
 
   return (
     <div className="max-w-2xl mx-auto">
       {/* Main Timer Card */}
-      <div className={`${modeConfig.bgColor} rounded-2xl p-8 shadow-xl border-2 ${modeConfig.textColor.replace('text-', 'border-')}`}>
+      <div className={`${modeConfig.bgColor} rounded-2xl p-8 shadow-xl border-2 ${modeConfig.borderColor}`}>
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
@@ -280,8 +140,9 @@ export default function PomodoroTimer({ studentId }: PomodoroTimerProps) {
             <RotateCcw className="h-6 w-6" />
           </button>
           
+          {/* ✅ PLAY/PAUSE BUTONU - handleToggle kullan */}
           <button
-            onClick={toggleTimer}
+            onClick={handleToggle}
             className={`p-6 rounded-full bg-gradient-to-r ${modeConfig.color} text-white shadow-lg hover:shadow-xl transform hover:scale-105 transition-all`}
           >
             {isRunning ? (
@@ -320,19 +181,19 @@ export default function PomodoroTimer({ studentId }: PomodoroTimerProps) {
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 mt-6">
-        <div className="bg-white rounded-xl p-4 text-center shadow-md">
+        <div className="bg-white rounded-xl p-4 text-center shadow-md border border-gray-200">
           <div className="text-2xl font-bold text-blue-600">
             {todayStats.focusSessions}
           </div>
           <div className="text-sm text-gray-600">Pomodoro</div>
         </div>
-        <div className="bg-white rounded-xl p-4 text-center shadow-md">
+        <div className="bg-white rounded-xl p-4 text-center shadow-md border border-gray-200">
           <div className="text-2xl font-bold text-green-600">
             {todayStats.totalMinutes}
           </div>
           <div className="text-sm text-gray-600">Dakika</div>
         </div>
-        <div className="bg-white rounded-xl p-4 text-center shadow-md">
+        <div className="bg-white rounded-xl p-4 text-center shadow-md border border-gray-200">
           <div className="text-2xl font-bold text-orange-600">
             {todayStats.currentStreak}
           </div>
@@ -344,7 +205,10 @@ export default function PomodoroTimer({ studentId }: PomodoroTimerProps) {
       {showSettings && (
         <PomodoroSettings
           currentSettings={settings}
-          onSave={saveSettings}
+          onSave={(newSettings) => {
+            updateSettings(newSettings);
+            setShowSettings(false);
+          }}
           onClose={() => setShowSettings(false)}
         />
       )}
@@ -412,7 +276,7 @@ function PomodoroSettings({
               max="120"
               value={settings.focusMinutes}
               onChange={(e) => setSettings({ ...settings, focusMinutes: parseInt(e.target.value) || 25 })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
             />
           </div>
 
@@ -426,7 +290,7 @@ function PomodoroSettings({
               max="30"
               value={settings.shortBreakMinutes}
               onChange={(e) => setSettings({ ...settings, shortBreakMinutes: parseInt(e.target.value) || 5 })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
             />
           </div>
 
@@ -440,7 +304,7 @@ function PomodoroSettings({
               max="60"
               value={settings.longBreakMinutes}
               onChange={(e) => setSettings({ ...settings, longBreakMinutes: parseInt(e.target.value) || 15 })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
             />
           </div>
 
@@ -454,7 +318,7 @@ function PomodoroSettings({
               max="10"
               value={settings.sessionsBeforeLongBreak}
               onChange={(e) => setSettings({ ...settings, sessionsBeforeLongBreak: parseInt(e.target.value) || 4 })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg"
             />
           </div>
         </div>

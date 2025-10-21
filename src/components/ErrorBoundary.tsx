@@ -105,10 +105,10 @@ class ErrorBoundary extends Component<Props, State> {
                 Sorun devam ederse, lütfen destek ekibiyle iletişime geçin.
               </p>
               <a 
-                href="mailto:destek@basariyolu.com" 
+                href="mailto:destek@basariyolum.com" 
                 className="text-blue-600 hover:text-blue-700 font-semibold text-sm"
               >
-                destek@basariyolu.com
+                destek@basariyolum.com
               </a>
             </div>
           </div>
