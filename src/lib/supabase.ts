@@ -1,6 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Debug logs
 console.log('🔍 Supabase Environment Check:');
 console.log('VITE_SUPABASE_URL:', import.meta.env.VITE_SUPABASE_URL);
 console.log('VITE_SUPABASE_ANON_KEY exists:', !!import.meta.env.VITE_SUPABASE_ANON_KEY);
@@ -10,10 +9,6 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('❌ Missing Supabase environment variables!');
-  console.error('URL present:', !!supabaseUrl);
-  console.error('Key present:', !!supabaseAnonKey);
-  console.error('All env vars:', import.meta.env);
   throw new Error('Missing Supabase environment variables');
 }
 
@@ -27,8 +22,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: true
   }
 });
-
-console.log('✅ Supabase client initialized successfully');
 
 // Auth functions
 export const signUp = async (email: string, password: string) => {
@@ -57,7 +50,6 @@ export const getCurrentUser = async () => {
   return user;
 };
 
-// Database helpers
 export const createProfile = async (profileData: any) => {
   const { data, error } = await supabase
     .from('profiles')
@@ -120,7 +112,6 @@ export const getParentData = async (userId: string) => {
 };
 
 export const connectParentToStudent = async (parentId: string, inviteCode: string) => {
-  // First, find the student by invite code
   const { data: student, error: studentError } = await supabase
     .from('students')
     .select('id')
@@ -131,7 +122,6 @@ export const connectParentToStudent = async (parentId: string, inviteCode: strin
     return { data: null, error: { message: 'Geçersiz davet kodu' } };
   }
 
-  // Create connection
   const { data, error } = await supabase
     .from('parent_student_connections')
     .insert([{
@@ -197,7 +187,7 @@ export const addExamResult = async (examData: any) => {
   const { data, error } = await supabase
     .from('exam_results')
     .insert([examData])
-    .select(); // ✅ MUTLAKA .select() EKLE
+    .select();
     
   console.log('📡 Database response:', { data, error });
   return { data, error };
@@ -251,7 +241,7 @@ export const addStudySession = async (sessionData: any) => {
 
 // Class-related functions for students
 export const getClassAssignmentsForStudent = async (studentId: string) => {
-  // Get classes that student is member of
+
   const { data: studentClasses } = await supabase
     .from('class_students')
     .select('class_id')
@@ -362,7 +352,6 @@ export const getWeeklyStudySessions = async (studentId: string, startDate: strin
   return { data, error };
 };
 
-// Pomodoro Sessions
 // Pomodoro session kaydetme
 export async function savePomodoroSession(sessionData: {
   student_id: string;
@@ -380,7 +369,6 @@ export async function savePomodoroSession(sessionData: {
   return data;
 }
 
-// Bugünün pomodoro istatistiklerini getir
 // Bugünün pomodoro istatistiklerini getir
 export async function getTodayPomodoroStats(studentId: string) {
   const today = new Date();
@@ -425,7 +413,6 @@ export const getPomodoroSessions = async (studentId: string, startDate?: string,
 };
 
 export const getPomodoroStats = async (studentId: string) => {
-  // Today's stats
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   

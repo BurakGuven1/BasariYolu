@@ -8,19 +8,14 @@ export const useAuth = () => {
   const lastAuthState = useRef<string>('');
 
   useEffect(() => {
-    // Sadece bir kere çalışsın
     if (isInitialized.current) return;
     isInitialized.current = true;
 
-    console.log('🔵 useAuth initialized');
-
-    // ✅ 1. Önce parent user kontrol et
     const checkParentUser = () => {
       const tempParentUser = localStorage.getItem('tempParentUser');
       if (tempParentUser) {
         try {
           const parentData = JSON.parse(tempParentUser);
-          console.log('👨‍👩‍👧 Found parent user in localStorage');
           setUser({
             id: parentData.id,
             email: parentData.email,
@@ -66,8 +61,6 @@ export const useAuth = () => {
       if (lastAuthState.current === newState) return;
       lastAuthState.current = newState;
 
-      console.log('🔔 Auth changed:', _event);
-
       if (session?.user) {
         setUser({
           id: session.user.id,
@@ -90,9 +83,7 @@ export const useAuth = () => {
   }, []);
 
   const clearUser = async () => {
-    console.log('🔴 clearUser called');
     
-    // ✅ Parent user ise sadece localStorage temizle
     if (user?.isParentLogin) {
       localStorage.removeItem('tempParentUser');
       setUser(null);
@@ -107,7 +98,6 @@ export const useAuth = () => {
   };
 
   const setParentUser = (parentData: any) => {
-    console.log('👨‍👩‍👧 Setting parent user:', parentData);
     const parentUser = {
       id: parentData.id || `parent_${Date.now()}`,
       email: parentData.email || '',
