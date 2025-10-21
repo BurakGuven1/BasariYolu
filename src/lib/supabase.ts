@@ -1,22 +1,34 @@
-import { createClient }  from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
+
+// Debug logs
+console.log('🔍 Supabase Environment Check:');
+console.log('VITE_SUPABASE_URL:', import.meta.env.VITE_SUPABASE_URL);
+console.log('VITE_SUPABASE_ANON_KEY exists:', !!import.meta.env.VITE_SUPABASE_ANON_KEY);
+console.log('VITE_SUPABASE_ANON_KEY length:', import.meta.env.VITE_SUPABASE_ANON_KEY?.length || 0);
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseKey) {
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('❌ Missing Supabase environment variables!');
+  console.error('URL present:', !!supabaseUrl);
+  console.error('Key present:', !!supabaseAnonKey);
+  console.error('All env vars:', import.meta.env);
   throw new Error('Missing Supabase environment variables');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey, {
+console.log('✅ Supabase credentials validated');
+console.log('✅ Creating Supabase client...');
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    persistSession: true,
     autoRefreshToken: true,
-    detectSessionInUrl: true,
-    storage: window.localStorage,
-    storageKey: 'basariyolum-auth',
-    flowType: 'pkce'
+    persistSession: true,
+    detectSessionInUrl: true
   }
 });
+
+console.log('✅ Supabase client initialized successfully');
 
 // Auth functions
 export const signUp = async (email: string, password: string) => {
