@@ -2,15 +2,17 @@ import { useState, useEffect } from 'react';
 import { Search, Star, BookOpen, Grid3x3, List } from 'lucide-react';
 import FormulaCard from './FormulaCard';
 import { supabase } from '../lib/supabase';
+import { useStudentData } from '../hooks/useStudentData';
+import { useAuth } from '../hooks/useAuth';
 
-interface FormulaCardsSectionProps {
-  studentId: string;
-}
 
-export default function FormulaCardsSection({ studentId }: FormulaCardsSectionProps) {
+
+export default function FormulaCardsSection() {
   const [formulas, setFormulas] = useState<any[]>([]);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const { studentData } = useStudentData(user?.id);
   
   const [selectedSubject, setSelectedSubject] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -18,7 +20,9 @@ export default function FormulaCardsSection({ studentId }: FormulaCardsSectionPr
   const [sortBy, setSortBy] = useState<'frequency' | 'difficulty' | 'alphabetical'>('frequency');
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-
+  
+  const studentId = studentData?.id;
+  
   const subjects = [
     'TYT Matematik', 'TYT Fizik', 'TYT Kimya',
     'AYT Matematik', 'AYT Fizik', 'AYT Kimya',

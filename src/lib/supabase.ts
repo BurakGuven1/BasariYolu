@@ -1,19 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 
-console.log('🔍 Supabase Environment Check:');
-console.log('VITE_SUPABASE_URL:', import.meta.env.VITE_SUPABASE_URL);
-console.log('VITE_SUPABASE_ANON_KEY exists:', !!import.meta.env.VITE_SUPABASE_ANON_KEY);
-console.log('VITE_SUPABASE_ANON_KEY length:', import.meta.env.VITE_SUPABASE_ANON_KEY?.length || 0);
-
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
-
-console.log('✅ Supabase credentials validated');
-console.log('✅ Creating Supabase client...');
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
@@ -22,7 +14,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     detectSessionInUrl: true
   }
 });
-
 // Auth functions
 export const signUp = async (email: string, password: string) => {
   const { data, error } = await supabase.auth.signUp({
@@ -85,10 +76,11 @@ export const getStudentData = async (userId: string) => {
     .from('students')
     .select(`
       *,
-      profiles(*)
+      profile:profiles!profile_id(*)
     `)
     .eq('user_id', userId)
-    .single(); 
+    .single();
+  
   return { data, error };
 };
 

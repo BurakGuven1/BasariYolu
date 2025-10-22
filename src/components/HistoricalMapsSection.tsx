@@ -3,22 +3,24 @@ import { Map, Clock, Search, BookOpen, Info, X } from 'lucide-react';
 import InteractiveMap from './InteractiveMap';
 import HistoricalTimeline from './HistoricalTimeline';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../hooks/useAuth';
+import { useStudentData } from '../hooks/useStudentData';
 
-interface HistoricalMapsSectionProps {
-  studentId: string;
-}
 
-export default function HistoricalMapsSection({ studentId }: HistoricalMapsSectionProps) {
+export default function HistoricalMapsSection() {
   const [events, setEvents] = useState<any[]>([]);
   const [timelineEvents, setTimelineEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'map' | 'timeline'>('map');
+  const { user } = useAuth();
+  const { studentData} = useStudentData(user?.id);
   
   const [selectedEventType, setSelectedEventType] = useState<'all' | 'tarih' | 'cografya'>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [showEventDetail, setShowEventDetail] = useState(false);
+  const studentId = studentData?.id;
 
   useEffect(() => {
     loadEvents();

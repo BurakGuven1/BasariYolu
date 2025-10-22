@@ -139,38 +139,6 @@ export default function StudentDashboard() {
     refetch 
   } = useStudentData(user?.id);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Yükleniyor...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!studentData) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-center max-w-md bg-white rounded-xl shadow-lg p-8">
-          <h3 className="text-xl font-bold text-gray-900 mb-2">
-            Öğrenci Kaydı Bulunamadı
-          </h3>
-          <p className="text-gray-600 mb-4">
-            Hesabınıza bağlı öğrenci kaydı bulunamadı.
-          </p>
-          <button 
-            onClick={() => window.location.reload()}
-            className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700"
-          >
-            Yeniden Dene
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   const handleJoinClass = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!studentData || !classInviteCodeInput.trim()) return;
@@ -810,6 +778,17 @@ const chartData = filteredExamResults
     </div>
   );
 
+    if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Yükleniyor...</p>
+        </div>
+      </div>
+    );
+  }
+
   const renderAnalysis = () => (
     <AIInsights examResults={examResults} studentData={studentData} />
   );
@@ -1313,7 +1292,7 @@ const chartData = filteredExamResults
           </div>
         }
       >
-        {studentData && <FormulaCardsSection studentId={studentData.id} />}
+        <FormulaCardsSection />
       </FeatureGate>
     )}
 
@@ -1354,7 +1333,7 @@ const chartData = filteredExamResults
           </div>
         }
       >
-        {studentData && <HistoricalMapsSection studentId={studentData.id} />}
+        <HistoricalMapsSection />
       </FeatureGate>
     )}
 
@@ -1395,7 +1374,7 @@ const chartData = filteredExamResults
           </div>
         }
       >
-        {studentData && <NotesSection studentId={studentData.id} />}
+        <NotesSection />
       </FeatureGate>
     )}
       {/* Study Session Form */}
