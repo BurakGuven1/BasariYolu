@@ -33,7 +33,6 @@ function App() {
   const [showStudentParentLoginModal, setShowStudentParentLoginModal] = useState(false);
   const [showTeacherLoginModal, setShowTeacherLoginModal] = useState(false);
   
-  // ✅ Legal pages ekle
   const [currentView, setCurrentView] = useState<'home' | 'dashboard' | 'blog' | 'blog-detail' | 'terms' | 'privacy' | 'refund'>('home');
   
   const [selectedBlogSlug, setSelectedBlogSlug] = useState<string>('');
@@ -52,7 +51,6 @@ function App() {
       return;
     }
 
-    // ✅ URL routing
     const path = window.location.pathname;
     if (path.startsWith('/blog/')) {
       const slug = path.replace('/blog/', '');
@@ -102,17 +100,14 @@ function App() {
 
   const handleLogout = async () => {
     try {
-      console.log('🔴 App handleLogout');
       
       localStorage.removeItem('teacherSession');
       localStorage.removeItem('classViewerSession');
       setTeacherUser(null);
       
       await clearUser();
-      
-      console.log('✅ Logout tamamlandı');
+      setCurrentView('home');
     } catch (err) {
-      console.error('❌ Logout failed:', err);
       localStorage.clear();
       window.location.href = '/';
     }
@@ -199,7 +194,6 @@ function App() {
     );
   }
 
-  // ✅ Provider'ı BURADA KULLANMA - renderDashboard içinde kullanıyorduk, YANLIŞ!
   const renderDashboard = () => {
     if (teacherUser) return <TeacherDashboard />;
     
@@ -210,8 +204,6 @@ function App() {
     }
     
     if (user.isParentLogin) return <ParentDashboard />;
-    
-    // ✅ Provider'sız döndür, zaten dışarıda sarmalandı
     return <StudentDashboard />;
   };
 
@@ -231,7 +223,6 @@ function App() {
       <TeacherSection />
       <CTASection onGetStarted={handleGetStarted} />
       
-      {/* ✅ Footer - Legal links ekle */}
       <footer className="bg-gray-900 dark:bg-gray-950 text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-4 gap-8">
@@ -342,7 +333,6 @@ function App() {
     }
   };
 
-  // ✅ BURADA PROVIDER İLE SARMALAMA - SADECE BİR KEZ MOUNT OLACAK
   return (
     <ErrorBoundary>
       <PomodoroProvider studentId={user?.id}>

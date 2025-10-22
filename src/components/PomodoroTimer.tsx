@@ -17,7 +17,7 @@ export default function PomodoroTimer() {
     mode,
     completedSessions,
     todayStats,
-    toggleTimer,  // ✅ Context'ten al
+    toggleTimer,
     resetTimer,
     skipToNext,
     updateSettings

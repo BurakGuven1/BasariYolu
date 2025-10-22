@@ -3,7 +3,6 @@ import {
   getStudentData, 
   getExamResults, 
   getHomeworks, 
-  getAIRecommendations,
   getClassAssignmentsForStudent,
   getClassAnnouncementsForStudent,
   getClassExamResultsForStudent
