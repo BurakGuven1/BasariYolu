@@ -85,10 +85,10 @@ export const getStudentData = async (userId: string) => {
     .from('students')
     .select(`
       *,
-      profiles!inner(*)
+      profiles(*)
     `)
     .eq('user_id', userId)
-    .single();
+    .single(); 
   return { data, error };
 };
 
