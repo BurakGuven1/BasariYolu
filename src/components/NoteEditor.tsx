@@ -303,13 +303,6 @@ export default function NoteEditor({ note, onSave, onClose }: NoteEditorProps) {
         </div>
 
         <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
-          <div className="text-sm text-gray-600">
-            {safeNote ? (
-              <span>Son duzenleme: {new Date(safeNote.last_edited_at).toLocaleString('tr-TR')}</span>
-            ) : (
-              <span>Yeni not olusturuluyor</span>
-            )}
-          </div>
           <div className="flex gap-3">
             <button
               onClick={onClose}

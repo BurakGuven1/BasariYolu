@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, Search, Star, Pin, BookOpen, Grid3x3, List } from 'lucide-react';
 import NoteCard from './NoteCard';
+import { useAuth } from '../hooks/useAuth';
+import { useStudentData } from '../hooks/useStudentData';
 import NoteEditor from './NoteEditor';
 import { supabase } from '../lib/supabase';
 import {
@@ -9,9 +11,6 @@ import {
   sanitizeSearchQuery
 } from '../utils/security';
 
-interface NotesSectionProps {
-  studentId: string;
-}
 
 const SUBJECTS = [
   'Matematik',
@@ -30,7 +29,7 @@ const SUBJECTS = [
 type FilterType = 'all' | 'favorite' | 'pinned';
 type ViewMode = 'grid' | 'list';
 
-export default function NotesSection({ studentId }: NotesSectionProps) {
+export default function NotesSection() {
   const [notes, setNotes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showEditor, setShowEditor] = useState(false);
@@ -41,6 +40,10 @@ export default function NotesSection({ studentId }: NotesSectionProps) {
   const [selectedTag, setSelectedTag] = useState<string>('all');
   const [filterType, setFilterType] = useState<FilterType>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const { user } = useAuth();
+  const { studentData } = useStudentData(user?.id);
+
+  const studentId = studentData?.id;
 
   const loadNotes = useCallback(async () => {
     setLoading(true);
@@ -204,7 +207,7 @@ export default function NotesSection({ studentId }: NotesSectionProps) {
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Notlar</h2>
           <p className="text-gray-600">
-            Calisma notlarini duzenle, favori olarak isaretle ve sabitle.
+            Çalışma notlarını düzenle, favori olarak işaretle ve sabitle.
           </p>
         </div>
         <button
