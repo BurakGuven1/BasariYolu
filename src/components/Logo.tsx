@@ -31,7 +31,7 @@ export default function Logo({
       onClick={onClick}
     >
       <img 
-        src="/public/logom.png" 
+        src="/Logom.png" 
         alt="BaşarıYolu Logo" 
         className={`${sizeClasses[size]} object-contain transition-all group-hover:scale-105`}
         onError={(e) => {

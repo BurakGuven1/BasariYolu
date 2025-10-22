@@ -129,7 +129,7 @@ export default function VisionSection() {
               </div>
               <video
                 className="absolute top-0 left-0 w-full h-full rounded-2xl object-cover z-10"
-                src="./public/sena.mp4"
+                src="/sena.mp4"
                 controls
                 autoPlay={false}
                 muted
