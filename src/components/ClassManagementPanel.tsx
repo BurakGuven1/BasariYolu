@@ -20,6 +20,7 @@ interface ClassManagementPanelProps {
   classData: any;
   onBack: () => void;
   onRefresh: () => void;
+  onAnnouncementCreated?: (announcementId: string) => Promise<void>;
 }
 
 interface StudentResult {
@@ -33,7 +34,7 @@ interface StudentResult {
   ranking: number;
 }
 
-export default function ClassManagementPanel({ classData, onBack, onRefresh }: ClassManagementPanelProps) {
+export default function ClassManagementPanel({ classData, onBack, onRefresh, onAnnouncementCreated }: ClassManagementPanelProps) {
   const [activeTab, setActiveTab] = useState<'assignments' | 'announcements' | 'exams'>('assignments');
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -370,11 +371,24 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh }: C
     setLoading(true);
 
     try {
-      await addClassAnnouncement({
+      const { data, error } = await addClassAnnouncement({
         class_id: classData.id,
         teacher_id: classData.teacher_id,
         ...announcementForm
       });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data?.id && onAnnouncementCreated) {
+        try {
+          await onAnnouncementCreated(data.id);
+        } catch (notificationError) {
+          console.error('Error sending announcement notification:', notificationError);
+          alert('Duyuru eklendi ancak bildirimi gönderirken bir sorun oluştu.');
+        }
+      }
 
       alert('Duyuru başarıyla eklendi!');
       handleCloseForm();

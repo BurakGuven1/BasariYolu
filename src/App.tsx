@@ -195,7 +195,7 @@ function App() {
   }
 
   const renderDashboard = () => {
-    if (teacherUser) return <TeacherDashboard />;
+    if (teacherUser) return <TeacherDashboard teacherUser={teacherUser} onLogout={handleLogout} />;
     
     if (!user) {
       console.log('No user, redirecting home');

@@ -3,8 +3,14 @@ import { Users, Plus, BookOpen, Settings, LogOut, Copy, Eye, EyeOff, CreditCard 
 import { getTeacherClasses, createClass, getClassData } from '../lib/teacherApi';
 import { PACKAGE_OPTIONS, calculateClassPrice } from '../types/teacher';
 import ClassManagementPanel from './ClassManagementPanel';
+import { sendAnnouncementNotification } from '../lib/notificationApi';
 
-export default function TeacherDashboard() {
+interface TeacherDashboardProps {
+  teacherUser?: any;
+  onLogout?: () => Promise<void> | void;
+}
+
+export default function TeacherDashboard({ teacherUser, onLogout }: TeacherDashboardProps) {
   const [teacher, setTeacher] = useState<any>(null);
   const [classes, setClasses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,6 +28,13 @@ export default function TeacherDashboard() {
   const [createLoading, setCreateLoading] = useState(false);
 
   useEffect(() => {
+    if (teacherUser) {
+      console.log('TeacherDashboard - using provided teacherUser:', teacherUser);
+      setTeacher(teacherUser);
+      loadClasses(teacherUser.id);
+      return;
+    }
+
     // Get teacher from localStorage
     const teacherSession = localStorage.getItem('teacherSession');
     console.log('TeacherDashboard - checking session:', !!teacherSession);
@@ -35,7 +48,7 @@ export default function TeacherDashboard() {
       // Don't redirect here, let App.tsx handle it
       setLoading(false);
     }
-  }, []);
+  }, [teacherUser]);
 
   const loadClasses = async (teacherId: string) => {
     try {
@@ -59,7 +72,12 @@ export default function TeacherDashboard() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    if (onLogout) {
+      await onLogout();
+      return;
+    }
+
     localStorage.removeItem('teacherSession');
     window.location.href = '/';
   };
@@ -103,6 +121,14 @@ export default function TeacherDashboard() {
     navigator.clipboard.writeText(code);
     alert('Davet kodu kopyalandı!');
   };
+
+  const handleAnnouncementCreated = async (announcementId: string) => {
+    const result = await sendAnnouncementNotification(announcementId);
+    if (!result.success) {
+      console.error('Failed to send announcement notification:', result.error);
+      alert('Duyuru bildirimi gönderilirken bir sorun oluştu. Lütfen daha sonra tekrar deneyin.');
+    }
+  };
   
   const handleManageClass = (classData: any) => {
     // Pass the detailed class data with assignments, announcements, and exams
@@ -133,6 +159,7 @@ export default function TeacherDashboard() {
       default: return status;
     }
   };
+  
 
   if (loading) {
     return (
@@ -156,6 +183,7 @@ export default function TeacherDashboard() {
         onRefresh={() => {
           loadClasses(teacher.id);
         }}
+        onAnnouncementCreated={handleAnnouncementCreated}
       />
     );
   }
