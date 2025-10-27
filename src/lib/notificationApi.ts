@@ -4,7 +4,7 @@ export const sendAnnouncementNotification = async (announcementId: string) => {
   try {
     console.log('📧 Triggering notification for announcement:', announcementId);
 
-    const { data, error } = await supabase.functions.invoke('send-notification', {
+    const { data, error } = await supabase.functions.invoke('SmtpSend', {
       body: { announcement_id: announcementId }
     });
 
