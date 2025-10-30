@@ -23,13 +23,14 @@ import { getStudentInviteCode, deleteExamResult, updateHomework, deleteHomework,
 import PomodoroTimer from './PomodoroTimer';
 import FormulaCardsSection from './FormulaCardsSection';
 import NotesSection from './NotesSection';
+import StudentWeeklySchedule from './StudentWeeklySchedule';
 
 export default function StudentDashboard() {
   const [insights, setInsights] = useState<any[]>([]);
   const [dailyChallenge, setDailyChallenge] = useState<any>(null);
   const { planName} = useFeatureAccess();
   const { user, clearUser } = useAuth();
-  const [activeTab, setActiveTab] = useState<'overview' | 'exams' | 'homeworks' | 'pomodoro' | 'formulas' | 'maps' | 'notes' | 'analysis' | 'classes' | 'smartplan'| 'subscription'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'exams' | 'homeworks' | 'schedule' | 'pomodoro' | 'formulas' | 'maps' | 'notes' | 'analysis' | 'classes' | 'smartplan'| 'subscription'>('overview');
   const [showExamForm, setShowExamForm] = useState(false);
   const [showHomeworkForm, setShowHomeworkForm] = useState(false);
   const [showInviteCode, setShowInviteCode] = useState(false);
@@ -39,7 +40,7 @@ export default function StudentDashboard() {
   const [editingExam, setEditingExam] = useState<any>(null);
   const [showExamMenu, setShowExamMenu] = useState<string | null>(null);
   const [showHomeworkMenu, setShowHomeworkMenu] = useState<string | null>(null);
-  const [badges, setBadges] = useState<string[]>(['İlk Deneme', 'Haftalık Çalışan']);
+  const [badges, setBadges] = useState<string[]>(['�-lk Deneme', 'Haftal�-k +�al�-+�an']);
   const [studyData, setStudyData] = useState([
     { day: 'Pzt', hours: 0 },
     { day: 'Sal', hours: 0 },
@@ -146,7 +147,7 @@ export default function StudentDashboard() {
     try {
       const { joinClassWithCode } = await import('../lib/teacherApi');
       await joinClassWithCode(studentData.id, classInviteCodeInput.trim());
-      
+
       alert('Sınıfa başarıyla katıldınız!');
       setShowJoinClassModal(false);
       setClassInviteCodeInput('');
@@ -223,7 +224,7 @@ export default function StudentDashboard() {
   }, [studentData]);
 
   const handleLogout = () => {
-    console.log('🔴 StudentDashboard logout başlatıldı');
+    console.log('StudentDashboard logout başlatıldı');
     clearUser();
   };
 
@@ -235,7 +236,7 @@ export default function StudentDashboard() {
     }
   };
 
-  // FeatureGate'deki onUpgrade prop'unu güncelle
+  // FeatureGate'deki onUpgrade prop'unu g+-ncelle
   <FeatureGate
     feature="ai_analysis"
     onUpgrade={() => handleUpgradeClick('advanced')}
@@ -252,7 +253,7 @@ export default function StudentDashboard() {
   };
 
   const handleDeleteExam = async (examId: string) => {
-    if (confirm('Bu deneme sonucunu silmek istediğinizden emin misiniz?')) {
+    if (confirm('Bu deneme sonucunu silmek istediğiinizden emin misiniz?')) {
       try {
         const { error } = await deleteExamResult(examId);
         if (error) throw error;
@@ -379,17 +380,17 @@ const handleAddStudySession = async (e: React.FormEvent) => {
     const { error } = await addStudySession(sessionData);
     if (error) throw error;
 
-    // 🎉 Puan ekle (1 saat = 10 puan)
+    // ���� Puan ekle (1 saat = 10 puan)
     const pointsResult = await addStudySessionPoints(studentData.id, durationMinutes);
     
-    // Haftalık çalışma saatlerini yeniden hesapla
+    // Haftal�-k +�al�-+�ma saatlerini yeniden hesapla
     if (weeklyGoal) {
       await reloadWeeklyStudyHours(weeklyGoal);
     }
 
     // Update local study data
     const dayIndex = new Date(studyFormData.date).getDay();
-    const dayNames = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
+    const dayNames = ['Paz', 'Pzt', 'Sal', '+�ar', 'Per', 'Cum', 'Cmt'];
     const dayName = dayNames[dayIndex];
     
     setStudyData(prev => prev.map(day => 
@@ -407,7 +408,7 @@ const handleAddStudySession = async (e: React.FormEvent) => {
     });
     
     if (pointsResult.pointsEarned > 0) {
-      alert(`✅ Çalışma eklendi! 🎉 +${pointsResult.pointsEarned} puan kazandın!`);
+      alert(`🎉 Çalışma eklendi! 🎉 +${pointsResult.pointsEarned} puan kazandınız!`);
     } else {
       alert('Çalışma seansı eklendi!');
     }
@@ -465,7 +466,7 @@ const chartData = filteredExamResults
                   <h4 className="font-semibold text-gray-900">{insight.title}</h4>
                   <p className="text-sm text-gray-600 mt-1">{insight.message}</p>
                   <button className="text-sm font-medium mt-2 text-blue-600 hover:underline">
-                    {insight.action} →
+                    {insight.action} için
                   </button>
                 </div>
               </div>
@@ -487,9 +488,9 @@ const chartData = filteredExamResults
             <div className="flex items-center justify-between pt-4">
               <div className="flex items-center gap-2">
                 <span className="bg-white/20 px-3 py-1 rounded-full text-sm">
-                  {dailyChallenge.difficulty === 'easy' ? '🟢 Kolay' :
-                   dailyChallenge.difficulty === 'medium' ? '🟡 Orta' :
-                   '🔴 Zor'}
+                  {dailyChallenge.difficulty === 'easy' ? '🎉 Kolay' :
+                   dailyChallenge.difficulty === 'medium' ? '🎉 Orta' :
+                   '🎉 Zor'}
                 </span>
                 <span className="bg-white/20 px-3 py-1 rounded-full text-sm">
                   +{dailyChallenge.points} puan
@@ -498,12 +499,12 @@ const chartData = filteredExamResults
                     <button
             onClick={async () => {
               if (!studentData) return;
-              
-              // Bugün tamamlandı mı kontrol et
+
+              // Bugünün tamamlandığını kontrol et
               const completed = await isChallengeCompletedToday(studentData.id, dailyChallenge.id);
               
               if (completed) {
-                alert('🎯 Bu görevi bugün zaten tamamladınız!');
+                alert('Bu görevi bugünün zaten tamamladınız!');
                 return;
               }
               // Challenge tamamla
@@ -515,10 +516,10 @@ const chartData = filteredExamResults
               );
               
               if (result.success) {
-                alert(`🎉 Görev tamamlandı! +${dailyChallenge.points} puan kazandın!`);
+                alert(`🎉 Görev tamamlandı! +${dailyChallenge.points} puan kazandınız!`);
                 window.location.reload(); // Points'i güncelle
               } else {
-                alert(result.error || 'Görev tamamlanamadı');
+                alert(result.error || 'G+�rev tamamlanamad�-');
               }
             }}
             className="bg-white text-purple-600 px-6 py-2 rounded-full font-semibold hover:bg-purple-50"
@@ -557,7 +558,7 @@ const chartData = filteredExamResults
         <div className="bg-white rounded-lg p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-600 text-sm">Bekleyen Ödev</p>
+              <p className="text-gray-600 text-sm">Bekleyen Görev</p>
               <p className="text-2xl font-bold text-orange-600">{stats.pendingHomeworks}</p>
             </div>
             <Clock className="h-8 w-8 text-orange-600" />
@@ -593,7 +594,7 @@ const chartData = filteredExamResults
             onClick={() => setShowStudyForm(true)}
             className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 sm:mt-0"
           >
-            Çalışma Ekle
+            +Çalışma Ekle
           </button>
           {!weeklyGoal && (
             <button
@@ -634,7 +635,7 @@ const chartData = filteredExamResults
     <ResponsiveContainer width="100%" height={250}>
       <LineChart data={chartData}>
         <CartesianGrid strokeDasharray="3 3" />
-        {/* Artık "date" anahtarını veride bulacağı için bu satır doğru çalışacak */}
+        {/* Artık "date" anahtarını veride bulabilmek için bu satır doğru çalışacak */}
         <XAxis dataKey="date" fontSize={12} /> 
         <YAxis domain={[100, 500]} />
         <Tooltip 
@@ -658,18 +659,18 @@ const chartData = filteredExamResults
   ) : (
       <div className="text-center py-16 text-gray-500">
         <TrendingUp className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-        <p>{chartFilter === 'all' ? 'Grafik için deneme sonucu gerekli' : `${chartFilter} denemesi bulunmuyor`}</p>
+        <p>{chartFilter === 'all' ? 'Grafik i+�in deneme sonucu gerekli' : `${chartFilter} denemesi bulunmuyor`}</p>
       </div>
     )}
   </div>
 
         <div className="bg-white rounded-lg p-6 shadow-sm">
-          <h3 className="text-lg font-semibold mb-4">Yaklaşan Ödevler</h3>
+          <h3 className="text-lg font-semibold mb-4">Yaklaşan Görevler</h3>
           <div className="space-y-3">
             {homeworks.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <p>Henüz ödev eklenmemiş</p>
+                <p>Henüz görev eklenmemiş</p>
               </div>
             ) : (
               [...homeworks, ...classAssignments].slice(0, 4).map((homework) => (
@@ -754,7 +755,7 @@ const chartData = filteredExamResults
                     className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center space-x-2"
                   >
                     <Edit className="h-4 w-4" />
-                    <span>Düzenle</span>
+                    <span>D+-zenle</span>
                   </button>
                   <button
                     onClick={() => { handleDeleteExam(exam.id); setShowExamMenu(null); }}
@@ -800,7 +801,7 @@ const chartData = filteredExamResults
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Öğrenci Paneli</h1>
             <p className="text-gray-600">
-              Hoş geldin, {user?.profile?.full_name || 'Öğrencimiz'}! İlerlemeni takip etmeye devam et.
+              Hoş geldin, {user?.profile?.full_name || 'öğrencimiz'}! Hedeflerini takip etmeye devam et.
             </p>
             <button
               onClick={handleShowInviteCode}
@@ -838,7 +839,7 @@ const chartData = filteredExamResults
             { key: 'maps', label: 'Tarih/Coğrafya', icon: MapIcon },
             { key: 'notes', label: 'Notlarım', icon: StickyNote },
             { key: 'subscription', label: 'Aboneliğim', icon: Crown },
-            
+
           ].map(({ key, label, icon: Icon }) => (
             <button
               key={key}
@@ -859,7 +860,17 @@ const chartData = filteredExamResults
             </button>
           ))}
         </div>
-
+        <button
+          onClick={() => setActiveTab('schedule')}
+          className={`flex items-center space-x-2 px-4 py-2 rounded-lg ${
+            activeTab === 'schedule'
+              ? 'bg-purple-600 text-white'
+              : 'text-gray-600 hover:bg-gray-100'
+          }`}
+        >
+          <Calendar className="w-5 h-5" />
+          <span>Çalışma Programı</span>
+        </button>
         <button
           onClick={() => setShowExamTopics(true)}
           className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 sm:w-auto"
@@ -934,13 +945,13 @@ const chartData = filteredExamResults
                       </span>
                     </div>
                     <div className="text-sm text-gray-600 mb-4">
-                      <p>Katılım Tarihi: {new Date(classData.joined_at).toLocaleDateString('tr-TR')}</p>
+                      <p>Kat�-l�-m Tarihi: {new Date(classData.joined_at).toLocaleDateString('tr-TR')}</p>
                     </div>
                     
                     {/* Show class assignments for this class */}
                     {classAssignments.filter(a => a.class_id === classData.class_id).length > 0 && (
                       <div className="mt-3 p-2 bg-blue-50 rounded">
-                        <p className="text-blue-800 text-sm font-medium mb-2">📝 Sınıf Ödevleri:</p>
+                        <p className="text-blue-800 text-sm font-medium mb-2">Sınıf Ödevleri:</p>
                         {classAssignments
                           .filter(a => a.class_id === classData.class_id)
                           .slice(0, 3)
@@ -948,7 +959,7 @@ const chartData = filteredExamResults
                             <div key={assignment.id} className="text-sm text-blue-700 mb-1 p-2 bg-white rounded border-l-2 border-blue-400">
                               <div className="font-medium">{assignment.title}</div>
                               <div className="text-xs text-blue-600">
-                                {assignment.subject} • Son teslim: {new Date(assignment.due_date).toLocaleDateString('tr-TR')}
+                                {assignment.subject} - Son teslim: {new Date(assignment.due_date).toLocaleDateString('tr-TR')}
                               </div>
                               {assignment.description && (
                                 <div className="text-xs text-blue-500 mt-1">{assignment.description}</div>
@@ -961,7 +972,7 @@ const chartData = filteredExamResults
                     {/* Show class announcements */}
                     {classAnnouncements.filter(a => a.class_id === classData.class_id).length > 0 && (
                       <div className="mt-3 p-2 bg-purple-50 rounded">
-                        <p className="text-purple-800 text-sm font-medium mb-2">📢 Sınıf Duyuruları:</p>
+                        <p className="text-purple-800 text-sm font-medium mb-2">Sınıf Duyuruları:</p>
                         {classAnnouncements
                           .filter(a => a.class_id === classData.class_id)
                           .slice(0, 3)
@@ -980,7 +991,7 @@ const chartData = filteredExamResults
                     {/* Show class exam results */}
                     {classExamResults.filter(r => r.class_exams?.class_id === classData.class_id).length > 0 && (
                       <div className="mt-3 p-2 bg-orange-50 rounded">
-                        <p className="text-orange-800 text-sm font-medium mb-2">🏆 Son Sınav Sonuçlarım:</p>
+                        <p className="text-orange-800 text-sm font-medium mb-2">Sınıf Sınav Sonuçları:</p>
                         {classExamResults
                           .filter(r => r.class_exams?.class_id === classData.class_id)
                           .slice(0, 3)
@@ -988,9 +999,9 @@ const chartData = filteredExamResults
                             <div key={result.id} className="text-sm text-orange-700 mb-1 p-2 bg-white rounded border-l-2 border-orange-400">
                               <div className="font-medium">{result.class_exams?.exam_name}</div>
                               <div className="text-xs text-orange-600">
-                                Puan: {result.score?.toFixed(1) || 'N/A'} • 
-                                Doğru: {result.correct_answers || 0} • 
-                                Yanlış: {result.wrong_answers || 0} • 
+                                Puan: {result.score?.toFixed(1) || 'N/A'} - 
+                                Doğru: {result.correct_answers || 0} - 
+                                Yanlış: {result.wrong_answers || 0} - 
                                 Boş: {result.empty_answers || 0}
                               </div>
                               <div className="text-xs text-orange-500 mt-1">
@@ -1006,11 +1017,19 @@ const chartData = filteredExamResults
             </div>
           </div>
         )}
+        {activeTab === 'schedule' && studentData && (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-gray-900">Haftalık Çalışma Programım</h2>
+            <StudentWeeklySchedule
+              studentId={studentData.id}
+              studentName={studentData.profile?.full_name}
+            />
+          </div>
+        )}
         {activeTab === 'homeworks' && (
           <div className="bg-white rounded-lg p-6 shadow-sm">
             <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-6">
               <h3 className="text-lg font-semibold">Ödev Takibi
-
                 <p> Kendi ödevlerini takip etmek için :</p>
               </h3>
               <button 
@@ -1028,7 +1047,7 @@ const chartData = filteredExamResults
                   <p className="text-gray-600">Henüz ödev eklenmemiş</p>
                   {classAssignments.length > 0 && (
                     <div className="mt-4">
-                      <p className="text-gray-700 font-medium mb-2">Sınıf Ödevleri:</p>
+                      <p className="text-gray-700 font-medium mb-2">Sınıf ödevleri:</p>
                       {classAssignments.slice(0, 3).map((assignment) => (
                         <div key={assignment.id} className="p-3 bg-blue-50 rounded-lg mb-2">
                           <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start">
@@ -1051,7 +1070,7 @@ const chartData = filteredExamResults
                     onClick={() => setShowHomeworkForm(true)}
                     className="mt-4 w-full rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-green-700 sm:w-auto"
                   >
-                    İlk Ödevi Ekle
+                    Yeni Ödev Ekle
                   </button>
                 </div>
               ) : (
@@ -1196,7 +1215,7 @@ const chartData = filteredExamResults
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl max-w-7xl w-full max-h-[90vh] overflow-y-auto">
               <div className="sticky top-0 bg-white border-b px-6 py-4 flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
-                <h2 className="text-xl font-bold">TYT-AYT Çıkmış Konular Analizi</h2>
+                <h2 className="text-xl font-bold">TYT-AYT-LGS+Çıkmış Konular Analizi</h2>
                 <button
                   onClick={() => setShowExamTopics(false)}
                   className="text-gray-400 hover:text-gray-600"
@@ -1262,16 +1281,16 @@ const chartData = filteredExamResults
           <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl p-8 text-center border-2 border-purple-200">
             <BookmarkCheck className="h-16 w-16 text-purple-400 mx-auto mb-4" />
             <h3 className="text-2xl font-bold text-gray-900 mb-2">
-              Formül Kartları
+              Form+-l Kartlar�-
             </h3>
             <p className="text-gray-600 mb-6">
-              Sınavda en çok çıkan formülleri flashcard tarzında öğren! Bu özellik Profesyonel pakette kullanılabilir.
+              Sınavda en çok kullanılan formülleri flashcard tarzında öğren! Bu özellik Profesyonel pakette kullanılabilir.
             </p>
             <div className="mb-6">
               <div className="flex items-center justify-center gap-8 text-sm text-gray-700">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                  <span>500+ Formül</span>
+                  <span>500+ Form+-l</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-blue-500"></div>
@@ -1287,7 +1306,7 @@ const chartData = filteredExamResults
               onClick={() => setActiveTab('subscription')}
               className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-medium"
             >
-              Profesyonel Pakete Yükselt
+              Profesyonel Pakete Y+-kselt
             </button>
           </div>
         }
@@ -1316,11 +1335,11 @@ const chartData = filteredExamResults
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                  <span>İnteraktif Harita</span>
+                  <span>�-nteraktif Harita</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-purple-500"></div>
-                  <span>Zaman Çizelgesi</span>
+                  <span>Zaman +�izelgesi</span>
                 </div>
               </div>
             </div>
@@ -1328,7 +1347,7 @@ const chartData = filteredExamResults
               onClick={() => setActiveTab('subscription')}
               className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium"
             >
-              Paketi Yükselt
+              Paketi Y+-kselt
             </button>
           </div>
         }
@@ -1414,7 +1433,7 @@ const chartData = filteredExamResults
                   onChange={(e) => setStudyFormData(prev => ({ ...prev, subject: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                 >
-                  <option value="">Ders seçin</option>
+                  <option value="">Ders Seçin</option>
                   <option value="Matematik">Matematik</option>
                   <option value="Türkçe">Türkçe</option>
                   <option value="Fen">Fen Bilimleri</option>
@@ -1444,7 +1463,7 @@ const chartData = filteredExamResults
                   onClick={() => setShowStudyForm(false)}
                   className="w-full rounded-lg bg-gray-100 py-2 text-gray-700 hover:bg-gray-200 sm:flex-1"
                 >
-                  İptal
+                  �-ptal
                 </button>
                 <button
                   type="submit"
@@ -1463,7 +1482,7 @@ const chartData = filteredExamResults
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-md w-full p-6">
             <h3 className="text-lg font-semibold mb-4">
-              {weeklyGoal ? 'Haftalık Hedefi Güncelle' : 'Haftalık Çalışma Hedefi Belirle'}
+              {weeklyGoal ? 'Haftal�-k Hedefi G+-ncelle' : 'Haftal�-k +�al�-+�ma Hedefi Belirle'}
             </h3>
             <p className="text-gray-600 mb-4 text-sm">
               Haftalık çalışma hedefinizi belirleyin. Bu hedef 7 gün sonra yeniden sorulacak.
@@ -1493,14 +1512,14 @@ const chartData = filteredExamResults
                   onClick={() => setShowGoalForm(false)}
                   className="w-full rounded-lg bg-gray-100 py-2 text-gray-700 hover:bg-gray-200 sm:flex-1"
                 >
-                  İptal
+                  �-ptal
                 </button>
                 <button
                   type="submit"
                   disabled={goalLoading}
                   className="w-full rounded-lg bg-blue-600 py-2 text-white hover:bg-blue-700 sm:flex-1"
                 >
-                  {goalLoading ? 'Kaydediliyor...' : (weeklyGoal ? 'Güncelle' : 'Belirle')}
+                  {goalLoading ? 'Kaydediliyor...' : (weeklyGoal ? 'G+-ncelle' : 'Belirle')}
                 </button>
               </div>
             </form>
@@ -1531,7 +1550,7 @@ const chartData = filteredExamResults
                   required
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Örnek: 645A-A006-208D
+                  Örnek: 635A-A006-204D
                 </p>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row">

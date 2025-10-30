@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Mail, Lock, User, Phone } from 'lucide-react';
 import { signUp, signIn, createProfile, createStudentRecord, createParentRecord, supabase } from '../lib/supabase';
 import PaymentPage from './PaymentPage';
+import ClassCodeLogin from './ClassCodeLogin';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
   const [userType] = useState<'student' | 'parent'>('student');
   const [loading, setLoading] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
+  const [showClassCodeLogin, setShowClassCodeLogin] = useState(false);
   const [registrationData, setRegistrationData] = useState<any>(null);
   const [formData, setFormData] = useState({
     email: '',
@@ -438,7 +440,14 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
             }
           </p>
         </div>
-
+        <div className="mb-4">
+          <button
+            onClick={() => setShowClassCodeLogin(true)}
+            className="w-full py-3 border-2 border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+          >
+            Sınıf Kodu ile Giriş
+          </button>
+        </div>
         {activeTab === 'parent' ? (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -783,6 +792,18 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
           </div>
         )}
       </div>
+      <ClassCodeLogin
+        isOpen={showClassCodeLogin}
+        onClose={() => setShowClassCodeLogin(false)}
+        onSuccess={(data) => {
+          onLogin(data);
+          if (setUserState) {
+            setUserState(data);
+          }
+          setShowClassCodeLogin(false);
+          onClose();
+        }}
+      />
       {/* Payment Page */}
     {registrationData && (
       <PaymentPage

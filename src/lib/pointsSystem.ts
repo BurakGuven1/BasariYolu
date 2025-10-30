@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase, SUPABASE_ANON_KEY, SUPABASE_URL } from './supabase';
 
 export interface StudentPoints {
   id: string;
@@ -21,19 +21,52 @@ export interface PointsTransaction {
 /**
  * Öğrencinin toplam puanını getir
  */
+const fetchStudentPointsFallback = async (studentId: string) => {
+  try {
+    const url = `${SUPABASE_URL}/rest/v1/student_points?select=*&student_id=eq.${studentId}`;
+    const response = await fetch(url, {
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`
+      }
+    });
+
+    if (!response.ok) {
+      console.error('Fallback points request failed:', await response.text());
+      return null;
+    }
+
+    const json = await response.json();
+    if (Array.isArray(json)) {
+      return json[0] || null;
+    }
+
+    return json || null;
+  } catch (error) {
+    console.error('Fallback points request error:', error);
+    return null;
+  }
+};
+
 export const getStudentPoints = async (studentId: string): Promise<StudentPoints | null> => {
   const { data, error } = await supabase
     .from('student_points')
     .select('*')
     .eq('student_id', studentId)
-    .single();
+    .maybeSingle();
 
-  if (error && error.code !== 'PGRST116') {
-    console.error('Error fetching points:', error);
-    return null;
+  if (error) {
+    if (error.message?.includes('No API key found')) {
+      const fallbackData = await fetchStudentPointsFallback(studentId);
+      if (fallbackData) {
+        return fallbackData as StudentPoints;
+      }
+    } else if (error.code !== 'PGRST116') {
+      console.error('Error fetching points:', error);
+      return null;
+    }
   }
 
-  // Eğer kayıt yoksa varsayılan değerler döndür
   if (!data) {
     return {
       id: '',
@@ -214,3 +247,4 @@ export const getPointsToNextLevel = (currentPoints: number, currentLevel: number
   const nextLevelPoints = getPointsForLevel(currentLevel + 1);
   return Math.max(0, nextLevelPoints - currentPoints);
 };
+

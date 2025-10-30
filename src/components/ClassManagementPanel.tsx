@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Plus, FileText, BookOpen, Bell, Trophy, ArrowLeft, CreditCard as Edit, Trash2, X, BarChart3, Save } from 'lucide-react';
+import { Plus, FileText, BookOpen, Bell, Trophy, ArrowLeft, CreditCard as Edit, Trash2, X, BarChart3, Save, Calendar, User } from 'lucide-react';
 import { 
   addClassAssignment, 
   addClassAnnouncement, 
@@ -15,6 +15,8 @@ import {
   deleteClassAnnouncement,
   deleteClassExam
 } from '../lib/teacherApi';
+import AdvancedStudyScheduleForm from './AdvancedStudyScheduleForm';
+import { getTeacherStudySchedules } from '../lib/studyScheduleApi';
 
 interface ClassManagementPanelProps {
   classData: any;
@@ -35,12 +37,13 @@ interface StudentResult {
 }
 
 export default function ClassManagementPanel({ classData, onBack, onRefresh, onAnnouncementCreated }: ClassManagementPanelProps) {
-  const [activeTab, setActiveTab] = useState<'assignments' | 'announcements' | 'exams'>('assignments');
+  const [activeTab, setActiveTab] = useState<'assignments' | 'announcements' | 'exams' | 'schedules'>('assignments');
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [assignments, setAssignments] = useState<any[]>([]);
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [exams, setExams] = useState<any[]>([]);
+  const [schedules, setSchedules] = useState<any[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   
   // Modal states
@@ -50,6 +53,9 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh, onA
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [editLoading, setEditLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  
+  // Weekly schedule states
+  const [showScheduleCreator, setShowScheduleCreator] = useState(false);
   
   // Student results state
   const [studentResults, setStudentResults] = useState<StudentResult[]>([]);
@@ -63,16 +69,21 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh, onA
   const loadClassContent = async () => {
     setDataLoading(true);
     try {
-      const [assignmentsRes, announcementsRes, examsRes] = await Promise.all([
+      const [assignmentsRes, announcementsRes, examsRes, schedulesRes] = await Promise.all([
         getClassAssignments(classData.id),
         getClassAnnouncements(classData.id),
-        getClassExams(classData.id)
+        getClassExams(classData.id),
+        getTeacherStudySchedules(classData.teacher_id)
       ]);
 
       console.log('Exams data:', examsRes.data);
       setAssignments(assignmentsRes.data || []);
       setAnnouncements(announcementsRes.data || []);
       setExams(examsRes.data || []);
+      
+      // Filter schedules for this class
+      const classSchedules = (schedulesRes.data || []).filter((s: any) => s.class_id === classData.id);
+      setSchedules(classSchedules);
     } catch (error) {
       console.error('Error loading class content:', error);
     } finally {
@@ -330,6 +341,10 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh, onA
   };
 
   const handleOpenForm = () => {
+    if (activeTab === 'schedules') {
+      setShowScheduleCreator(true);
+      return;
+    }
     resetFormState();
     setShowForm(true);
   };
@@ -455,6 +470,7 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh, onA
             { key: 'assignments', label: 'Ödevler', icon: BookOpen },
             { key: 'announcements', label: 'Duyurular', icon: Bell },
             { key: 'exams', label: 'Sınavlar', icon: Trophy },
+            { key: 'schedules', label: 'Çalışma Programı', icon: Calendar },
           ].map(({ key, label, icon: Icon }) => (
             <button
               key={key}
@@ -478,6 +494,7 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh, onA
               {activeTab === 'assignments' && 'Ödev Yönetimi'}
               {activeTab === 'announcements' && 'Duyuru Yönetimi'}
               {activeTab === 'exams' && 'Sınav Yönetimi'}
+              {activeTab === 'schedules' && 'Haftalık Çalışma Programı'}
             </h3>
             <button
               onClick={handleOpenForm}
@@ -488,6 +505,7 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh, onA
                 {activeTab === 'assignments' && 'Yeni Ödev'}
                 {activeTab === 'announcements' && 'Yeni Duyuru'}
                 {activeTab === 'exams' && 'Yeni Sınav'}
+                {activeTab === 'schedules' && 'Program Oluştur'}
               </span>
             </button>
           </div>
@@ -647,9 +665,80 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh, onA
                   ))
                 )
               )}
+
+              {activeTab === 'schedules' && (
+                schedules.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500">
+                    <Calendar className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+                    <p>Henüz çalışma programı oluşturulmamış</p>
+                    <p className="text-sm mt-2">Öğrencileriniz için haftalık çalışma programı oluşturun</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-4">
+                    {schedules.map((schedule) => (
+                      <div
+                        key={schedule.id}
+                        className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/70 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-lg text-gray-900 dark:text-white">
+                              {schedule.title}
+                            </h4>
+                            {schedule.description && (
+                              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                {schedule.description}
+                              </p>
+                            )}
+                            <div className="flex flex-wrap items-center gap-3 mt-3 text-sm text-gray-600 dark:text-gray-300">
+                              <div className="flex items-center space-x-1">
+                                <Calendar className="w-4 h-4 text-blue-500" />
+                                <span>
+                                  {new Date(schedule.week_start_date).toLocaleDateString('tr-TR')} - {new Date(schedule.week_end_date).toLocaleDateString('tr-TR')}
+                                </span>
+                              </div>
+                              {schedule.class?.class_name && (
+                                <div className="flex items-center space-x-1">
+                                  <BookOpen className="w-4 h-4 text-indigo-500" />
+                                  <span>{schedule.class.class_name}</span>
+                                </div>
+                              )}
+                              {schedule.student?.profile?.full_name && (
+                                <div className="flex items-center space-x-1">
+                                  <User className="w-4 h-4 text-emerald-500" />
+                                  <span>{schedule.student.profile.full_name}</span>
+                                </div>
+                              )}
+                              {schedule.study_schedule_items && (
+                                <span className="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/60 text-blue-700 dark:text-blue-200 text-xs font-medium rounded-full">
+                                  {schedule.study_schedule_items.length} çalışma saati
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              )}
             </div>
           )}
         </div>
+
+        {/* Weekly Schedule Creator Modal */}
+        {showScheduleCreator && (
+          <AdvancedStudyScheduleForm
+            isOpen={showScheduleCreator}
+            onClose={() => setShowScheduleCreator(false)}
+            classId={classData.id}
+            teacherId={classData.teacher_id}
+            onSuccess={() => {
+              setShowScheduleCreator(false);
+              loadClassContent();
+            }}
+          />
+        )}
 
         {/* Edit Modal */}
         {showEditModal && (
