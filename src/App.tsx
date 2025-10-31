@@ -25,6 +25,7 @@ import TermsOfService from './pages/TermsOfService';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import RefundPolicy from './pages/RefundPolicy'; 
 import { PomodoroProvider } from './contexts/PomodoroContext';
+import NotFoundPage from './pages/NotFoundPage';
 
 function App() {
   const { user, loading, setParentUser, clearUser } = useAuth();
@@ -33,7 +34,7 @@ function App() {
   const [showStudentParentLoginModal, setShowStudentParentLoginModal] = useState(false);
   const [showTeacherLoginModal, setShowTeacherLoginModal] = useState(false);
   
-  const [currentView, setCurrentView] = useState<'home' | 'dashboard' | 'blog' | 'blog-detail' | 'terms' | 'privacy' | 'refund'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'dashboard' | 'blog' | 'blog-detail' | 'terms' | 'privacy' | 'refund' | 'not-found'>('home');
   
   const [selectedBlogSlug, setSelectedBlogSlug] = useState<string>('');
   const [teacherUser, setTeacherUser] = useState<any>(null);
@@ -64,6 +65,10 @@ function App() {
       setCurrentView('privacy');
     } else if (path === '/refund-policy' || path === '/iade-politikasi') {
       setCurrentView('refund');
+    } else if (path === '/' || path === '') {
+      setCurrentView('home');
+    } else {
+      setCurrentView('not-found');
     }
   }, []);
 
@@ -85,11 +90,27 @@ function App() {
         setCurrentView('refund');
       } else if (path === '/') {
         setCurrentView('home');
+      } else {
+        setCurrentView('not-found');
       }
     };
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  React.useEffect(() => {
+    const handleGlobalError = () => {
+      setCurrentView('not-found');
+    };
+
+    window.addEventListener('error', handleGlobalError);
+    window.addEventListener('unhandledrejection', handleGlobalError);
+
+    return () => {
+      window.removeEventListener('error', handleGlobalError);
+      window.removeEventListener('unhandledrejection', handleGlobalError);
+    };
   }, []);
 
   React.useEffect(() => {
@@ -328,6 +349,8 @@ function App() {
       return <PrivacyPolicy />;
     } else if (currentView === 'refund') {
       return <RefundPolicy />;
+    } else if (currentView === 'not-found') {
+      return <NotFoundPage onNavigateHome={handleNavigateHome} />;
     } else {
       return renderHomePage();
     }
