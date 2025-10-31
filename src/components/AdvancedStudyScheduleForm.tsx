@@ -87,9 +87,8 @@ export default function AdvancedStudyScheduleForm({
 const loadStudents = async () => {
   setStudentsLoading(true);
   try {
-    console.log('🔍 Loading students for class:', classId);
+    console.log('Sinif ogrenci listesi yukleniyor:', classId);
 
-    // ADIM 1: Class'taki student ID'leri al
     const { data: classStudentsData, error: classError } = await supabase
       .from('class_students')
       .select('student_id')
@@ -97,53 +96,50 @@ const loadStudents = async () => {
       .eq('status', 'active');
 
     if (classError) {
-      console.error('❌ Class students error:', classError);
+      console.error('Sinif ogrencileri sorgusu hatasi:', classError);
       throw classError;
     }
 
     if (!classStudentsData || classStudentsData.length === 0) {
-      console.log('⚠️ No students found in class');
+      console.log('Sinifta aktif ogrenci bulunamadi');
       setStudents([]);
       return;
     }
 
     const studentIds = classStudentsData.map(cs => cs.student_id);
-    console.log('📋 Student IDs:', studentIds);
+    console.log('Ogrenci kimlikleri:', studentIds);
 
-    // ADIM 2: Students bilgilerini al
     const { data: studentsData, error: studentsError } = await supabase
       .from('students')
-      .select('id, grade, profile_id')
+      .select(`
+        id,
+        grade,
+        profile:profiles!students_profile_id_fkey(
+          full_name
+        )
+      `)
       .in('id', studentIds);
 
     if (studentsError) throw studentsError;
 
-    console.log('👥 Students data:', studentsData);
+    console.log('Ogrenci verisi:', studentsData);
 
-    // ADIM 3: Her öğrenci için profile bilgisini çek
-    const studentListPromises = (studentsData || []).map(async (student, index) => {
-      // Profile'dan ismi al
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('id', student.profile_id)
-        .single();
+    const studentList = (studentsData as Array<{
+      id: string;
+      grade: number | null;
+      profile?: { full_name?: string | null } | null;
+    }> | null | undefined || []).map((student, index) => ({
+      id: student.id,
+      name: student.profile?.full_name || `Ogrenci ${index + 1}`,
+      grade: student.grade ?? 9
+    }));
 
-      return {
-        id: student.id,
-        name: profileData?.full_name || `Öğrenci ${index + 1}`,
-        grade: student.grade || 9
-      };
-    });
-
-    const studentList = await Promise.all(studentListPromises);
-    console.log('✅ Final student list:', studentList);
+    console.log('Ogrenci listesi olusturuldu:', studentList);
     setStudents(studentList);
 
   } catch (error) {
-    console.error('💥 Error loading students:', error);
-    
-    // FALLBACK
+    console.error('Ogrenci verisi yukleme hatasi:', error);
+
     try {
       const { data: fallbackData } = await supabase
         .from('class_students')
@@ -151,16 +147,16 @@ const loadStudents = async () => {
         .eq('class_id', classId)
         .eq('status', 'active');
 
-      const fallbackList = fallbackData?.map((cs, index) => ({
+      const fallbackList = (fallbackData ?? []).map((cs, index) => ({
         id: cs.student_id,
-        name: `Öğrenci ${index + 1}`,
+        name: `Ogrenci ${index + 1}`,
         grade: 9
-      })) || [];
+      }));
 
       setStudents(fallbackList);
-      console.log('⚠️ Fallback list used:', fallbackList);
+      console.log('Yedek ogrenci listesi kullanildi:', fallbackList);
     } catch (fallbackError) {
-      console.error('💥 Fallback also failed:', fallbackError);
+      console.error('Yedek ogrenci listesi de yuklenemedi:', fallbackError);
       setStudents([]);
     }
   } finally {
@@ -706,3 +702,4 @@ const loadStudents = async () => {
     </div>
   );
 }
+

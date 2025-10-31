@@ -1,5 +1,28 @@
+import bcrypt from 'bcryptjs';
 import { supabase } from './supabase';
 import { PACKAGE_OPTIONS } from '../types/teacher';
+
+const hashPassword = (password: string): Promise<string> =>
+  new Promise((resolve, reject) => {
+    bcrypt.hash(password, 12, (err, hash) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      resolve(hash);
+    });
+  });
+
+const verifyPassword = (password: string, hash: string): Promise<boolean> =>
+  new Promise((resolve, reject) => {
+    bcrypt.compare(password, hash, (err, same) => {
+      if (err) {
+        reject(err);
+        return;
+      }
+      resolve(same);
+    });
+  });
 
 // Teacher Authentication
 export const registerTeacher = async (teacherData: {
@@ -49,12 +72,14 @@ export const registerTeacher = async (teacherData: {
     throw new Error('Bu telefon numarası zaten kullanılıyor');
   }
 
+  const hashedPassword = await hashPassword(teacherData.password);
+
   // Create teacher record
   const { data, error } = await supabase
     .from('teachers')
     .insert([{
       email: teacherData.email,
-      password_hash: teacherData.password, // In production, hash this properly
+      password_hash: hashedPassword,
       full_name: teacherData.full_name,
       phone: teacherData.phone,
       school_name: teacherData.school_name,
@@ -65,8 +90,13 @@ export const registerTeacher = async (teacherData: {
 
   if (error) throw error;
 
+  if (!data) {
+    return { data: null, error: null };
+  }
 
-  return { data, error: null };
+  const { password_hash: _removed, ...safeData } = data as Record<string, unknown>;
+
+  return { data: safeData, error: null };
 };
 
 export const loginTeacher = async (email: string, password: string) => {
@@ -74,15 +104,48 @@ export const loginTeacher = async (email: string, password: string) => {
     .from('teachers')
     .select('*')
     .eq('email', email)
-    .eq('password_hash', password)
-    .single();
+    .maybeSingle();
 
-  if (error || !data) {
-    throw new Error('Email veya şifre hatalı');
+  if (error || !data || !data.password_hash) {
+    throw new Error('Email veya sifre hatali');
   }
 
+  const passwordHash = data.password_hash as string;
+  const isBcryptHash = passwordHash.startsWith('$2');
 
-  return { data, error: null };
+  let passwordMatches = false;
+
+  if (isBcryptHash) {
+    passwordMatches = await verifyPassword(password, passwordHash);
+  } else {
+    passwordMatches = passwordHash === password;
+  }
+
+  if (!passwordMatches) {
+    throw new Error('Email veya sifre hatali');
+  }
+
+  if (!isBcryptHash) {
+    try {
+      const newHash = await hashPassword(password);
+      const { error: updateError } = await supabase
+        .from('teachers')
+        .update({ password_hash: newHash })
+        .eq('id', data.id);
+
+      if (!updateError) {
+        data.password_hash = newHash;
+      } else {
+        console.warn('Legacy teacher password upgrade failed:', updateError);
+      }
+    } catch (hashError) {
+      console.warn('Legacy teacher password hashing failed:', hashError);
+    }
+  }
+
+  const { password_hash: _removed, ...safeData } = data as Record<string, unknown>;
+
+  return { data: safeData, error: null };
 };
 
 
@@ -473,3 +536,4 @@ export const uploadExamResultFile = async () => {
   // For now, return a success response
   return { data: { url: 'placeholder-url' }, error: null };
 };
+
