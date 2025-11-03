@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
-import { Plus, FileText, BookOpen, Bell, Trophy, ArrowLeft, CreditCard as Edit, Trash2, X, BarChart3, Save, Calendar, User } from 'lucide-react';
+import { Plus, FileText, BookOpen, Bell, Trophy, ArrowLeft, CreditCard as Edit, Trash2, X, BarChart3, Save, Calendar, User, MessageSquare } from 'lucide-react';
 import { 
   addClassAssignment, 
   addClassAnnouncement, 
@@ -16,7 +16,7 @@ import {
   deleteClassExam
 } from '../lib/teacherApi';
 import AdvancedStudyScheduleForm from './AdvancedStudyScheduleForm';
-import { getTeacherStudySchedules } from '../lib/studyScheduleApi';
+import { getTeacherStudySchedules, getScheduleFeedbackForSchedule } from '../lib/studyScheduleApi';
 
 interface ClassManagementPanelProps {
   classData: any;
@@ -35,6 +35,16 @@ interface StudentResult {
   note: string;
   ranking: number;
 }
+
+const DAY_LABELS = [
+  'Pazartesi',
+  'Salı',
+  'Çarşamba',
+  'Perşembe',
+  'Cuma',
+  'Cumartesi',
+  'Pazar'
+];
 
 export default function ClassManagementPanel({ classData, onBack, onRefresh, onAnnouncementCreated }: ClassManagementPanelProps) {
   const [activeTab, setActiveTab] = useState<'assignments' | 'announcements' | 'exams' | 'schedules'>('assignments');
@@ -60,6 +70,26 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh, onA
   // Student results state
   const [studentResults, setStudentResults] = useState<StudentResult[]>([]);
   const [savingResults, setSavingResults] = useState(false);
+  const [scheduleFeedbackModal, setScheduleFeedbackModal] = useState<{ open: boolean; schedule?: any }>({ open: false });
+  const [scheduleFeedback, setScheduleFeedback] = useState<any[]>([]);
+  const [scheduleFeedbackLoading, setScheduleFeedbackLoading] = useState(false);
+  const scheduleFeedbackSummary = useMemo(() => {
+    const summary: Record<'achieved' | 'partial' | 'not_met', number> = {
+      achieved: 0,
+      partial: 0,
+      not_met: 0
+    };
+
+    scheduleFeedback.forEach((feedback: any) => {
+      const status = (feedback?.goal_status || 'not_met') as 'achieved' | 'partial' | 'not_met';
+      summary[status] = (summary[status] || 0) + 1;
+    });
+
+    return {
+      ...summary,
+      total: scheduleFeedback.length
+    };
+  }, [scheduleFeedback]);
 
   // Load fresh data when component mounts
   useEffect(() => {
@@ -89,6 +119,26 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh, onA
     } finally {
       setDataLoading(false);
     }
+  };
+
+  const openScheduleFeedbackModal = async (schedule: any) => {
+    setScheduleFeedbackModal({ open: true, schedule });
+    setScheduleFeedbackLoading(true);
+    try {
+      const { data, error } = await getScheduleFeedbackForSchedule(schedule.id);
+      if (error) throw error;
+      setScheduleFeedback(data || []);
+    } catch (error) {
+      console.error('Error loading schedule feedback:', error);
+      setScheduleFeedback([]);
+    } finally {
+      setScheduleFeedbackLoading(false);
+    }
+  };
+
+  const closeScheduleFeedbackModal = () => {
+    setScheduleFeedbackModal({ open: false });
+    setScheduleFeedback([]);
   };
 
   // Assignment form
@@ -715,6 +765,15 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh, onA
                                 </span>
                               )}
                             </div>
+                          <div className="ml-4 flex items-start">
+                            <button
+                              onClick={() => openScheduleFeedbackModal(schedule)}
+                              className="inline-flex items-center gap-2 rounded-full border border-blue-200 px-3 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-200 dark:hover:bg-blue-900/30"
+                            >
+                              <MessageSquare className="h-4 w-4" />
+                              Geri bildirimler
+                            </button>
+                          </div>
                           </div>
                         </div>
                       </div>
@@ -725,6 +784,158 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh, onA
             </div>
           )}
         </div>
+
+        {scheduleFeedbackModal.open && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-3xl rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Geri Bildirimler - {scheduleFeedbackModal.schedule?.title}
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {scheduleFeedbackModal.schedule &&
+                      `${new Date(scheduleFeedbackModal.schedule.week_start_date).toLocaleDateString('tr-TR')} - ${new Date(scheduleFeedbackModal.schedule.week_end_date).toLocaleDateString('tr-TR')}`}
+                  </p>
+                </div>
+                <button
+                  onClick={closeScheduleFeedbackModal}
+                  className="rounded-full bg-gray-100 p-2 text-gray-500 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="mt-4">
+                {scheduleFeedbackLoading ? (
+                  <div className="flex items-center justify-center py-10">
+                    <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
+                  </div>
+                ) : scheduleFeedback.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-gray-300 py-10 text-center text-sm text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                    Henuz geri bildirim yok.
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid gap-3 sm:grid-cols-4">
+                      <div className="rounded-lg bg-green-50 p-3 text-center dark:bg-green-900/20">
+                        <div className="text-2xl font-bold text-green-600">
+                          {scheduleFeedbackSummary.achieved}
+                        </div>
+                        <div className="text-xs text-green-700 dark:text-green-200">Tamamlanan</div>
+                      </div>
+                      <div className="rounded-lg bg-orange-50 p-3 text-center dark:bg-orange-900/20">
+                        <div className="text-2xl font-bold text-orange-600">
+                          {scheduleFeedbackSummary.partial}
+                        </div>
+                        <div className="text-xs text-orange-700 dark:text-orange-200">Kismen tamamlanan</div>
+                      </div>
+                      <div className="rounded-lg bg-gray-100 p-3 text-center dark:bg-gray-800">
+                        <div className="text-2xl font-bold text-gray-700 dark:text-gray-200">
+                          {scheduleFeedbackSummary.not_met}
+                        </div>
+                        <div className="text-xs text-gray-600 dark:text-gray-300">Ertelenen</div>
+                      </div>
+                      <div className="rounded-lg bg-blue-50 p-3 text-center dark:bg-blue-900/20">
+                        <div className="text-2xl font-bold text-blue-600">
+                          {scheduleFeedbackSummary.total}
+                        </div>
+                        <div className="text-xs text-blue-700 dark:text-blue-200">Toplam geri bildirim</div>
+                      </div>
+                    </div>
+
+                    <div className="mt-6 max-h-80 space-y-3 overflow-y-auto pr-1">
+                      {scheduleFeedback.map((feedback) => (
+                        <div
+                          key={feedback.id}
+                          className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-700 dark:bg-blue-900/40 dark:text-blue-200">
+                                {feedback?.student?.profile?.full_name
+                                  ? feedback.student.profile.full_name[0]
+                                  : '?'}
+                              </div>
+                              <div>
+                                <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                                  {feedback?.student?.profile?.full_name || 'Ogrenci'}
+                                </p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  {feedback?.schedule_item?.day_of_week !== undefined
+                                    ? DAY_LABELS[feedback.schedule_item.day_of_week] || '-'
+                                    : '-'} - {feedback?.schedule_item?.start_time} - {feedback?.schedule_item?.end_time}
+                                </p>
+                              </div>
+                            </div>
+                            <span
+                              className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                                feedback.goal_status === 'achieved'
+                                  ? 'bg-green-100 text-green-700'
+                                  : feedback.goal_status === 'partial'
+                                  ? 'bg-orange-100 text-orange-700'
+                                  : 'bg-gray-100 text-gray-600'
+                              }`}
+                            >
+                              {feedback.goal_status === 'achieved'
+                                ? 'Tamamlandi'
+                                : feedback.goal_status === 'partial'
+                                ? 'Kismen tamamlandi'
+                                : 'Ertelendi'}
+                            </span>
+                          </div>
+
+                          {feedback.schedule_item?.goal && (
+                            <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">
+                              <span className="font-medium text-gray-700 dark:text-gray-200">Hedef: </span>
+                              {feedback.schedule_item.goal}
+                            </p>
+                          )}
+
+                          <div className="mt-3 grid gap-3 text-xs sm:grid-cols-3">
+                            <div className="rounded-lg bg-gray-50 p-2 dark:bg-gray-900/40">
+                              <p className="text-gray-500 dark:text-gray-400">Sure</p>
+                              <p className="font-semibold text-gray-900 dark:text-white">
+                                {feedback.time_spent_minutes ? `${feedback.time_spent_minutes} dk` : '-'}
+                              </p>
+                            </div>
+                            <div className="rounded-lg bg-gray-50 p-2 dark:bg-gray-900/40">
+                              <p className="text-gray-500 dark:text-gray-400">Zorluk</p>
+                              <p className="font-semibold text-gray-900 dark:text-white">
+                                {feedback.difficulty_level ? `${feedback.difficulty_level}/5` : '-'}
+                              </p>
+                            </div>
+                            <div className="rounded-lg bg-gray-50 p-2 dark:bg-gray-900/40">
+                              <p className="text-gray-500 dark:text-gray-400">Guncelleme</p>
+                              <p className="font-semibold text-gray-900 dark:text-white">
+                                {feedback.updated_at ? new Date(feedback.updated_at).toLocaleString('tr-TR') : '-'}
+                              </p>
+                            </div>
+                          </div>
+
+                          {(feedback.resources_used || feedback.reflection) && (
+                            <div className="mt-3 space-y-2 text-sm text-gray-600 dark:text-gray-300">
+                              {feedback.resources_used && (
+                                <p>
+                                  <span className="font-medium text-gray-700 dark:text-gray-200">Kaynaklar:</span> {feedback.resources_used}
+                                </p>
+                              )}
+                              {feedback.reflection && (
+                                <p>
+                                  <span className="font-medium text-gray-700 dark:text-gray-200">Not:</span> {feedback.reflection}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Weekly Schedule Creator Modal */}
         {showScheduleCreator && (
@@ -1376,3 +1587,4 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh, onA
     </div>
   );
 }
+

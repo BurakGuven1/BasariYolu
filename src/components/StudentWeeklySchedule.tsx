@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Clock, BookOpen, CheckCircle, Target, User, AlertCircle } from 'lucide-react';
-import { getCurrentWeekSchedule, markScheduleItemComplete } from '../lib/studyScheduleApi';
+import { Calendar, Clock, BookOpen, CheckCircle, Target, User, AlertCircle, MessageSquarePlus } from 'lucide-react';
+import {
+  getCurrentWeekSchedule,
+  markScheduleItemComplete,
+  getScheduleFeedbackForItems,
+  submitScheduleItemFeedback
+} from '../lib/studyScheduleApi';
+import { rewardScheduleGoal } from '../lib/pointsSystem';
 
 interface StudentWeeklyScheduleProps {
   studentId: string;
@@ -22,6 +28,17 @@ export default function StudentWeeklySchedule({ studentId }: StudentWeeklySchedu
   const [loading, setLoading] = useState(true);
   const [selectedDay, setSelectedDay] = useState<number>(new Date().getDay() === 0 ? 6 : new Date().getDay() - 1);
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
+  const [feedbackMap, setFeedbackMap] = useState<Record<string, any>>({});
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [feedbackModalItem, setFeedbackModalItem] = useState<any | null>(null);
+  const [feedbackSaving, setFeedbackSaving] = useState(false);
+  const [feedbackForm, setFeedbackForm] = useState({
+    goalStatus: 'achieved' as 'achieved' | 'partial' | 'not_met',
+    timeSpent: '',
+    difficulty: 3,
+    resources: '',
+    reflection: ''
+  });
 
   useEffect(() => {
     loadSchedule();
@@ -35,6 +52,35 @@ export default function StudentWeeklySchedule({ studentId }: StudentWeeklySchedu
       if (error) throw error;
       
       setSchedule(data);
+
+      if (data?.study_schedule_items?.length) {
+        const itemIds = data.study_schedule_items
+          .map((item: any) => item.id)
+          .filter((id: any): id is string => Boolean(id));
+
+        if (itemIds.length > 0) {
+          setFeedbackLoading(true);
+          try {
+            const { data: feedbackData } = await getScheduleFeedbackForItems(itemIds, studentId);
+            const map: Record<string, any> = {};
+            (feedbackData || []).forEach((feedback) => {
+              if (feedback?.schedule_item_id) {
+                map[feedback.schedule_item_id] = feedback;
+              }
+            });
+            setFeedbackMap(map);
+          } catch (feedbackError) {
+            console.error('Error loading feedback:', feedbackError);
+            setFeedbackMap({});
+          } finally {
+            setFeedbackLoading(false);
+          }
+        } else {
+          setFeedbackMap({});
+        }
+      } else {
+        setFeedbackMap({});
+      }
     } catch (error) {
       console.error('Error loading schedule:', error);
     } finally {
@@ -64,6 +110,90 @@ export default function StudentWeeklySchedule({ studentId }: StudentWeeklySchedu
     } catch (error) {
       console.error('Error toggling complete:', error);
       alert('Durum güncellenirken hata oluştu');
+    }
+  };
+
+  const openFeedbackModal = (item: any) => {
+    const existing = item?.id ? feedbackMap[item.id] : null;
+    setFeedbackForm({
+      goalStatus: existing?.goal_status || (item?.is_completed ? 'achieved' : 'partial'),
+      timeSpent: existing?.time_spent_minutes ? String(existing.time_spent_minutes) : '',
+      difficulty: existing?.difficulty_level ?? 3,
+      resources: existing?.resources_used || '',
+      reflection: existing?.reflection || ''
+    });
+    setFeedbackModalItem(item);
+  };
+
+  const closeFeedbackModal = () => {
+    setFeedbackModalItem(null);
+    setFeedbackForm({
+      goalStatus: 'achieved',
+      timeSpent: '',
+      difficulty: 3,
+      resources: '',
+      reflection: ''
+    });
+  };
+
+  const handleSubmitFeedback = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!feedbackModalItem || !schedule) return;
+
+    const payload = {
+      schedule_id: schedule.id,
+      schedule_item_id: feedbackModalItem.id,
+      student_id: studentId,
+      goal_status: feedbackForm.goalStatus,
+      time_spent_minutes: feedbackForm.timeSpent ? Number(feedbackForm.timeSpent) : null,
+      difficulty_level: feedbackForm.difficulty ? Number(feedbackForm.difficulty) : null,
+      resources_used: feedbackForm.resources.trim() || null,
+      reflection: feedbackForm.reflection.trim() || null
+    };
+
+    const previousFeedback = feedbackMap[feedbackModalItem.id];
+
+    setFeedbackSaving(true);
+    try {
+      const { data, error } = await submitScheduleItemFeedback(payload);
+      if (error) throw error;
+
+      if (data) {
+        setFeedbackMap((prev) => ({
+          ...prev,
+          [feedbackModalItem.id]: data
+        }));
+      }
+
+      let pointsEarned = 0;
+      if (feedbackForm.goalStatus === 'achieved' && previousFeedback?.goal_status !== 'achieved') {
+        const reward = await rewardScheduleGoal(studentId, 'achieved');
+        if (reward.success) {
+          pointsEarned = reward.pointsEarned;
+        }
+      } else if (
+        feedbackForm.goalStatus === 'partial' &&
+        previousFeedback?.goal_status !== 'achieved' &&
+        previousFeedback?.goal_status !== 'partial'
+      ) {
+        const reward = await rewardScheduleGoal(studentId, 'partial');
+        if (reward.success) {
+          pointsEarned = reward.pointsEarned;
+        }
+      }
+
+      closeFeedbackModal();
+
+      if (pointsEarned > 0) {
+        alert(`Tebrikler! ${pointsEarned} puan kazandınız.`);
+      } else {
+        alert('Geri bildiriminiz kaydedildi.');
+      }
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+      alert('Geri bildirim kaydedilirken hata oluştu');
+    } finally {
+      setFeedbackSaving(false);
     }
   };
 
@@ -232,7 +362,37 @@ export default function StudentWeeklySchedule({ studentId }: StudentWeeklySchedu
             </div>
           ) : (
             <div className="space-y-4">
-              {selectedDayData.items.map((item: any) => (
+              {selectedDayData.items.map((item: any) => {
+                const feedback = feedbackMap[item.id];
+                const hasDetails = Boolean(item.description || item.resources);
+                let statusBadge: JSX.Element | null = null;
+
+                if (feedback?.goal_status) {
+                  const statusMap: Record<string, { label: string; classes: string }> = {
+                    achieved: {
+                      label: 'Hedef tamamlandı',
+                      classes: 'bg-green-100 border border-green-300 text-green-700'
+                    },
+                    partial: {
+                      label: 'Kısmen tamamlandı',
+                      classes: 'bg-orange-100 border border-orange-300 text-orange-700'
+                    },
+                    not_met: {
+                      label: 'Hedef ertelendi',
+                      classes: 'bg-gray-100 border border-gray-300 text-gray-600'
+                    }
+                  };
+
+                  const status = statusMap[feedback.goal_status] || statusMap.not_met;
+                  statusBadge = (
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${status.classes}`}>
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      {status.label}
+                    </span>
+                  );
+                }
+
+                return (
                 <div
                   key={item.id}
                   className={`border-l-4 rounded-lg p-4 transition-all ${
@@ -276,6 +436,12 @@ export default function StudentWeeklySchedule({ studentId }: StudentWeeklySchedu
                         </div>
                       )}
 
+                      {statusBadge && (
+                        <div className="mb-2">
+                          {statusBadge}
+                        </div>
+                      )}
+
                       {/* Description */}
                       {item.description && expandedItem === item.id && (
                         <div className="mt-3 p-3 bg-white dark:bg-gray-700 rounded-lg">
@@ -294,29 +460,48 @@ export default function StudentWeeklySchedule({ studentId }: StudentWeeklySchedu
                         </div>
                       )}
 
-                      {/* Expand Button */}
-                      {(item.description || item.resources) && (
-                        <button
-                          onClick={() => setExpandedItem(expandedItem === item.id ? null : item.id)}
-                          className="mt-2 text-xs text-blue-600 hover:text-blue-700 font-medium"
-                        >
-                          {expandedItem === item.id ? '▲ Daha Az' : '▼ Detayları Gör'}
-                        </button>
-                      )}
                     </div>
 
-                    {/* Complete Checkbox */}
-                    <button
-                      onClick={() => handleToggleComplete(item.id, item.is_completed)}
-                      className={`flex-shrink-0 ml-4 w-8 h-8 rounded-full flex items-center justify-center transition-all ${
-                        item.is_completed
-                          ? 'bg-green-500 text-white'
-                          : 'border-2 border-gray-300 dark:border-gray-600 text-gray-400 hover:border-green-500 hover:text-green-500'
-                      }`}
-                    >
-                      {item.is_completed && <CheckCircle className="w-5 h-5" />}
-                    </button>
-                  </div>
+                    {/* Actions */}
+                    <div className="flex flex-col items-end gap-2 ml-4">
+                      <button
+                        onClick={() => handleToggleComplete(item.id, item.is_completed)}
+                        className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                          item.is_completed
+                            ? 'bg-green-500 text-white'
+                            : 'border-2 border-gray-300 dark:border-gray-600 text-gray-400 hover:border-green-500 hover:text-green-500'
+                        }`}
+                      >
+                        {item.is_completed && <CheckCircle className="w-5 h-5" />}
+                      </button>
+
+                      <button
+                        onClick={() => openFeedbackModal(item)}
+                        disabled={feedbackLoading || feedbackSaving}
+                        className="inline-flex items-center px-2 py-1 text-xs font-semibold text-blue-600 hover:text-blue-700 bg-white dark:bg-gray-800 border border-blue-200 rounded-full disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        <MessageSquarePlus className="w-4 h-4 mr-1" />
+                        {feedback ? 'Geri bildirimi güncelle' : 'Geri bildirim'}
+                      </button>
+                    </div>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
+                      {hasDetails && (
+                        <button
+                          onClick={() => setExpandedItem(expandedItem === item.id ? null : item.id)}
+                          className="text-blue-600 hover:text-blue-700 font-medium"
+                        >
+                          {expandedItem === item.id ? 'Daha Az' : 'Detayları Gör'}
+                        </button>
+                      )}
+
+                      {feedback && feedback.updated_at && (
+                        <span className="text-gray-500">
+                          Son güncelleme: {new Date(feedback.updated_at).toLocaleString('tr-TR')}
+                        </span>
+                      )}
+                    </div>
 
                   {/* Completion Time */}
                   {item.is_completed && item.completed_at && (
@@ -325,11 +510,147 @@ export default function StudentWeeklySchedule({ studentId }: StudentWeeklySchedu
                     </div>
                   )}
                 </div>
-              ))}
+              );
+            })}
             </div>
           )}
         </div>
       </div>
+
+      {feedbackModalItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-2xl dark:bg-gray-900">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Geri Bildirim - {feedbackModalItem.subject}
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {feedbackModalItem.start_time} - {feedbackModalItem.end_time}
+                </p>
+              </div>
+              <button
+                onClick={closeFeedbackModal}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                type="button"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitFeedback} className="mt-4 space-y-4">
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                  Hedef Durumu
+                </label>
+                <select
+                  value={feedbackForm.goalStatus}
+                  onChange={(e) =>
+                    setFeedbackForm(prev => ({
+                      ...prev,
+                      goalStatus: e.target.value as 'achieved' | 'partial' | 'not_met'
+                    }))
+                  }
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring focus:ring-blue-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                  disabled={feedbackSaving}
+                >
+                  <option value="achieved">Hedefi tamamladım</option>
+                  <option value="partial">Kısmen tamamladım</option>
+                  <option value="not_met">Hedefi erteledim</option>
+                </select>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                    Çalışma süresi (dakika)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={feedbackForm.timeSpent}
+                    onChange={(e) =>
+                      setFeedbackForm(prev => ({ ...prev, timeSpent: e.target.value }))
+                    }
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring focus:ring-blue-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                    placeholder="Örn: 45"
+                    disabled={feedbackSaving}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                    Zorluk derecesi
+                  </label>
+                  <select
+                    value={feedbackForm.difficulty}
+                    onChange={(e) =>
+                      setFeedbackForm(prev => ({ ...prev, difficulty: Number(e.target.value) }))
+                    }
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring focus:ring-blue-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                    disabled={feedbackSaving}
+                  >
+                    {[1, 2, 3, 4, 5].map(level => (
+                      <option key={level} value={level}>
+                        {level} - {level === 1 ? 'Çok kolay' : level === 5 ? 'Çok zor' : 'Orta'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                  Kullanılan kaynaklar
+                </label>
+                <textarea
+                  value={feedbackForm.resources}
+                  onChange={(e) =>
+                    setFeedbackForm(prev => ({ ...prev, resources: e.target.value }))
+                  }
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring focus:ring-blue-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                  rows={2}
+                  placeholder="Kitap, video, not vb."
+                  disabled={feedbackSaving}
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                  Kısa not al
+                </label>
+                <textarea
+                  value={feedbackForm.reflection}
+                  onChange={(e) =>
+                    setFeedbackForm(prev => ({ ...prev, reflection: e.target.value }))
+                  }
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring focus:ring-blue-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                  rows={3}
+                  placeholder="Nerede zorlandın? Sonraki derste neye odaklanacaksın?"
+                  disabled={feedbackSaving}
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={closeFeedbackModal}
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
+                  disabled={feedbackSaving}
+                >
+                  İptal
+                </button>
+                <button
+                  type="submit"
+                  disabled={feedbackSaving}
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+                >
+                  {feedbackSaving ? 'Kaydediliyor...' : 'Geri bildirimi kaydet'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Weekly Summary */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">

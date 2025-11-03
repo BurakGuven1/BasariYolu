@@ -4,6 +4,7 @@ import { getTeacherClasses, createClass, getClassData } from '../lib/teacherApi'
 import { PACKAGE_OPTIONS, calculateClassPrice } from '../types/teacher';
 import ClassManagementPanel from './ClassManagementPanel';
 import { sendAnnouncementNotification } from '../lib/notificationApi';
+import { supabase } from '../lib/supabase';
 
 interface TeacherDashboardProps {
   teacherUser?: any;
@@ -73,6 +74,7 @@ export default function TeacherDashboard({ teacherUser, onLogout }: TeacherDashb
   };
 
   const handleLogout = async () => {
+    await supabase.auth.signOut();
     if (onLogout) {
       await onLogout();
       return;

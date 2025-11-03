@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { BookOpen, StickyNote, MapIcon, BookmarkCheck, Plus, TrendingUp, Calendar, Target, Award, Clock, CheckCircle, AlertCircle, LogOut, CreditCard as Edit, Trash2, MoreVertical, Users, X, Brain,Crown, Trophy, Timer } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer} from 'recharts';
+import { BookOpen, StickyNote, MapIcon, BookmarkCheck, Plus, TrendingUp, Calendar, Target, Award, Clock, CheckCircle, AlertCircle, LogOut, CreditCard as Edit, Trash2, MoreVertical, Users, X, Brain, Crown, Trophy, Timer } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuth } from '../hooks/useAuth';
 import { useStudentData } from '../hooks/useStudentData';
 import ExamForm from './ExamForm';
@@ -17,20 +17,40 @@ import AIRecommendations from './AIRecommendations';
 import HistoricalMapsSection from './HistoricalMapsSection';
 import SubscriptionManagement from './SubscriptionManagement';
 import { addStudySessionPoints, completeChallenge, isChallengeCompletedToday } from '../lib/pointsSystem';
-import { packages } from '../data/packages';
 import { generatePerformanceInsights, generateDailyChallenge } from '../lib/ai';
-import { getStudentInviteCode, deleteExamResult, updateHomework, deleteHomework, addStudySession, getWeeklyStudyGoal, createWeeklyStudyGoal, updateWeeklyStudyGoal, getWeeklyStudySessions } from '../lib/supabase';
+import { getStudentInviteCode, deleteExamResult, updateHomework, deleteHomework, addStudySession, getWeeklyStudyGoal, createWeeklyStudyGoal, updateWeeklyStudyGoal, getWeeklyStudySessions, getWeeklyQuestionPlan, upsertWeeklyQuestionPlan, updateWeeklyQuestionPlan } from '../lib/supabase';
 import PomodoroTimer from './PomodoroTimer';
 import FormulaCardsSection from './FormulaCardsSection';
 import NotesSection from './NotesSection';
 import StudentWeeklySchedule from './StudentWeeklySchedule';
 
+const getCurrentWeekRange = () => {
+  const now = new Date();
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  const day = start.getDay(); // 0 = Sunday
+  const offset = day === 0 ? -6 : 1 - day;
+  start.setDate(start.getDate() + offset);
+
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+
+  const toISODate = (date: Date) => date.toISOString().split('T')[0];
+
+  return {
+    startDate: toISODate(start),
+    endDate: toISODate(end),
+    start,
+    end
+  };
+};
+
 export default function StudentDashboard() {
   const [insights, setInsights] = useState<any[]>([]);
   const [dailyChallenge, setDailyChallenge] = useState<any>(null);
-  const { planName} = useFeatureAccess();
+  const { planName } = useFeatureAccess();
   const { user, clearUser } = useAuth();
-  const [activeTab, setActiveTab] = useState<'overview' | 'exams' | 'homeworks' | 'schedule' | 'pomodoro' | 'formulas' | 'maps' | 'notes' | 'analysis' | 'classes' | 'smartplan'| 'subscription'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'exams' | 'homeworks' | 'schedule' | 'pomodoro' | 'formulas' | 'maps' | 'notes' | 'analysis' | 'classes' | 'smartplan' | 'subscription'>('overview');
   const [showExamForm, setShowExamForm] = useState(false);
   const [showHomeworkForm, setShowHomeworkForm] = useState(false);
   const [showInviteCode, setShowInviteCode] = useState(false);
@@ -64,10 +84,61 @@ export default function StudentDashboard() {
     weekly_hours_target: '25'
   });
   const [goalLoading, setGoalLoading] = useState(false);
+  const [questionPlan, setQuestionPlan] = useState<any>(null);
+  const [questionPlanLoading, setQuestionPlanLoading] = useState(false);
+  const [showQuestionTargetModal, setShowQuestionTargetModal] = useState(false);
+  const [questionTargetInput, setQuestionTargetInput] = useState('');
+  const [showQuestionProgressModal, setShowQuestionProgressModal] = useState(false);
+  const [questionProgressInput, setQuestionProgressInput] = useState('');
+  const [questionProgressLoading, setQuestionProgressLoading] = useState(false);
   const [showJoinClassModal, setShowJoinClassModal] = useState(false);
   const [classInviteCodeInput, setClassInviteCodeInput] = useState('');
   const [showExamTopics, setShowExamTopics] = useState(false);
   const { subscription } = useFeatureAccess();
+
+  const {
+    studentData,
+    examResults,
+    homeworks,
+    studentClasses,
+    classAssignments,
+    classAnnouncements,
+    classExamResults,
+    loading,
+    refetch
+  } = useStudentData(user?.id);
+
+  const loadWeeklyQuestionPlan = React.useCallback(async () => {
+    if (!studentData) {
+      setQuestionPlan(null);
+      setQuestionTargetInput('');
+      return;
+    }
+
+    try {
+      setQuestionPlanLoading(true);
+      const { startDate } = getCurrentWeekRange();
+      const { data, error } = await getWeeklyQuestionPlan(studentData.id, startDate);
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching weekly question plan:', error);
+      }
+
+      if (data) {
+        setQuestionPlan(data);
+        setQuestionTargetInput(data.question_target ? String(data.question_target) : '');
+      } else {
+        setQuestionPlan(null);
+        setQuestionTargetInput('');
+      }
+    } catch (error) {
+      console.error('Error loading weekly question plan:', error);
+      setQuestionPlan(null);
+      setQuestionTargetInput('');
+    } finally {
+      setQuestionPlanLoading(false);
+    }
+  }, [studentData]);
 
   const handleCreateWeeklyGoal = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,18 +199,6 @@ export default function StudentDashboard() {
 
   const [weeklyStudyHours, setWeeklyStudyHours] = useState(0);
   
-  const { 
-    studentData, 
-    examResults, 
-    homeworks, 
-    studentClasses, 
-    classAssignments,
-    classAnnouncements,
-    classExamResults,
-    loading,
-    refetch 
-  } = useStudentData(user?.id);
-
   const handleJoinClass = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!studentData || !classInviteCodeInput.trim()) return;
@@ -157,15 +216,16 @@ export default function StudentDashboard() {
     }
   };
 
-    React.useEffect(() => {
-      if (studentData) {
-        const performanceInsights = generatePerformanceInsights(studentData);
-        setInsights(performanceInsights);
-        
-        const challenge = generateDailyChallenge(studentData);
-        setDailyChallenge(challenge);
-      }
-    }, [studentData]);
+  React.useEffect(() => {
+    if (studentData) {
+      const performanceInsights = generatePerformanceInsights(studentData);
+      setInsights(performanceInsights);
+      
+      const challenge = generateDailyChallenge(studentData);
+      setDailyChallenge(challenge);
+    }
+  }, [studentData]);
+
   // Load weekly study goal and calculate hours
   React.useEffect(() => {
     const loadWeeklyData = async () => {
@@ -223,24 +283,15 @@ export default function StudentDashboard() {
     loadWeeklyData();
   }, [studentData]);
 
+  React.useEffect(() => {
+    loadWeeklyQuestionPlan();
+  }, [loadWeeklyQuestionPlan]);
+
   const handleLogout = () => {
     console.log('StudentDashboard logout başlatıldı');
     clearUser();
   };
 
-  const handleUpgradeClick = (planName: 'advanced' | 'professional') => {
-    const plan = packages.find(p => p.id === planName);
-    if (plan) {
-      setTargetPlan(plan);
-      setShowUpgradeModal(true);
-    }
-  };
-
-  // FeatureGate'deki onUpgrade prop'unu güncelle
-  <FeatureGate
-    feature="ai_analysis"
-    onUpgrade={() => handleUpgradeClick('advanced')}
-  ></FeatureGate>
 
   const handleShowInviteCode = async () => {
     if (studentData) {
@@ -253,7 +304,7 @@ export default function StudentDashboard() {
   };
 
   const handleDeleteExam = async (examId: string) => {
-    if (confirm('Bu deneme sonucunu silmek istediğiinizden emin misiniz?')) {
+    if (confirm('Bu deneme sonucunu silmek istediğinizden emin misiniz?')) {
       try {
         const { error } = await deleteExamResult(examId);
         if (error) throw error;
@@ -295,19 +346,109 @@ export default function StudentDashboard() {
     }
   };
 
-  <FeatureGate feature="pomodoro_timer">
-    <button
-      onClick={() => setActiveTab('pomodoro')}
-      className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-        activeTab === 'pomodoro'
-          ? 'bg-orange-100 text-orange-700'
-          : 'text-gray-700 hover:bg-gray-100'
-      }`}
-    >
-      <Clock className="h-5 w-5" />
-      <span className="font-medium">Pomodoro</span>
-    </button>
-  </FeatureGate>
+  const handleOpenQuestionTargetModal = () => {
+    setQuestionTargetInput(questionPlan?.question_target ? String(questionPlan.question_target) : '');
+    setShowQuestionTargetModal(true);
+  };
+
+  const handleQuestionTargetSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!studentData) return;
+
+    const parsedTarget = parseInt(questionTargetInput, 10);
+    if (Number.isNaN(parsedTarget) || parsedTarget <= 0) {
+      alert('Lütfen haftalık soru hedefiniz için pozitif bir sayı girin.');
+      return;
+    }
+
+    try {
+      setQuestionPlanLoading(true);
+      const { startDate, endDate } = getCurrentWeekRange();
+
+      if (questionPlan && questionPlan.id) {
+        const currentCompleted = questionPlan.questions_completed || 0;
+        const adjustedCompleted = Math.min(currentCompleted, parsedTarget);
+        const { data, error } = await updateWeeklyQuestionPlan(questionPlan.id, {
+          question_target: parsedTarget,
+          questions_completed: adjustedCompleted,
+          week_start_date: startDate,
+          week_end_date: endDate
+        });
+        if (error) throw error;
+        setQuestionPlan(data);
+      } else {
+        const { data, error } = await upsertWeeklyQuestionPlan({
+          student_id: studentData.id,
+          week_start_date: startDate,
+          week_end_date: endDate,
+          question_target: parsedTarget,
+          questions_completed: 0
+        });
+        if (error) throw error;
+        setQuestionPlan(data);
+      }
+
+      setQuestionTargetInput(parsedTarget.toString());
+      setShowQuestionTargetModal(false);
+    } catch (error) {
+      console.error('Error saving weekly question target:', error);
+      alert('Soru hedefi kaydedilirken hata oluştu.');
+    } finally {
+      setQuestionPlanLoading(false);
+    }
+  };
+
+  const handleOpenQuestionProgressModal = () => {
+    if (!questionPlan?.question_target) {
+      alert('Önce haftalık soru hedefinizi belirleyin.');
+      return;
+    }
+
+    setQuestionProgressInput('');
+    setShowQuestionProgressModal(true);
+  };
+
+  const handleQuestionProgressSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!questionPlan || !questionPlan.id) {
+      alert('Önce haftalık soru hedefi belirleyin.');
+      return;
+    }
+
+    const parsedValue = parseInt(questionProgressInput, 10);
+    if (Number.isNaN(parsedValue) || parsedValue <= 0) {
+      alert('Lütfen çözdüğünüz soru sayısı için pozitif bir sayı girin.');
+      return;
+    }
+
+    if (!questionPlan.question_target || questionPlan.question_target <= 0) {
+      alert('Önce haftalık soru hedefinizi belirleyin.');
+      return;
+    }
+
+    try {
+      setQuestionProgressLoading(true);
+      const currentCompleted = questionPlan.questions_completed || 0;
+      const newCompleted = Math.min(
+        questionPlan.question_target,
+        currentCompleted + parsedValue
+      );
+
+      const { data, error } = await updateWeeklyQuestionPlan(questionPlan.id, {
+        questions_completed: newCompleted
+      });
+      if (error) throw error;
+
+      setQuestionPlan(data);
+      setQuestionProgressInput('');
+      setShowQuestionProgressModal(false);
+    } catch (error) {
+      console.error('Error updating weekly question progress:', error);
+      alert('Soru ilerlemesi kaydedilirken hata oluştu.');
+    } finally {
+      setQuestionProgressLoading(false);
+    }
+  };
 
   // Calculate real statistics from user's data
   const calculateStats = () => {
@@ -340,363 +481,437 @@ export default function StudentDashboard() {
 
   const stats = calculateStats();
 
-
   const reloadWeeklyStudyHours = async (goal: any) => {
-  if (!studentData || !goal) return;
+    if (!studentData || !goal) return;
 
-  try {
-    // Calculate actual study hours for this week
-    const { data: sessions } = await getWeeklyStudySessions(
-      studentData.id,
-      goal.start_date,
-      goal.end_date
-    );
-    
-    const totalHours = sessions?.reduce((sum: number, session: any) => {
-      return sum + (session.duration_minutes || 0) / 60;
-    }, 0) || 0;
-    
-    setWeeklyStudyHours(totalHours);
-  } catch (error) {
-    console.error('Error reloading study hours:', error);
-  }
-};
+    try {
+      // Calculate actual study hours for this week
+      const { data: sessions } = await getWeeklyStudySessions(
+        studentData.id,
+        goal.start_date,
+        goal.end_date
+      );
+      
+      const totalHours = sessions?.reduce((sum: number, session: any) => {
+        return sum + (session.duration_minutes || 0) / 60;
+      }, 0) || 0;
+      
+      setWeeklyStudyHours(totalHours);
+    } catch (error) {
+      console.error('Error reloading study hours:', error);
+    }
+  };
+
   // Add study session handler
-const handleAddStudySession = async (e: React.FormEvent) => {
-  e.preventDefault();
-  if (!studentData || !studyFormData.hours) return;
+  const handleAddStudySession = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!studentData || !studyFormData.hours) return;
 
-  try {
-    const durationMinutes = parseFloat(studyFormData.hours) * 60;
-    
-    const sessionData = {
-      student_id: studentData.id,
-      subject: studyFormData.subject || 'Genel',
-      duration_minutes: durationMinutes,
-      session_date: studyFormData.date,
-      notes: studyFormData.notes
-    };
+    try {
+      const durationMinutes = parseFloat(studyFormData.hours) * 60;
+      
+      const sessionData = {
+        student_id: studentData.id,
+        subject: studyFormData.subject || 'Genel',
+        duration_minutes: durationMinutes,
+        session_date: studyFormData.date,
+        notes: studyFormData.notes
+      };
 
-    const { error } = await addStudySession(sessionData);
-    if (error) throw error;
+      const { error } = await addStudySession(sessionData);
+      if (error) throw error;
 
-    // ���� Puan ekle (1 saat = 10 puan)
-    const pointsResult = await addStudySessionPoints(studentData.id, durationMinutes);
-    
-    // Haftal�-k +�al�-+�ma saatlerini yeniden hesapla
-    if (weeklyGoal) {
-      await reloadWeeklyStudyHours(weeklyGoal);
+      // Puan ekle (1 saat = 10 puan)
+      const pointsResult = await addStudySessionPoints(studentData.id, durationMinutes);
+      
+      // Haftalık çalışma saatlerini yeniden hesapla
+      if (weeklyGoal) {
+        await reloadWeeklyStudyHours(weeklyGoal);
+      }
+
+      // Update local study data
+      const dayIndex = new Date(studyFormData.date).getDay();
+      const dayNames = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
+      const dayName = dayNames[dayIndex];
+      
+      setStudyData(prev => prev.map(day => 
+        day.day === dayName 
+          ? { ...day, hours: day.hours + parseFloat(studyFormData.hours) }
+          : day
+      ));
+
+      setShowStudyForm(false);
+      setStudyFormData({
+        date: new Date().toISOString().split('T')[0],
+        hours: '',
+        subject: '',
+        notes: ''
+      });
+      
+      if (pointsResult.pointsEarned > 0) {
+        alert(`✓ Çalışma eklendi! +${pointsResult.pointsEarned} puan kazandınız!`);
+      } else {
+        alert('Çalışma seansı eklendi!');
+      }
+    } catch (error) {
+      console.error('Error adding study session:', error);
+      alert('Çalışma seansı eklenirken hata oluştu');
     }
-
-    // Update local study data
-    const dayIndex = new Date(studyFormData.date).getDay();
-    const dayNames = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
-    const dayName = dayNames[dayIndex];
-    
-    setStudyData(prev => prev.map(day => 
-      day.day === dayName 
-        ? { ...day, hours: day.hours + parseFloat(studyFormData.hours) }
-        : day
-    ));
-
-    setShowStudyForm(false);
-    setStudyFormData({
-      date: new Date().toISOString().split('T')[0],
-      hours: '',
-      subject: '',
-      notes: ''
-    });
-    
-    if (pointsResult.pointsEarned > 0) {
-      alert(`🎉 Çalışma eklendi! 🎉 +${pointsResult.pointsEarned} puan kazandınız!`);
-    } else {
-      alert('Çalışma seansı eklendi!');
-    }
-  } catch (error) {
-    console.error('Error adding study session:', error);
-    alert('Çalışma seansı eklenirken hata oluştu');
-  }
-};
+  };
 
   // Prepare chart data from real exam results
-const filteredExamResults = chartFilter === 'all' 
-  ? examResults 
-  : examResults.filter(exam => exam.exam_type === chartFilter);
+  const filteredExamResults = chartFilter === 'all' 
+    ? examResults 
+    : examResults.filter(exam => exam.exam_type === chartFilter);
 
-const chartData = filteredExamResults
-  .sort((a, b) => new Date(a.exam_date).getTime() - new Date(b.exam_date).getTime())
-  .slice(-10) // Son 10 deneme
-  .map((exam, index) => {
-    // Tarihi formatlamak için yeni bir Date objesi oluştur
-    const date = new Date(exam.exam_date);
-    // Tarihi GG.AA formatında formatla (ör: 25.09)
-    const formattedDate = `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}`;
+  const chartData = filteredExamResults
+    .sort((a, b) => new Date(a.exam_date).getTime() - new Date(b.exam_date).getTime())
+    .slice(-10) // Son 10 deneme
+    .map((exam, index) => {
+      // Tarihi formatlamak için yeni bir Date objesi oluştur
+      const date = new Date(exam.exam_date);
+      // Tarihi GG.AA formatında formatla (ör: 25.09)
+      const formattedDate = `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}`;
 
-    // Yeni objeyi formatlanmış tarih ile birlikte döndür
-    return {
-      puan: exam.total_score || 0,
-      examType: exam.exam_type,
-      examName: exam.exam_name,
-      date: formattedDate, // <<< EKLENEN SATIR
-      color: `hsl(${(index * 36) % 360}, 70%, 50%)`
-    };
-  });
+      // Yeni objeyi formatlanmış tarih ile birlikte döndür
+      return {
+        puan: exam.total_score || 0,
+        examType: exam.exam_type,
+        examName: exam.exam_name,
+        date: formattedDate, // <<< EKLENEN SATIR
+        color: `hsl(${(index * 36) % 360}, 70%, 50%)`
+      };
+    });
 
-  const renderOverview = () => (
-    <div className="space-y-6">
+  const renderOverview = () => {
+    const questionTarget = questionPlan?.question_target || 0;
+    const questionsCompleted = questionPlan?.questions_completed || 0;
+    const questionsRemaining = questionTarget ? Math.max(questionTarget - questionsCompleted, 0) : 0;
+    const questionProgressPercent = questionTarget ? Math.min(100, Math.round((questionsCompleted / questionTarget) * 100)) : 0;
+    const weekRange = getCurrentWeekRange();
 
-      <div className="grid md:grid-cols-2 gap-6">
-      {/* AI Insights Card */}
-      <div className="bg-white rounded-xl shadow-sm p-6">
-        <h3 className="text-lg font-semibold mb-4 flex items-center">
-          <Brain className="h-5 w-5 mr-2 text-purple-600" />
-          AI Önerileri
-        </h3>
-        <div className="space-y-3">
-          {insights.map((insight, idx) => (
-            <div key={idx} className={`p-4 rounded-lg border-l-4 ${
-              insight.type === 'success' ? 'bg-green-50 border-green-500' :
-              insight.type === 'warning' ? 'bg-yellow-50 border-yellow-500' :
-              insight.type === 'danger' ? 'bg-red-50 border-red-500' :
-              'bg-blue-50 border-blue-500'
-            }`}>
-              <div className="flex items-start gap-3">
-                <span className="text-2xl">{insight.icon}</span>
-                <div>
-                  <h4 className="font-semibold text-gray-900">{insight.title}</h4>
-                  <p className="text-sm text-gray-600 mt-1">{insight.message}</p>
-                  <button className="text-sm font-medium mt-2 text-blue-600 hover:underline">
-                    {insight.action} için
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Daily Challenge Card */}
-      {dailyChallenge && (
-        <div className="bg-gradient-to-br from-purple-500 to-pink-500 text-white rounded-xl shadow-lg p-6">
-          <h3 className="text-lg font-semibold mb-4 flex items-center">
-            <Trophy className="h-5 w-5 mr-2" />
-            Günün Görevi
-          </h3>
-          <div className="space-y-3">
-            <h4 className="text-2xl font-bold">{dailyChallenge.title}</h4>
-            <p className="text-purple-100">{dailyChallenge.description}</p>
-            <div className="flex items-center justify-between pt-4">
-              <div className="flex items-center gap-2">
-                <span className="bg-white/20 px-3 py-1 rounded-full text-sm">
-                  {dailyChallenge.difficulty === 'easy' ? '🎉 Kolay' :
-                   dailyChallenge.difficulty === 'medium' ? '🎉 Orta' :
-                   '🎉 Zor'}
-                </span>
-                <span className="bg-white/20 px-3 py-1 rounded-full text-sm">
-                  +{dailyChallenge.points} puan
-                </span>
-              </div>
-                    <button
-            onClick={async () => {
-              if (!studentData) return;
-
-              // Bugünün tamamlandığını kontrol et
-              const completed = await isChallengeCompletedToday(studentData.id, dailyChallenge.id);
-              
-              if (completed) {
-                alert('Bu görevi bugünün zaten tamamladınız!');
-                return;
-              }
-              // Challenge tamamla
-              const result = await completeChallenge(
-                studentData.id,
-                dailyChallenge.id,
-                dailyChallenge.points,
-                dailyChallenge.title
-              );
-              
-              if (result.success) {
-                alert(`🎉 Görev tamamlandı! +${dailyChallenge.points} puan kazandınız!`);
-                window.location.reload(); // Points'i güncelle
-              } else {
-                alert(result.error || 'Görev tamamlanamadı');
-              }
-            }}
-            className="bg-white text-purple-600 px-6 py-2 rounded-full font-semibold hover:bg-purple-50"
-          >
-            Görevi Tamamladım
-          </button>
-            </div>
-          </div>   
-        </div>
-      )}
-    </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-sm">Bu Ay Deneme</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.totalExams}</p>
-            </div>
-            <BookOpen className="h-8 w-8 text-blue-600" />
-          </div>
-        </div>
-        
-        <div className="bg-white rounded-lg p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-sm">Ortalama Puan</p>
-              <p className="text-xl font-bold text-green-600">
-                {stats.averageScore > 0 ? stats.averageScore.toFixed(1) : '0'}
-              </p>
-              <p className="text-xs text-gray-500">/ 500</p>
-            </div>
-            <Award className="h-8 w-8 text-green-600" />
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-sm">Bekleyen Görev</p>
-              <p className="text-2xl font-bold text-orange-600">{stats.pendingHomeworks}</p>
-            </div>
-            <Clock className="h-8 w-8 text-orange-600" />
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-sm">Son Gelişim</p>
-              <p className={`text-2xl font-bold ${stats.improvementPercent >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {stats.improvementPercent > 0 ? '+' : ''}{stats.improvementPercent.toFixed(1)}%
-              </p>
-              <p className="text-xs text-gray-500">son denemenize göre</p>
-            </div>
-            <TrendingUp className="h-8 w-8 text-green-600" />
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-sm">Haftalık Çalışma</p>
-              <p className="text-2xl font-bold text-blue-600">{weeklyStudyHours.toFixed(1)} saat</p>
-              <p className="text-blue-600 text-sm">
-                {weeklyGoal ? `Hedef: ${weeklyGoal.weekly_hours_target} saat (${Math.round((weeklyStudyHours / weeklyGoal.weekly_hours_target) * 100)}%)` : 'Bu hafta'}
-              </p>
-            </div>
-            <Clock className="h-8 w-8 text-blue-600" />
-          </div>
-          <div className="mt-2 flex flex-wrap gap-2">
-          <button
-            onClick={() => setShowStudyForm(true)}
-            className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 sm:mt-0"
-          >
-            +Çalışma Ekle
-          </button>
-          {!weeklyGoal && (
-            <button
-              onClick={() => setShowGoalForm(true)}
-              className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200 sm:mt-0"
-            >
-              Hedef Belirle
-            </button>
-          )}
-          {weeklyGoal && (
-            <button
-              onClick={() => setShowGoalForm(true)}
-              className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded hover:bg-yellow-200 sm:mt-0"
-            >
-              Hedef Güncelle
-            </button>
-          )}
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-  <div className="bg-white rounded-lg p-6 shadow-sm">
-    <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-4">
-      <h3 className="text-lg font-semibold">Deneme İlerlemesi</h3>
-      <select
-        value={chartFilter}
-        onChange={(e) => setChartFilter(e.target.value as any)}
-        className="px-3 py-1 border border-gray-300 rounded text-sm"
-      >
-        <option value="all">Tümü</option>
-        <option value="TYT">TYT</option>
-        <option value="AYT">AYT</option>
-        <option value="LGS">LGS</option>
-      </select>
-    </div>
-  {chartData.length > 0 ? (
-    <ResponsiveContainer width="100%" height={250}>
-      <LineChart data={chartData}>
-        <CartesianGrid strokeDasharray="3 3" />
-        {/* Artık "date" anahtarını veride bulabilmek için bu satır doğru çalışacak */}
-        <XAxis dataKey="date" fontSize={12} /> 
-        <YAxis domain={[100, 500]} />
-        <Tooltip 
-          formatter={(value, _name, props) => [
-            `${value} puan`,
-            `${props.payload.examName} (${props.payload.examType})`
-          ]}
-        />
-        <Line 
-          type="monotone" 
-          dataKey="puan" 
-          stroke="#3B82F6" 
-          strokeWidth={3} 
-          name="Puan"
-          // Bu noktalar artık veri olduğu için görünecek
-          dot={{ fill: '#3B82F6', strokeWidth: 2, r: 5 }}
-          activeDot={{ r: 7, stroke: '#3B82F6', strokeWidth: 2 }}
-        />
-      </LineChart>
-    </ResponsiveContainer>
-  ) : (
-      <div className="text-center py-16 text-gray-500">
-        <TrendingUp className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-        <p>{chartFilter === 'all' ? 'Grafik için deneme sonucu gerekli' : `${chartFilter} denemesi bulunmuyor`}</p>
-      </div>
-    )}
-  </div>
-
-        <div className="bg-white rounded-lg p-6 shadow-sm">
-          <h3 className="text-lg font-semibold mb-4">Yaklaşan Görevler</h3>
-          <div className="space-y-3">
-            {homeworks.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <p>Henüz görev eklenmemiş</p>
-              </div>
-            ) : (
-              [...homeworks, ...classAssignments].slice(0, 4).map((homework) => (
-              <div key={homework.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  {homework.completed ? (
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                  ) : (
-                    <AlertCircle className="h-5 w-5 text-orange-500" />
-                  )}
-                  <div>
-                    <p className="text-sm font-medium">{homework.title}</p>
-                    <p className="text-xs text-gray-500">
-                      {new Date(homework.due_date).toLocaleDateString('tr-TR')}
-                      {homework.subject && ` • ${homework.subject}`}
-                    </p>
+    return (
+      <div className="space-y-6">
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* AI Insights Card */}
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <h3 className="text-lg font-semibold mb-4 flex items-center">
+              <Brain className="h-5 w-5 mr-2 text-purple-600" />
+              AI Önerileri
+            </h3>
+            <div className="space-y-3">
+              {insights.map((insight, idx) => (
+                <div key={idx} className={`p-4 rounded-lg border-l-4 ${
+                  insight.type === 'success' ? 'bg-green-50 border-green-500' :
+                  insight.type === 'warning' ? 'bg-yellow-50 border-yellow-500' :
+                  insight.type === 'danger' ? 'bg-red-50 border-red-500' :
+                  'bg-blue-50 border-blue-500'
+                }`}>
+                  <div className="flex items-start gap-3">
+                    <span className="text-2xl">{insight.icon}</span>
+                    <div>
+                      <h4 className="font-semibold text-gray-900">{insight.title}</h4>
+                      <p className="text-sm text-gray-600 mt-1">{insight.message}</p>
+                      <button className="text-sm font-medium mt-2 text-blue-600 hover:underline">
+                        {insight.action} için
+                      </button>
+                    </div>
                   </div>
                 </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Daily Challenge Card */}
+          {dailyChallenge && (
+            <div className="bg-gradient-to-br from-purple-500 to-pink-500 text-white rounded-xl shadow-lg p-6">
+              <h3 className="text-lg font-semibold mb-4 flex items-center">
+                <Trophy className="h-5 w-5 mr-2" />
+                Günün Görevi
+              </h3>
+              <div className="space-y-3">
+                <h4 className="text-2xl font-bold">{dailyChallenge.title}</h4>
+                <p className="text-purple-100">{dailyChallenge.description}</p>
+                <div className="flex items-center justify-between pt-4">
+                  <div className="flex items-center gap-2">
+                    <span className="bg-white/20 px-3 py-1 rounded-full text-sm">
+                      {dailyChallenge.difficulty === 'easy' ? '✓ Kolay' :
+                       dailyChallenge.difficulty === 'medium' ? '✓ Orta' :
+                       '✓ Zor'}
+                    </span>
+                    <span className="bg-white/20 px-3 py-1 rounded-full text-sm">
+                      +{dailyChallenge.points} puan
+                    </span>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      if (!studentData) return;
+
+                      // Bugünün tamamlandığını kontrol et
+                      const completed = await isChallengeCompletedToday(studentData.id, dailyChallenge.id);
+                      
+                      if (completed) {
+                        alert('Bu görevi bugün zaten tamamladınız!');
+                        return;
+                      }
+                      // Challenge tamamla
+                      const result = await completeChallenge(
+                        studentData.id,
+                        dailyChallenge.id,
+                        dailyChallenge.points,
+                        dailyChallenge.title
+                      );
+                      
+                      if (result.success) {
+                        alert(`✓ Görev tamamlandı! +${dailyChallenge.points} puan kazandınız!`);
+                        window.location.reload(); // Points'i güncelle
+                      } else {
+                        alert(result.error || 'Görev tamamlanamadı');
+                      }
+                    }}
+                    className="bg-white text-purple-600 px-6 py-2 rounded-full font-semibold hover:bg-purple-50"
+                  >
+                    Görevi Tamamladım
+                  </button>
+                </div>
+              </div>   
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+          <div className="bg-white rounded-lg p-6 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-600 text-sm">Bu Ay Deneme</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.totalExams}</p>
               </div>
-              ))
+              <BookOpen className="h-8 w-8 text-blue-600" />
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg p-6 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-600 text-sm">Ortalama Puan</p>
+                <p className="text-xl font-bold text-green-600">
+                  {stats.averageScore > 0 ? stats.averageScore.toFixed(1) : '0'}
+                </p>
+                <p className="text-xs text-gray-500">/ 500</p>
+              </div>
+              <Award className="h-8 w-8 text-green-600" />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg p-6 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-600 text-sm">Bekleyen Görev</p>
+                <p className="text-2xl font-bold text-orange-600">{stats.pendingHomeworks}</p>
+              </div>
+              <Clock className="h-8 w-8 text-orange-600" />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg p-6 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-600 text-sm">Son Gelişim</p>
+                <p className={`text-2xl font-bold ${stats.improvementPercent >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {stats.improvementPercent > 0 ? '+' : ''}{stats.improvementPercent.toFixed(1)}%
+                </p>
+                <p className="text-xs text-gray-500">son denemenize göre</p>
+              </div>
+              <TrendingUp className="h-8 w-8 text-green-600" />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg p-6 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-600 text-sm">Haftalık Çalışma</p>
+                <p className="text-2xl font-bold text-blue-600">{weeklyStudyHours.toFixed(1)} saat</p>
+                <p className="text-blue-600 text-sm">
+                  {weeklyGoal ? `Hedef: ${weeklyGoal.weekly_hours_target} saat (${Math.round((weeklyStudyHours / weeklyGoal.weekly_hours_target) * 100)}%)` : 'Bu hafta'}
+                </p>
+              </div>
+              <Clock className="h-8 w-8 text-blue-600" />
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                onClick={() => setShowStudyForm(true)}
+                className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 sm:mt-0"
+              >
+                +Çalışma Ekle
+              </button>
+              {!weeklyGoal && (
+                <button
+                  onClick={() => setShowGoalForm(true)}
+                  className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200 sm:mt-0"
+                >
+                  Hedef Belirle
+                </button>
+              )}
+              {weeklyGoal && (
+                <button
+                  onClick={() => setShowGoalForm(true)}
+                  className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded hover:bg-yellow-200 sm:mt-0"
+                >
+                  Hedef Güncelle
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg p-6 shadow-sm">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-gray-600 text-sm">Haftalık Soru Takibi</p>
+                <h4 className="text-lg font-semibold text-gray-900 mt-1">Bu Hafta</h4>
+                <p className="text-xs text-gray-500 mt-1">
+                  {weekRange.startDate} - {weekRange.endDate}
+                </p>
+              </div>
+              {questionPlanLoading && (
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-400 border-t-transparent"></div>
+              )}
+            </div>
+
+            {questionTarget > 0 ? (
+              <>
+                <div className="mt-4 flex items-end justify-between">
+                  <div>
+                    <p className="text-3xl font-bold text-blue-600">{questionsCompleted}</p>
+                    <p className="text-sm text-gray-500">çözülen</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-gray-500">hedef</p>
+                    <p className="text-lg font-semibold text-gray-900">{questionTarget}</p>
+                  </div>
+                </div>
+
+                <div className="mt-3">
+                  <div className="h-2 rounded-full bg-gray-200">
+                    <div
+                      className="h-2 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 transition-all"
+                      style={{ width: `${questionProgressPercent}%` }}
+                    ></div>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between text-xs text-gray-600">
+                    <span>İlerleme: %{questionProgressPercent}</span>
+                    <span>Kalan: {questionsRemaining}</span>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="mt-4 rounded-lg border border-dashed border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+                Henüz haftalık soru hedefi belirlemedin. Hedef koyup çözdükçe ilerlemeni takip edebilirsin.
+              </div>
             )}
+
+            <div className="mt-4 grid grid-cols-1 gap-2">
+              <button
+                onClick={handleOpenQuestionTargetModal}
+                disabled={questionPlanLoading}
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-blue-200 px-3 py-2 text-sm font-medium text-blue-600 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Target className="h-4 w-4" />
+                {questionTarget > 0 ? 'Hedefi Güncelle' : 'Hedef Belirle'}
+              </button>
+              <button
+                onClick={handleOpenQuestionProgressModal}
+                disabled={questionPlanLoading || questionTarget === 0}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Plus className="h-4 w-4" />
+                Soru Ekle
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-white rounded-lg p-6 shadow-sm">
+            <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-4">
+              <h3 className="text-lg font-semibold">Deneme İlerlemesi</h3>
+              <select
+                value={chartFilter}
+                onChange={(e) => setChartFilter(e.target.value as any)}
+                className="px-3 py-1 border border-gray-300 rounded text-sm"
+              >
+                <option value="all">Tümü</option>
+                <option value="TYT">TYT</option>
+                <option value="AYT">AYT</option>
+                <option value="LGS">LGS</option>
+              </select>
+            </div>
+            {chartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={250}>
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  {/* Artık "date" anahtarını veride bulabilmek için bu satır doğru çalışacak */}
+                  <XAxis dataKey="date" fontSize={12} /> 
+                  <YAxis domain={[100, 500]} />
+                  <Tooltip 
+                    formatter={(value, _name, props) => [
+                      `${value} puan`,
+                      `${props.payload.examName} (${props.payload.examType})`
+                    ]}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="puan" 
+                    stroke="#3B82F6" 
+                    strokeWidth={3} 
+                    name="Puan"
+                    // Bu noktalar artık veri olduğu için görünecek
+                    dot={{ fill: '#3B82F6', strokeWidth: 2, r: 5 }}
+                    activeDot={{ r: 7, stroke: '#3B82F6', strokeWidth: 2 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="text-center py-16 text-gray-500">
+                <TrendingUp className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                <p>{chartFilter === 'all' ? 'Grafik için deneme sonucu gerekli' : `${chartFilter} denemesi bulunmuyor`}</p>
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white rounded-lg p-6 shadow-sm">
+            <h3 className="text-lg font-semibold mb-4">Yaklaşan Görevler</h3>
+            <div className="space-y-3">
+              {homeworks.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                  <p>Henüz görev eklenmemiş</p>
+                </div>
+              ) : (
+                [...homeworks, ...classAssignments].slice(0, 4).map((homework) => (
+                  <div key={homework.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      {homework.completed ? (
+                        <CheckCircle className="h-5 w-5 text-green-500" />
+                      ) : (
+                        <AlertCircle className="h-5 w-5 text-orange-500" />
+                      )}
+                      <div>
+                        <p className="text-sm font-medium">{homework.title}</p>
+                        <p className="text-xs text-gray-500">
+                          {new Date(homework.due_date).toLocaleDateString('tr-TR')}
+                          {homework.subject && ` • ${homework.subject}`}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderExams = () => (
     <div className="bg-white rounded-lg p-6 shadow-sm">
@@ -724,62 +939,62 @@ const chartData = filteredExamResults
           </div>
         ) : (
           examResults.slice(0, 5).map((exam, index) => (
-          <div key={index} className="border rounded-lg p-4 relative">
-            <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start mb-3 pr-8">
-              <div>
-                <h4 className="font-semibold">{exam.exam_name}</h4>
-                <p className="text-sm text-gray-600">{new Date(exam.exam_date).toLocaleDateString('tr-TR')}</p>
-              </div>
-              <span className="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                {exam.exam_type}: {exam.total_score ? Math.round(exam.total_score) : 'N/A'}
-              </span>
-            </div>
-            
-            {/* Exam Menu */}
-            <div className="absolute top-4 right-4">
-              <button
-                onClick={() => setShowExamMenu(showExamMenu === exam.id ? null : exam.id)}
-                className="p-1 hover:bg-gray-100 rounded"
-              >
-                <MoreVertical className="h-4 w-4 text-gray-500" />
-              </button>
-              
-              {showExamMenu === exam.id && (
-                <div className="absolute right-0 top-8 bg-white border rounded-lg shadow-lg z-10 min-w-[120px]">
-                  <button
-                    onClick={() => {
-                      setEditingExam(exam);
-                      setShowExamForm(true);
-                      setShowExamMenu(null);
-                    }}
-                    className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center space-x-2"
-                  >
-                    <Edit className="h-4 w-4" />
-                    <span>Düzenle</span>
-                  </button>
-                  <button
-                    onClick={() => { handleDeleteExam(exam.id); setShowExamMenu(null); }}
-                    className="w-full px-3 py-2 text-left hover:bg-gray-50 text-red-600 flex items-center space-x-2"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    <span>Sil</span>
-                  </button>
+            <div key={index} className="border rounded-lg p-4 relative">
+              <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start mb-3 pr-8">
+                <div>
+                  <h4 className="font-semibold">{exam.exam_name}</h4>
+                  <p className="text-sm text-gray-600">{new Date(exam.exam_date).toLocaleDateString('tr-TR')}</p>
                 </div>
-              )}
+                <span className="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                  {exam.exam_type}: {exam.total_score ? Math.round(exam.total_score) : 'N/A'}
+                </span>
+              </div>
+              
+              {/* Exam Menu */}
+              <div className="absolute top-4 right-4">
+                <button
+                  onClick={() => setShowExamMenu(showExamMenu === exam.id ? null : exam.id)}
+                  className="p-1 hover:bg-gray-100 rounded"
+                >
+                  <MoreVertical className="h-4 w-4 text-gray-500" />
+                </button>
+                
+                {showExamMenu === exam.id && (
+                  <div className="absolute right-0 top-8 bg-white border rounded-lg shadow-lg z-10 min-w-[120px]">
+                    <button
+                      onClick={() => {
+                        setEditingExam(exam);
+                        setShowExamForm(true);
+                        setShowExamMenu(null);
+                      }}
+                      className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center space-x-2"
+                    >
+                      <Edit className="h-4 w-4" />
+                      <span>Düzenle</span>
+                    </button>
+                    <button
+                      onClick={() => { handleDeleteExam(exam.id); setShowExamMenu(null); }}
+                      className="w-full px-3 py-2 text-left hover:bg-gray-50 text-red-600 flex items-center space-x-2"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      <span>Sil</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+              
+              <div className="text-sm text-gray-600">
+                <p>Toplam Puan: <span className="font-semibold">{exam.total_score ? Math.round(exam.total_score) : 'N/A'}</span></p>
+                {exam.notes && <p className="mt-1 text-xs">{exam.notes}</p>}
+              </div>
             </div>
-            
-            <div className="text-sm text-gray-600">
-              <p>Toplam Puan: <span className="font-semibold">{exam.total_score ? Math.round(exam.total_score) : 'N/A'}</span></p>
-              {exam.notes && <p className="mt-1 text-xs">{exam.notes}</p>}
-            </div>
-          </div>
           ))
         )}
       </div>
     </div>
   );
 
-    if (loading) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center">
@@ -824,61 +1039,59 @@ const chartData = filteredExamResults
           </div>
         </div>
 
-
         <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-2">
-          {[
-            { key: 'overview', label: 'Genel Bakış', icon: TrendingUp },
-            { key: 'exams', label: 'Denemeler', icon: BookOpen },
-            { key: 'homeworks', label: 'Ödevler', icon: Calendar },
-            { key: 'classes', label: 'Sınıflarım', icon: Users },
-            { key: 'analysis', label: 'AI Analiz', icon: Target },
-            { key: 'smartplan', label: 'Akıllı Plan', icon: Brain },
-            { key: 'formulas', label: 'Formül Kartları', icon: BookmarkCheck },
-            { key: 'pomodoro', label: 'Pomodoro', icon: Timer },
-            { key: 'maps', label: 'Tarih/Coğrafya', icon: MapIcon },
-            { key: 'notes', label: 'Notlarım', icon: StickyNote },
-            { key: 'subscription', label: 'Aboneliğim', icon: Crown },
-
-          ].map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              onClick={() => setActiveTab(key as any)}
-              className={`flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors sm:w-auto ${
-                activeTab === key
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
-              }`}
-            >
-              <Icon className="h-4 w-4" />
-              <span>{label}</span>
-              {(key === 'pomodoro' || key === 'formulas'|| key === 'maps'|| key === 'notes') && (
-              <span className="px-2 py-0.5 bg-gradient-to-r from-purple-500 to-blue-500 text-white text-xs rounded-full font-bold">
-                PRO
-              </span>
-            )}
-            </button>
-          ))}
+          <div className="flex flex-wrap items-center gap-2">
+            {[
+              { key: 'overview', label: 'Genel Bakış', icon: TrendingUp },
+              { key: 'exams', label: 'Denemeler', icon: BookOpen },
+              { key: 'homeworks', label: 'Ödevler', icon: Calendar },
+              { key: 'classes', label: 'Sınıflarım', icon: Users },
+              { key: 'analysis', label: 'AI Analiz', icon: Target },
+              { key: 'smartplan', label: 'Akıllı Plan', icon: Brain },
+              { key: 'formulas', label: 'Formül Kartları', icon: BookmarkCheck },
+              { key: 'pomodoro', label: 'Pomodoro', icon: Timer },
+              { key: 'maps', label: 'Tarih/Coğrafya', icon: MapIcon },
+              { key: 'notes', label: 'Notlarım', icon: StickyNote },
+              { key: 'subscription', label: 'Aboneliğim', icon: Crown },
+            ].map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                onClick={() => setActiveTab(key as any)}
+                className={`flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors sm:w-auto ${
+                  activeTab === key
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                <span>{label}</span>
+                {(key === 'pomodoro' || key === 'formulas'|| key === 'maps'|| key === 'notes') && (
+                  <span className="px-2 py-0.5 bg-gradient-to-r from-purple-500 to-blue-500 text-white text-xs rounded-full font-bold">
+                    PRO
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => setActiveTab('schedule')}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg ${
+              activeTab === 'schedule'
+                ? 'bg-purple-600 text-white'
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <Calendar className="w-5 h-5" />
+            <span>Çalışma Programı</span>
+          </button>
+          <button
+            onClick={() => setShowExamTopics(true)}
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 sm:w-auto"
+          >
+            <Target className="h-4 w-4" />
+            <span>Çıkmış Konular</span>
+          </button>
         </div>
-        <button
-          onClick={() => setActiveTab('schedule')}
-          className={`flex items-center space-x-2 px-4 py-2 rounded-lg ${
-            activeTab === 'schedule'
-              ? 'bg-purple-600 text-white'
-              : 'text-gray-600 hover:bg-gray-100'
-          }`}
-        >
-          <Calendar className="w-5 h-5" />
-          <span>Çalışma Programı</span>
-        </button>
-        <button
-          onClick={() => setShowExamTopics(true)}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 sm:w-auto"
-        >
-          <Target className="h-4 w-4" />
-          <span>Çıkmış Konular</span>
-        </button>
-      </div>
 
         {activeTab === 'overview' && renderOverview()}
         {activeTab === 'exams' && renderExams()}
@@ -1075,93 +1288,93 @@ const chartData = filteredExamResults
                 </div>
               ) : (
                 [...homeworks, ...classAssignments.map(a => ({...a, isClassAssignment: true}))].map((homework) => (
-                <div key={homework.id} className="flex items-center justify-between p-4 border rounded-lg relative">
-                  <div className="flex items-center space-x-3">
-                    {!homework.isClassAssignment && (
-                      <button
-                        onClick={() => handleToggleHomework(homework)}
-                        className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                          homework.completed 
-                            ? 'bg-green-500 border-green-500 text-white' 
-                            : 'border-gray-300 hover:border-green-400'
-                        }`}
-                      >
-                        {homework.completed && <CheckCircle className="h-3 w-3" />}
-                      </button>
-                    )}
-                    {homework.isClassAssignment && (
-                      <div className="w-5 h-5 rounded border-2 border-blue-300 bg-blue-100 flex items-center justify-center">
-                        <BookOpen className="h-3 w-3 text-blue-600" />
-                      </div>
-                    )}
-                    <div className={homework.completed ? 'opacity-60' : ''}>
-                      <p className={`font-medium ${homework.completed ? 'line-through' : ''}`}>
-                        {homework.title}
-                        {homework.isClassAssignment && (
-                          <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                            Sınıf Ödevi
-                          </span>
+                  <div key={homework.id} className="flex items-center justify-between p-4 border rounded-lg relative">
+                    <div className="flex items-center space-x-3">
+                      {!homework.isClassAssignment && (
+                        <button
+                          onClick={() => handleToggleHomework(homework)}
+                          className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                            homework.completed 
+                              ? 'bg-green-500 border-green-500 text-white' 
+                              : 'border-gray-300 hover:border-green-400'
+                          }`}
+                        >
+                          {homework.completed && <CheckCircle className="h-3 w-3" />}
+                        </button>
+                      )}
+                      {homework.isClassAssignment && (
+                        <div className="w-5 h-5 rounded border-2 border-blue-300 bg-blue-100 flex items-center justify-center">
+                          <BookOpen className="h-3 w-3 text-blue-600" />
+                        </div>
+                      )}
+                      <div className={homework.completed ? 'opacity-60' : ''}>
+                        <p className={`font-medium ${homework.completed ? 'line-through' : ''}`}>
+                          {homework.title}
+                          {homework.isClassAssignment && (
+                            <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                              Sınıf Ödevi
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          Son teslim: {new Date(homework.due_date).toLocaleDateString('tr-TR')}
+                          {homework.subject && ` • ${homework.subject}`}
+                        </p>
+                        {homework.description && (
+                          <p className="text-xs text-gray-500 mt-1">{homework.description}</p>
                         )}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        Son teslim: {new Date(homework.due_date).toLocaleDateString('tr-TR')}
-                        {homework.subject && ` • ${homework.subject}`}
-                      </p>
-                      {homework.description && (
-                        <p className="text-xs text-gray-500 mt-1">{homework.description}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <span className={`px-2 py-1 rounded text-xs ${
+                        homework.isClassAssignment
+                          ? 'bg-blue-100 text-blue-800'
+                          : homework.completed 
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-orange-100 text-orange-800'
+                      }`}>
+                        {homework.isClassAssignment 
+                          ? 'Sınıf Ödevi' 
+                          : homework.completed ? 'Tamamlandı' : 'Bekliyor'
+                        }
+                      </span>
+                      
+                      {/* Homework Menu */}
+                      {!homework.isClassAssignment && (
+                        <div className="relative">
+                          <button
+                            onClick={() => setShowHomeworkMenu(showHomeworkMenu === homework.id ? null : homework.id)}
+                            className="p-1 hover:bg-gray-100 rounded"
+                          >
+                            <MoreVertical className="h-4 w-4 text-gray-500" />
+                          </button>
+                          
+                          {showHomeworkMenu === homework.id && (
+                            <div className="absolute right-0 top-8 bg-white border rounded-lg shadow-lg z-10 min-w-[120px]">
+                              <button
+                                onClick={() => {
+                                  handleToggleHomework(homework);
+                                  setShowHomeworkMenu(null);
+                                }}
+                                className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center space-x-2"
+                              >
+                                <CheckCircle className="h-4 w-4" />
+                                <span>{homework.completed ? 'Geri Al' : 'Tamamla'}</span>
+                              </button>
+                              <button
+                                onClick={() => { handleDeleteHomework(homework.id); setShowHomeworkMenu(null); }}
+                                className="w-full px-3 py-2 text-left hover:bg-gray-50 text-red-600 flex items-center space-x-2"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                <span>Sil</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <span className={`px-2 py-1 rounded text-xs ${
-                      homework.isClassAssignment
-                        ? 'bg-blue-100 text-blue-800'
-                        : homework.completed 
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-orange-100 text-orange-800'
-                    }`}>
-                      {homework.isClassAssignment 
-                        ? 'Sınıf Ödevi' 
-                        : homework.completed ? 'Tamamlandı' : 'Bekliyor'
-                      }
-                    </span>
-                    
-                    {/* Homework Menu */}
-                    {!homework.isClassAssignment && (
-                      <div className="relative">
-                        <button
-                          onClick={() => setShowHomeworkMenu(showHomeworkMenu === homework.id ? null : homework.id)}
-                          className="p-1 hover:bg-gray-100 rounded"
-                        >
-                          <MoreVertical className="h-4 w-4 text-gray-500" />
-                        </button>
-                        
-                        {showHomeworkMenu === homework.id && (
-                          <div className="absolute right-0 top-8 bg-white border rounded-lg shadow-lg z-10 min-w-[120px]">
-                            <button
-                              onClick={() => {
-                                handleToggleHomework(homework);
-                                setShowHomeworkMenu(null);
-                              }}
-                              className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center space-x-2"
-                            >
-                              <CheckCircle className="h-4 w-4" />
-                              <span>{homework.completed ? 'Geri Al' : 'Tamamla'}</span>
-                            </button>
-                            <button
-                              onClick={() => { handleDeleteHomework(homework.id); setShowHomeworkMenu(null); }}
-                              className="w-full px-3 py-2 text-left hover:bg-gray-50 text-red-600 flex items-center space-x-2"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              <span>Sil</span>
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
                 ))
               )}
             </div>
@@ -1215,7 +1428,7 @@ const chartData = filteredExamResults
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl max-w-7xl w-full max-h-[90vh] overflow-y-auto">
               <div className="sticky top-0 bg-white border-b px-6 py-4 flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
-                <h2 className="text-xl font-bold">TYT-AYT-LGS+Çıkmış Konular Analizi</h2>
+                <h2 className="text-xl font-bold">TYT-AYT-LGS Çıkmış Konular Analizi</h2>
                 <button
                   onClick={() => setShowExamTopics(false)}
                   className="text-gray-400 hover:text-gray-600"
@@ -1233,14 +1446,12 @@ const chartData = filteredExamResults
             </div>
           </div>
         )}
-        
 
         {planName === 'basic' && (
           <div className="mb-6">
             <ExamLimitBadge onUpgrade={() => setShowUpgradeModal(true)} />
           </div>
         )}
-        
 
         {activeTab === 'subscription' && (
           <SubscriptionManagement />
@@ -1269,133 +1480,233 @@ const chartData = filteredExamResults
           }
         >
           <div>
-          <PomodoroTimer />
+            <PomodoroTimer />
           </div>
         </FeatureGate>
       )}
 
+      {/* Weekly Question Target Modal */}
+      {showQuestionTargetModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-xl">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">
+              Haftalık soru hedefi
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Bu hafta çözmek istediğin toplam soru sayısını gir. Hedefin yeni hafta başladığında sıfırlanır.
+            </p>
+            <form onSubmit={handleQuestionTargetSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Haftalık hedef (soru)
+                </label>
+                <input
+                  type="number"
+                  min={50}
+                  max={5000}
+                  value={questionTargetInput}
+                  onChange={(e) => setQuestionTargetInput(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring focus:ring-blue-200"
+                  placeholder="Örn: 500"
+                  required
+                />
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={() => setShowQuestionTargetModal(false)}
+                  className="w-full rounded-lg bg-gray-100 py-2 text-gray-700 hover:bg-gray-200 sm:flex-1"
+                >
+                  İptal
+                </button>
+                <button
+                  type="submit"
+                  disabled={questionPlanLoading}
+                  className="w-full rounded-lg bg-blue-600 py-2 text-white font-semibold hover:bg-blue-700 disabled:opacity-60 sm:flex-1"
+                >
+                  {questionPlanLoading ? 'Kaydediliyor...' : 'Kaydet'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Weekly Question Progress Modal */}
+      {showQuestionProgressModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6 shadow-xl">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">
+              Çözülen soru ekle
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Bugün çözdüğün soru sayısını gir. İlerleme otomatik olarak güncellenecek.
+            </p>
+            <form onSubmit={handleQuestionProgressSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Çözdüğün soru sayısı
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={questionPlan?.question_target || 10000}
+                  value={questionProgressInput}
+                  onChange={(e) => setQuestionProgressInput(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring focus:ring-blue-200"
+                  placeholder="Örn: 100"
+                  required
+                />
+                {questionPlan && (
+                  <p className="mt-2 text-xs text-gray-500">
+                    Toplam hedef: {questionPlan.question_target} • Kalan: {Math.max((questionPlan.question_target || 0) - (questionPlan.questions_completed || 0), 0)}
+                  </p>
+                )}
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={() => setShowQuestionProgressModal(false)}
+                  className="w-full rounded-lg bg-gray-100 py-2 text-gray-700 hover:bg-gray-200 sm:flex-1"
+                >
+                  İptal
+                </button>
+                <button
+                  type="submit"
+                  disabled={questionProgressLoading}
+                  className="w-full rounded-lg bg-blue-600 py-2 text-white font-semibold hover:bg-blue-700 disabled:opacity-60 sm:flex-1"
+                >
+                  {questionProgressLoading ? 'Kaydediliyor...' : 'Ekle'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {activeTab === 'formulas' && (
-      <FeatureGate 
-        feature="formula_cards"
-        fallback={
-          <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl p-8 text-center border-2 border-purple-200">
-            <BookmarkCheck className="h-16 w-16 text-purple-400 mx-auto mb-4" />
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">
-              Formül Kartları
-            </h3>
-            <p className="text-gray-600 mb-6">
-              Sınavda en çok kullanılan formülleri flashcard tarzında öğren! Bu özellik Profesyonel pakette kullanılabilir.
-            </p>
-            <div className="mb-6">
-              <div className="flex items-center justify-center gap-8 text-sm text-gray-700">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                  <span>500+ Formül</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                  <span>Flashcard Sistemi</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-purple-500"></div>
-                  <span>LaTeX Render</span>
+        <FeatureGate 
+          feature="formula_cards"
+          fallback={
+            <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl p-8 text-center border-2 border-purple-200">
+              <BookmarkCheck className="h-16 w-16 text-purple-400 mx-auto mb-4" />
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                Formül Kartları
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Sınavda en çok kullanılan formülleri flashcard tarzında öğren! Bu özellik Profesyonel pakette kullanılabilir.
+              </p>
+              <div className="mb-6">
+                <div className="flex items-center justify-center gap-8 text-sm text-gray-700">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                    <span>500+ Formül</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                    <span>Flashcard Sistemi</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                    <span>LaTeX Render</span>
+                  </div>
                 </div>
               </div>
+              <button
+                onClick={() => setActiveTab('subscription')}
+                className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-medium"
+              >
+                Profesyonel Pakete Yükselt
+              </button>
             </div>
-            <button
-              onClick={() => setActiveTab('subscription')}
-              className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-medium"
-            >
-              Profesyonel Pakete Yükselt
-            </button>
-          </div>
-        }
-      >
-        <FormulaCardsSection />
-      </FeatureGate>
-    )}
+          }
+        >
+          <FormulaCardsSection />
+        </FeatureGate>
+      )}
 
-    {activeTab === 'maps' && (
-      <FeatureGate 
-        feature="historical_maps"
-        fallback={
-          <div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-xl p-8 text-center border-2 border-green-200">
-            <MapIcon className="h-16 w-16 text-green-400 mx-auto mb-4" />
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">
-              Tarih & Coğrafya Haritaları
-            </h3>
-            <p className="text-gray-600 mb-6">
-              Türkiye'deki önemli tarihi olayları ve coğrafi özellikleri interaktif harita üzerinde keşfet! Bu özellik Gelişmiş ve Profesyonel paketlerde kullanılabilir.
-            </p>
-            <div className="mb-6">
-              <div className="flex items-center justify-center gap-8 text-sm text-gray-700">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                  <span>50+ Tarihi Olay</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                  <span>Interaktif Harita</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-purple-500"></div>
-                  <span>Zaman Çizelgesi</span>
+      {activeTab === 'maps' && (
+        <FeatureGate 
+          feature="historical_maps"
+          fallback={
+            <div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-xl p-8 text-center border-2 border-green-200">
+              <MapIcon className="h-16 w-16 text-green-400 mx-auto mb-4" />
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                Tarih & Coğrafya Haritaları
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Türkiye'deki önemli tarihi olayları ve coğrafi özellikleri interaktif harita üzerinde keşfet! Bu özellik Gelişmiş ve Profesyonel paketlerde kullanılabilir.
+              </p>
+              <div className="mb-6">
+                <div className="flex items-center justify-center gap-8 text-sm text-gray-700">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                    <span>50+ Tarihi Olay</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                    <span>Interaktif Harita</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                    <span>Zaman Çizelgesi</span>
+                  </div>
                 </div>
               </div>
+              <button
+                onClick={() => setActiveTab('subscription')}
+                className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium"
+              >
+                Paketi Yükselt
+              </button>
             </div>
-            <button
-              onClick={() => setActiveTab('subscription')}
-              className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium"
-            >
-              Paketi Yükselt
-            </button>
-          </div>
-        }
-      >
-        <HistoricalMapsSection />
-      </FeatureGate>
-    )}
+          }
+        >
+          <HistoricalMapsSection />
+        </FeatureGate>
+      )}
 
-    {activeTab === 'notes' && (
-      <FeatureGate 
-        feature="student_notes"
-        fallback={
-          <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-8 text-center border-2 border-purple-200">
-            <StickyNote className="h-16 w-16 text-purple-400 mx-auto mb-4" />
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">
-              Not Defteri
-            </h3>
-            <p className="text-gray-600 mb-6">
-              Markdown destekli not editörü ile notlarını organize et! Bu özellik Profesyonel pakette kullanılabilir.
-            </p>
-            <div className="mb-6">
-              <div className="flex items-center justify-center gap-8 text-sm text-gray-700">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-purple-500"></div>
-                  <span>Markdown Editor</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-pink-500"></div>
-                  <span>Etiketleme</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                  <span>Renk Kodlama</span>
+      {activeTab === 'notes' && (
+        <FeatureGate 
+          feature="student_notes"
+          fallback={
+            <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-8 text-center border-2 border-purple-200">
+              <StickyNote className="h-16 w-16 text-purple-400 mx-auto mb-4" />
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                Not Defteri
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Markdown destekli not editörü ile notlarını organize et! Bu özellik Profesyonel pakette kullanılabilir.
+              </p>
+              <div className="mb-6">
+                <div className="flex items-center justify-center gap-8 text-sm text-gray-700">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                    <span>Markdown Editor</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-pink-500"></div>
+                    <span>Etiketleme</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                    <span>Renk Kodlama</span>
+                  </div>
                 </div>
               </div>
+              <button
+                onClick={() => setActiveTab('subscription')}
+                className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-medium"
+              >
+                Profesyonel Pakete Yükselt
+              </button>
             </div>
-            <button
-              onClick={() => setActiveTab('subscription')}
-              className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-medium"
-            >
-              Profesyonel Pakete Yükselt
-            </button>
-          </div>
-        }
-      >
-        <NotesSection />
-      </FeatureGate>
-    )}
+          }
+        >
+          <NotesSection />
+        </FeatureGate>
+      )}
+
       {/* Study Session Form */}
       {showStudyForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -1575,6 +1886,7 @@ const chartData = filteredExamResults
           </div>
         </div>
       )}
+
       {/* Click outside to close menus */}
       {(showExamMenu || showHomeworkMenu) && (
         <div 

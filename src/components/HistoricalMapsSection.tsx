@@ -6,6 +6,233 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useStudentData } from '../hooks/useStudentData';
 
+const TURKEY_CORE_GEO_EVENTS = [
+  {
+    id: 'geo-mountain-agri',
+    event_type: 'cografya',
+    category: 'Dağlar',
+    title: 'Ağrı Dağı (5105 m)',
+    description: 'Türkiye’nin en yüksek noktası olan Ağrı Dağı, Iğdır ve Ağrı illeri sınırında yer alır. Kış turizmi ve dağcılık faaliyetleri ile bilinir.',
+    date_start: '',
+    latitude: 39.702,
+    longitude: 44.298,
+    importance_level: 5,
+    exam_frequency: 85,
+    tags: ['dağ', 'jeomorfoloji', 'turizm'],
+    color: '#DC2626',
+    icon: 'mountain'
+  },
+  {
+    id: 'geo-mountain-kackar',
+    event_type: 'cografya',
+    category: 'Dağlar',
+    title: 'Kaçkar Dağları',
+    description: 'Doğu Karadeniz’de bulunan Kaçkar Dağları, Türkiye’nin en fazla yağış alan bölgesinde yer alır; orman örtüsü ve yaylacılık faaliyetleri ile öne çıkar.',
+    date_start: '',
+    latitude: 40.946,
+    longitude: 40.889,
+    importance_level: 4,
+    exam_frequency: 70,
+    tags: ['dağ', 'iklim', 'yaylacılık'],
+    color: '#EF4444',
+    icon: 'mountain'
+  },
+  {
+    id: 'geo-mountain-toros',
+    event_type: 'cografya',
+    category: 'Dağlar',
+    title: 'Toros Dağları',
+    description: 'Akdeniz kıyısı boyunca uzanan Toroslar, karstik şekillerin (dikit, sarkıt, dolin) yoğun görüldüğü ve yazın yaylacılığın yaygın olduğu dağ sırasıdır.',
+    date_start: '',
+    latitude: 37.401,
+    longitude: 34.043,
+    importance_level: 4,
+    exam_frequency: 80,
+    tags: ['dağ', 'karst', 'yaylacılık'],
+    color: '#F97316',
+    icon: 'mountain'
+  },
+  {
+    id: 'geo-mountain-uludag',
+    event_type: 'cografya',
+    category: 'Dağlar',
+    title: 'Uludağ Milli Parkı',
+    description: 'Marmara Bölgesi’nde bulunan Uludağ, kış turizmi, kayak tesisleri ve endemik bitki çeşitliliği açısından Türkiye’nin önemli bir merkezidir.',
+    date_start: '',
+    latitude: 40.099,
+    longitude: 29.218,
+    importance_level: 3,
+    exam_frequency: 60,
+    tags: ['turizm', 'kış', 'ekoloji'],
+    color: '#FB923C',
+    icon: 'mountain'
+  },
+  {
+    id: 'geo-agri-hazelnut',
+    event_type: 'cografya',
+    category: 'Tarım Ürünleri',
+    title: 'Fındık: Ordu-Giresun-Rize',
+    description: 'Dünya fındık üretiminin %70’inden fazlası Doğu Karadeniz’de gerçekleşir. Nemli iklim ve engebeli alanlar fındık tarımına uygundur.',
+    date_start: '',
+    latitude: 40.918,
+    longitude: 38.389,
+    importance_level: 5,
+    exam_frequency: 95,
+    tags: ['tarım', 'ihracat', 'Karadeniz'],
+    color: '#22C55E',
+    icon: 'wheat'
+  },
+  {
+    id: 'geo-agri-tea',
+    event_type: 'cografya',
+    category: 'Tarım Ürünleri',
+    title: 'Çay: Rize ve Çevresi',
+    description: 'Türkiye’de çay tarımı sadece Doğu Karadeniz’in kıyı kesimlerinde yapılır; bol yağış ve ılıman iklim bu tarımı mümkün kılar.',
+    date_start: '',
+    latitude: 41.025,
+    longitude: 40.517,
+    importance_level: 5,
+    exam_frequency: 90,
+    tags: ['tarım', 'iklim', 'monokültür'],
+    color: '#16A34A',
+    icon: 'wheat'
+  },
+  {
+    id: 'geo-agri-citrus',
+    event_type: 'cografya',
+    category: 'Tarım Ürünleri',
+    title: 'Turunçgiller: Çukurova ve Antalya',
+    description: 'Akdeniz ikliminin hakim olduğu Çukurova ve Antalya ovelerinde portakal, mandalina ve limon üretimi Türkiye’nin en yüksek düzeydedir.',
+    date_start: '',
+    latitude: 36.851,
+    longitude: 34.646,
+    importance_level: 4,
+    exam_frequency: 75,
+    tags: ['tarım', 'iklim', 'Akdeniz'],
+    color: '#F97316',
+    icon: 'sun'
+  },
+  {
+    id: 'geo-agri-cotton',
+    event_type: 'cografya',
+    category: 'Tarım Ürünleri',
+    title: 'Pamuk: Şanlıurfa Ovası',
+    description: 'GAP sulama projeleri sayesinde Şanlıurfa ovası pamuk üretiminde Türkiye’nin lideridir; tekstil sanayisi için kritik öneme sahiptir.',
+    date_start: '',
+    latitude: 37.167,
+    longitude: 38.795,
+    importance_level: 4,
+    exam_frequency: 85,
+    tags: ['tarım', 'GAP', 'sanayi'],
+    color: '#F59E0B',
+    icon: 'wheat'
+  },
+  {
+    id: 'geo-agri-wheat',
+    event_type: 'cografya',
+    category: 'Tarım Ürünleri',
+    title: 'Buğday: Konya Ovası',
+    description: 'Konya Ovası geniş düzlükleri ve kurak-yarı kurak iklimiyle buğday üretiminde Türkiye’nin tahıl ambarıdır.',
+    date_start: '',
+    latitude: 37.874,
+    longitude: 32.493,
+    importance_level: 4,
+    exam_frequency: 80,
+    tags: ['tarım', 'hububat', 'ova'],
+    color: '#FACC15',
+    icon: 'wheat'
+  },
+  {
+    id: 'geo-agri-olive',
+    event_type: 'cografya',
+    category: 'Tarım Ürünleri',
+    title: 'Zeytin: Ayvalık - Aydın - Mersin',
+    description: 'Ege ve Akdeniz kıyılarındaki zeytinlikler, Türkiye zeytinyağı üretiminin büyük kısmını oluşturur. Ayvalık, Aydın ve Mersin başlıca merkezlerdir.',
+    date_start: '',
+    latitude: 39.313,
+    longitude: 26.693,
+    importance_level: 3,
+    exam_frequency: 70,
+    tags: ['tarım', 'Ege', 'Akdeniz'],
+    color: '#65A30D',
+    icon: 'wheat'
+  },
+  {
+    id: 'geo-natural-oil',
+    event_type: 'cografya',
+    category: 'Enerji Kaynakları',
+    title: 'Batman Petrol Sahası',
+    description: 'Türkiye’de petrol üretiminin tarihi merkezi olan Batman, Raman ve Garzan sahaları ile enerji coğrafyasında kritik önem taşır.',
+    date_start: '',
+    latitude: 37.888,
+    longitude: 41.132,
+    importance_level: 4,
+    exam_frequency: 80,
+    tags: ['enerji', 'petrol', 'sanayi'],
+    color: '#27272A',
+    icon: 'oil'
+  },
+  {
+    id: 'geo-water-goksu',
+    event_type: 'cografya',
+    category: 'Akarsular',
+    title: 'Göksu Deltası',
+    description: 'Göksu nehri deltası, tarım (pirinç, sebze) ve kuş göç yolları açısından önemlidir; delta toprakları verimlidir.',
+    date_start: '',
+    latitude: 36.293,
+    longitude: 33.995,
+    importance_level: 3,
+    exam_frequency: 65,
+    tags: ['delta', 'tarım', 'ekosistem'],
+    color: '#0EA5E9',
+    icon: 'waves'
+  },
+  {
+    id: 'geo-water-cildir',
+    event_type: 'cografya',
+    category: 'Göller',
+    title: 'Çıldır Gölü',
+    description: 'Kışın tamamen donan Çıldır Gölü, Doğu Anadolu’nun en büyük ikinci gölüdür. Kış turizmi ve balıkçılık ile bilinir.',
+    date_start: '',
+    latitude: 41.083,
+    longitude: 43.238,
+    importance_level: 3,
+    exam_frequency: 60,
+    tags: ['göl', 'kış', 'balıkçılık'],
+    color: '#38BDF8',
+    icon: 'droplet'
+  },
+  {
+    id: 'geo-agri-grape',
+    event_type: 'cografya',
+    category: 'Tarım Ürünleri',
+    title: 'Üzüm: Manisa - Denizli',
+    description: 'Ege’nin iç kesimleri, çekirdeksiz Sultaniye üzümü ile şarap ve kuru üzüm üretiminde öne çıkar.',
+    date_start: '',
+    latitude: 38.619,
+    longitude: 27.428,
+    importance_level: 3,
+    exam_frequency: 65,
+    tags: ['tarım', 'ihracat', 'Ege'],
+    color: '#A855F7',
+    icon: 'grapes'
+  },
+  {
+    id: 'geo-agri-apple',
+    event_type: 'cografya',
+    category: 'Tarım Ürünleri',
+    title: 'Elma: Isparta - Eğirdir',
+    description: 'Türkiye elma üretiminin önemli bir kısmı Isparta ve Eğirdir çevresinde gerçekleşir; soğuk hava depoları ile desteklenir.',
+    date_start: '',
+    latitude: 37.948,
+    longitude: 30.823,
+    importance_level: 3,
+    exam_frequency: 60,
+    tags: ['tarım', 'meyve', 'Göller Yöresi'],
+    color: '#F43F5E',
+    icon: 'sun'
+  }
+] as const;
 
 export default function HistoricalMapsSection() {
   const [events, setEvents] = useState<any[]>([]);
@@ -42,7 +269,17 @@ export default function HistoricalMapsSection() {
       const { data, error } = await query;
       
       if (error) throw error;
-      setEvents(data || []);
+
+      const dbEvents = data || [];
+
+      // Prevent duplicates based on title
+      const existingTitles = new Set(dbEvents.map((event) => event.title));
+      const mergedEvents = [
+        ...dbEvents,
+        ...TURKEY_CORE_GEO_EVENTS.filter((event) => !existingTitles.has(event.title))
+      ];
+
+      setEvents(mergedEvents);
     } catch (error) {
       console.error('Error loading events:', error);
     } finally {

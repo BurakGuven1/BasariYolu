@@ -16,6 +16,22 @@ export interface StudyScheduleItem {
   created_at?: string;
 }
 
+export type ScheduleGoalStatus = 'achieved' | 'partial' | 'not_met';
+
+export interface StudyScheduleFeedback {
+  id?: string;
+  schedule_id: string;
+  schedule_item_id: string;
+  student_id: string;
+  goal_status: ScheduleGoalStatus;
+  time_spent_minutes?: number | null;
+  difficulty_level?: number | null;
+  resources_used?: string | null;
+  reflection?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface StudySchedule {
   id?: string;
   student_id: string;
@@ -172,7 +188,7 @@ export const createBulkStudySchedule = async (
       data: {
         success: true,
         count: classStudents.length,
-        message: `${classStudents.length} ��renci i�in program olu�turuldu`
+        message: `${classStudents.length} Öğrenci için program oluşturuldu`
       },
       error: null
     };
@@ -475,5 +491,96 @@ export const checkStudentType = async (studentId: string): Promise<{
   }
 };
 
+export const getScheduleFeedbackForItems = async (
+  itemIds: string[],
+  studentId: string
+): Promise<{ data: StudyScheduleFeedback[] | null; error: any }> => {
+  if (!itemIds || itemIds.length === 0) {
+    return { data: [], error: null };
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('study_schedule_feedback')
+      .select('*')
+      .in('schedule_item_id', itemIds)
+      .eq('student_id', studentId);
+
+    if (error) throw error;
+
+    return { data: (data as StudyScheduleFeedback[]) || [], error: null };
+  } catch (error: any) {
+    console.error('Error fetching feedback for items:', error);
+    return { data: null, error };
+  }
+};
+
+export const submitScheduleItemFeedback = async (
+  feedback: Omit<StudyScheduleFeedback, 'id' | 'created_at' | 'updated_at'>
+): Promise<{ data: StudyScheduleFeedback | null; error: any }> => {
+  try {
+    const payload = {
+      ...feedback,
+      resources_used: feedback.resources_used || null,
+      reflection: feedback.reflection || null,
+      time_spent_minutes:
+        typeof feedback.time_spent_minutes === 'number' ? feedback.time_spent_minutes : null,
+      difficulty_level:
+        typeof feedback.difficulty_level === 'number' ? feedback.difficulty_level : null,
+      updated_at: new Date().toISOString()
+    };
+
+    const { data, error } = await supabase
+      .from('study_schedule_feedback')
+      .upsert(payload, {
+        onConflict: 'schedule_item_id,student_id',
+        ignoreDuplicates: false
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return { data: data as StudyScheduleFeedback, error: null };
+  } catch (error: any) {
+    console.error('Error submitting schedule item feedback:', error);
+    return { data: null, error };
+  }
+};
+
+export const getScheduleFeedbackForSchedule = async (
+  scheduleId: string
+): Promise<{ data: any[] | null; error: any }> => {
+  try {
+    const { data, error } = await supabase
+      .from('study_schedule_feedback')
+      .select(`
+        *,
+        schedule_item:study_schedule_items(
+          id,
+          day_of_week,
+          subject,
+          goal,
+          start_time,
+          end_time
+        ),
+        student:students(
+          id,
+          profile:profiles!students_profile_id_fkey(
+            full_name
+          )
+        )
+      `)
+      .eq('schedule_id', scheduleId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    return { data: data || [], error: null };
+  } catch (error: any) {
+    console.error('Error fetching schedule feedback:', error);
+    return { data: null, error };
+  }
+};
 
 

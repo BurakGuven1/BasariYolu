@@ -336,6 +336,45 @@ export const updateWeeklyStudyGoal = async (goalId: string, updates: any) => {
   return { data, error };
 };
 
+// Weekly question tracking
+export const getWeeklyQuestionPlan = async (studentId: string, weekStartDate: string) => {
+  const { data, error } = await supabase
+    .from('weekly_question_plans')
+    .select('*')
+    .eq('student_id', studentId)
+    .eq('week_start_date', weekStartDate)
+    .maybeSingle();
+  return { data, error };
+};
+
+export const upsertWeeklyQuestionPlan = async (planData: {
+  student_id: string;
+  week_start_date: string;
+  week_end_date: string;
+  question_target: number;
+  questions_completed?: number;
+}) => {
+  const { data, error } = await supabase
+    .from('weekly_question_plans')
+    .upsert(planData, {
+      onConflict: 'student_id,week_start_date',
+      ignoreDuplicates: false
+    })
+    .select()
+    .single();
+  return { data, error };
+};
+
+export const updateWeeklyQuestionPlan = async (planId: string, updates: any) => {
+  const { data, error } = await supabase
+    .from('weekly_question_plans')
+    .update(updates)
+    .eq('id', planId)
+    .select()
+    .single();
+  return { data, error };
+};
+
 // Get study sessions for current week
 export const getWeeklyStudySessions = async (studentId: string, startDate: string, endDate: string) => {
   const { data, error } = await supabase

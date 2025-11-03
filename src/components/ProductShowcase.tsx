@@ -66,13 +66,13 @@ export default function ProductShowcase() {
       },
       {
         icon: BookOpen,
-        title: 'Ödev & Duyuru Sistemi',
+        title: 'Ödev & Duyuru & Veli Sistemi',
         description: 'Ödev atın, duyuru yapın, sınav ekleyin. Tüm öğrenciler anında görsün.',
         color: 'from-green-500 to-emerald-500'
       },
       {
         icon: BarChart3,
-        title: 'Toplu Analiz',
+        title: 'Sınıfa veya Öğrenciye Özel Çalışma Programı',
         description: 'Tüm sınıfın performansını tek bakışta görün. En zayıf konu hangisi?',
         color: 'from-purple-500 to-pink-500'
       },

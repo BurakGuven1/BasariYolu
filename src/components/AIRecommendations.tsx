@@ -184,7 +184,7 @@ export default function AIRecommendations({ studentId }: AIRecommendationsProps)
                 <div className="text-2xl font-bold text-purple-600">
                   {rec.study_hours_needed}h
                 </div>
-                <div className="text-xs text-purple-700">Tahmini Süre</div>
+                <div className="text-xs text-purple-700">Tahmini Süre(Aylık)</div>
               </div>
             </div>
 
