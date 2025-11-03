@@ -227,13 +227,14 @@ export default function TeacherSection() {
           </div>
         </div>
       </div>
-
       <TeacherRegistration
         isOpen={showRegistration}
         onClose={() => setShowRegistration(false)}
-        onSuccess={() => {
+        onSuccess={(_teacher, requiresEmailConfirmation) => {
           setShowRegistration(false);
-          alert('Kayıt başarılı! Artık giriş yapabilirsiniz.');
+          if (requiresEmailConfirmation) {
+            alert('Kaydiniz olusturuldu. Lutfen e-posta dogrulamasini tamamladiktan sonra giris yapin.');
+          }
         }}
       />
 

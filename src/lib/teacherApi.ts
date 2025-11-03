@@ -13,17 +13,6 @@ const hashPassword = (password: string): Promise<string> =>
     });
   });
 
-const verifyPassword = (password: string, hash: string): Promise<boolean> =>
-  new Promise((resolve, reject) => {
-    bcrypt.compare(password, hash, (err, same) => {
-      if (err) {
-        reject(err);
-        return;
-      }
-      resolve(same);
-    });
-  });
-
 // Teacher Authentication
 export const registerTeacher = async (teacherData: {
   email: string;
@@ -46,18 +35,19 @@ export const registerTeacher = async (teacherData: {
 
   // Validate phone number (10 digits)
   const phoneRegex = /^\d{10}$/;
-  if (!phoneRegex.test(teacherData.phone.replace(/\D/g, ''))) {
+  const normalizedPhone = teacherData.phone.replace(/\D/g, '');
+  if (!phoneRegex.test(normalizedPhone)) {
     throw new Error('Telefon numarası 10 haneli olmalıdır');
   }
 
   // Check if email already exists
   const { data: existingTeacher } = await supabase
     .from('teachers')
-    .select('id')
+    .select('id, user_id')
     .eq('email', teacherData.email)
     .maybeSingle();
 
-  if (existingTeacher) {
+  if (existingTeacher?.user_id) {
     throw new Error('Bu email adresi zaten kullanılıyor');
   }
 
@@ -65,85 +55,142 @@ export const registerTeacher = async (teacherData: {
   const { data: existingPhone } = await supabase
     .from('teachers')
     .select('id')
-    .eq('phone', teacherData.phone)
+    .eq('phone', normalizedPhone)
     .maybeSingle();
 
   if (existingPhone) {
     throw new Error('Bu telefon numarası zaten kullanılıyor');
   }
 
+  // Create Supabase auth user
+  const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+    email: teacherData.email,
+    password: teacherData.password,
+    options: {
+      data: {
+        full_name: teacherData.full_name,
+        user_type: 'teacher'
+      }
+    }
+  });
+
+  if (signUpError) {
+    throw new Error(signUpError.message || 'Supabase auth hesabı oluşturulamadı');
+  }
+
+  const authUserId = signUpData.user?.id;
+  if (!authUserId) {
+    throw new Error('Supabase auth kullanıcısı oluşturulamadı');
+  }
+
   const hashedPassword = await hashPassword(teacherData.password);
 
-  // Create teacher record
-  const { data, error } = await supabase
-    .from('teachers')
-    .insert([{
-      email: teacherData.email,
-      password_hash: hashedPassword,
-      full_name: teacherData.full_name,
-      phone: teacherData.phone,
-      school_name: teacherData.school_name,
-      email_confirmed: true // Simplified - no email verification needed
-    }])
-    .select()
-    .single();
+  let teacherRecord;
 
-  if (error) throw error;
+  if (existingTeacher) {
+    const { data, error } = await supabase
+      .from('teachers')
+      .update({
+        password_hash: hashedPassword,
+        full_name: teacherData.full_name,
+        phone: normalizedPhone,
+        school_name: teacherData.school_name,
+        user_id: authUserId,
+        email_confirmed: !!signUpData.session
+      })
+      .eq('id', existingTeacher.id)
+      .select()
+      .single();
 
-  if (!data) {
+    if (error) throw error;
+    teacherRecord = data;
+  } else {
+    const { data, error } = await supabase
+      .from('teachers')
+      .insert([{
+        id: authUserId,
+        user_id: authUserId,
+        email: teacherData.email,
+        password_hash: hashedPassword,
+        full_name: teacherData.full_name,
+        phone: normalizedPhone,
+        school_name: teacherData.school_name,
+        email_confirmed: !!signUpData.session
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    teacherRecord = data;
+  }
+
+  if (!teacherRecord) {
     return { data: null, error: null };
   }
 
-  const { password_hash: _removed, ...safeData } = data as Record<string, unknown>;
+  const { password_hash: _removed, ...safeData } = teacherRecord as Record<string, unknown>;
 
-  return { data: safeData, error: null };
+  return {
+    data: safeData,
+    error: null,
+    requiresEmailConfirmation: !signUpData.session
+  };
 };
 
 export const loginTeacher = async (email: string, password: string) => {
-  const { data, error } = await supabase
+  const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+    email,
+    password
+  });
+
+  if (authError || !authData.user) {
+    throw new Error(authError?.message || 'Email veya sifre hatali');
+  }
+
+  const authUser = authData.user;
+
+  let { data: teacher, error: teacherError } = await supabase
     .from('teachers')
     .select('*')
-    .eq('email', email)
+    .eq('user_id', authUser.id)
     .maybeSingle();
 
-  if (error || !data || !data.password_hash) {
-    throw new Error('Email veya sifre hatali');
+  if (teacherError) {
+    throw teacherError;
   }
 
-  const passwordHash = data.password_hash as string;
-  const isBcryptHash = passwordHash.startsWith('$2');
+  if (!teacher && authUser.email) {
+    const { data: fallbackTeacher, error: fallbackError } = await supabase
+      .from('teachers')
+      .select('*')
+      .eq('email', authUser.email)
+      .maybeSingle();
 
-  let passwordMatches = false;
+    if (fallbackError) {
+      throw fallbackError;
+    }
 
-  if (isBcryptHash) {
-    passwordMatches = await verifyPassword(password, passwordHash);
-  } else {
-    passwordMatches = passwordHash === password;
-  }
-
-  if (!passwordMatches) {
-    throw new Error('Email veya sifre hatali');
-  }
-
-  if (!isBcryptHash) {
-    try {
-      const newHash = await hashPassword(password);
-      const { error: updateError } = await supabase
+    if (fallbackTeacher) {
+      const { data: updatedTeacher, error: updateError } = await supabase
         .from('teachers')
-        .update({ password_hash: newHash })
-        .eq('id', data.id);
+        .update({ user_id: authUser.id })
+        .eq('id', fallbackTeacher.id)
+        .select()
+        .single();
 
-      if (!updateError) {
-        data.password_hash = newHash;
-      } else {
-        console.warn('Legacy teacher password upgrade failed:', updateError);
+      if (updateError) {
+        throw updateError;
       }
-    } catch (hashError) {
-      console.warn('Legacy teacher password hashing failed:', hashError);
+
+      teacher = updatedTeacher;
     }
   }
 
-  const { password_hash: _removed, ...safeData } = data as Record<string, unknown>;
+  if (!teacher) {
+    throw new Error('Öğretmen kaydı bulunamadı');
+  }
+
+  const { password_hash: _removed, ...safeData } = teacher as Record<string, unknown>;
 
   return { data: safeData, error: null };
 };

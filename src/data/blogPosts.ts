@@ -65,7 +65,7 @@ Pomodoro tekniği basit ama son derece etkili. Özellikle YKS ve LGS gibi uzun s
 
 **Hemen dene!** İlk 4 pomodoro'nu tamamla ve farkı kendin gör.
 `,
-    author: 'Dr. Ayşe Yılmaz',
+    author: 'Dr. Vedat Kol',
     authorRole: 'Eğitim Danışmanı',
     category: 'calisma-teknikleri',
     tags: ['pomodoro', 'verimlilik', 'zaman yönetimi', 'çalışma teknikleri'],

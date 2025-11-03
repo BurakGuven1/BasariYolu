@@ -82,7 +82,7 @@ export const getStudentPoints = async (studentId: string): Promise<StudentPoints
 };
 
 /**
- * Puan ekle
+ * Puan ekle - AUTH USER'IN STUDENT ID'SINI OTOMATIK BULUR
  */
 export const addPoints = async (
   studentId: string,
@@ -91,22 +91,67 @@ export const addPoints = async (
   challengeId?: string
 ): Promise<{ success: boolean; error?: string }> => {
   try {
+    // Auth user bilgisi
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      console.error('❌ No authenticated user');
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    console.log('🔍 addPoints called:', {
+      inputStudentId: studentId,
+      authUid: user.id,
+      match: studentId === user.id
+    });
+
+    // Eğer studentId = auth.uid() ise direkt kullan
+    // Değilse, auth user'ın student kaydını bul
+    let actualStudentId = studentId;
+
+    if (studentId !== user.id) {
+      console.log('⚠️ studentId ≠ auth.uid(), finding correct student_id...');
+      
+      // Auth user'ın student kaydını bul
+      const { data: studentData, error: studentError } = await supabase
+        .from('students')
+        .select('id')
+        .eq('profile_id', user.id)
+        .maybeSingle();
+
+      if (studentError) {
+        console.error('❌ Error finding student:', studentError);
+        return { success: false, error: 'Student not found' };
+      }
+
+      if (!studentData) {
+        console.error('❌ No student record for auth user');
+        return { success: false, error: 'Student record not found' };
+      }
+
+      actualStudentId = studentData.id;
+      console.log('✅ Found correct student_id:', actualStudentId);
+    }
+
+    // Puan ekle
     const { error } = await supabase
       .from('points_transactions')
       .insert({
-        student_id: studentId,
+        student_id: actualStudentId,
         points,
         reason,
         challenge_id: challengeId
       });
 
     if (error) {
-      console.error('Error adding points:', error);
+      console.error('❌ Error adding points:', error);
       return { success: false, error: error.message };
     }
 
+    console.log('✅ Points added successfully!');
     return { success: true };
   } catch (error: any) {
+    console.error('💥 Exception in addPoints:', error);
     return { success: false, error: error.message };
   }
 };
@@ -215,6 +260,37 @@ export const completeChallenge = async (
 };
 
 /**
+ * Haftalık çalışma hedefi geri bildirimi için puan ver
+ */
+export const rewardScheduleGoal = async (
+  studentId: string,
+  status: 'achieved' | 'partial' | 'not_met'
+): Promise<{ success: boolean; pointsEarned: number; error?: string }> => {
+  let pointsToAward = 0;
+  let reason = '';
+
+  if (status === 'achieved') {
+    pointsToAward = 15;
+    reason = 'Haftalık hedef tamamlandı';
+  } else if (status === 'partial') {
+    pointsToAward = 5;
+    reason = 'Haftalık hedef kısmen tamamlandı';
+  }
+
+  if (pointsToAward === 0) {
+    return { success: true, pointsEarned: 0 };
+  }
+
+  const result = await addPoints(studentId, pointsToAward, reason, 'schedule_feedback');
+
+  if (!result.success) {
+    return { success: false, pointsEarned: 0, error: result.error };
+  }
+
+  return { success: true, pointsEarned: pointsToAward };
+};
+
+/**
  * Puan geçmişini getir
  */
 export const getPointsHistory = async (studentId: string, limit = 10) => {
@@ -247,4 +323,3 @@ export const getPointsToNextLevel = (currentPoints: number, currentLevel: number
   const nextLevelPoints = getPointsForLevel(currentLevel + 1);
   return Math.max(0, nextLevelPoints - currentPoints);
 };
-

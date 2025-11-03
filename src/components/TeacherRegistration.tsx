@@ -7,7 +7,7 @@ import TeacherPaymentPage from './TeacherPaymentPage';
 interface TeacherRegistrationProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess?: (teacher: any, requiresEmailConfirmation: boolean) => void;
 }
 
 export default function TeacherRegistration({ isOpen, onClose, onSuccess }: TeacherRegistrationProps) {
@@ -97,7 +97,7 @@ export default function TeacherRegistration({ isOpen, onClose, onSuccess }: Teac
     setLoading(true);
     try {
       // Create teacher account
-      await registerTeacher({
+      const { data: teacher, requiresEmailConfirmation } = await registerTeacher({
         email: formData.email,
         password: formData.password,
         full_name: formData.full_name,
@@ -105,10 +105,30 @@ export default function TeacherRegistration({ isOpen, onClose, onSuccess }: Teac
         school_name: formData.school_name || undefined
       });
 
-      alert('Öğretmen kaydı ve ödeme başarılı! Artık giriş yapabilirsiniz.');
-      onSuccess();
-      onClose();
-      
+      if (!teacher) {
+        throw new Error('Öğretmen kaydı tamamlanamadı. Lütfen tekrar deneyin.');
+      }
+
+      if (requiresEmailConfirmation) {
+        alert('Kaydiniz olusturuldu. Lutfen e-posta adresinizi dogruladiktan sonra giris yapin.');
+        onSuccess?.(teacher, true);
+        onClose();
+      } else {
+        const teacherSession = {
+          id: teacher.id,
+          email: teacher.email,
+          full_name: teacher.full_name,
+          school_name: teacher.school_name,
+          loginTime: new Date().toISOString()
+        };
+
+        localStorage.setItem('teacherSession', JSON.stringify(teacherSession));
+        alert('Ogretmen kaydiniz tamamlandi! Panelinize yonlendiriliyorsunuz.');
+        onSuccess?.(teacherSession, false);
+        onClose();
+        window.location.reload();
+      }
+
       // Reset form
       setFormData({
         email: '',

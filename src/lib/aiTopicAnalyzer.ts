@@ -162,12 +162,6 @@ const getTopicResources = (subject: string, topic: string) => {
       url: `https://www.youtube.com/results?search_query=${encodeURIComponent(subject + ' ' + topic + ' konu anlatımı')}`
     },
     {
-      type: 'practice',
-      title: `${topic} - Soru Bankası`,
-      description: 'Pratik soru çözümü',
-      platform: 'Recommended'
-    },
-    {
       type: 'notes',
       title: `${topic} - Konu Özeti`,
       description: 'PDF konu özeti',
