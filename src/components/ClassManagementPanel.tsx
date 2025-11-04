@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
-import { Plus, FileText, BookOpen, Bell, Trophy, ArrowLeft, CreditCard as Edit, Trash2, X, BarChart3, Save, Calendar, User, MessageSquare } from 'lucide-react';
+import { Plus, FileText, BookOpen, Bell, Trophy, ArrowLeft, CreditCard as Edit, Trash2, X, BarChart3, Save, Calendar, User, MessageSquare, Download } from 'lucide-react';
 import { 
   addClassAssignment, 
   addClassAnnouncement, 
@@ -17,6 +17,7 @@ import {
 } from '../lib/teacherApi';
 import AdvancedStudyScheduleForm from './AdvancedStudyScheduleForm';
 import { getTeacherStudySchedules, getScheduleFeedbackForSchedule } from '../lib/studyScheduleApi';
+import { exportStudySchedulePdf } from '../lib/exportSchedulePdf';
 
 interface ClassManagementPanelProps {
   classData: any;
@@ -73,6 +74,7 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh, onA
   const [scheduleFeedbackModal, setScheduleFeedbackModal] = useState<{ open: boolean; schedule?: any }>({ open: false });
   const [scheduleFeedback, setScheduleFeedback] = useState<any[]>([]);
   const [scheduleFeedbackLoading, setScheduleFeedbackLoading] = useState(false);
+  const [exportingScheduleId, setExportingScheduleId] = useState<string | null>(null);
   const scheduleFeedbackSummary = useMemo(() => {
     const summary: Record<'achieved' | 'partial' | 'not_met', number> = {
       achieved: 0,
@@ -118,6 +120,27 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh, onA
       console.error('Error loading class content:', error);
     } finally {
       setDataLoading(false);
+    }
+  };
+
+  const handleExportSchedule = async (schedule: any) => {
+    if (!schedule?.study_schedule_items?.length) {
+      alert('PDF için program verisi bulunamadı.');
+      return;
+    }
+
+    try {
+      setExportingScheduleId(schedule.id || null);
+      await exportStudySchedulePdf(schedule, {
+        studentName: schedule.student?.profile?.full_name,
+        className: schedule.class?.class_name,
+        teacherName: schedule.teacher?.full_name || classData?.teacher?.full_name
+      });
+    } catch (error) {
+      console.error('Failed to export schedule pdf:', error);
+      alert('PDF hazırlanırken bir hata oluştu.');
+    } finally {
+      setExportingScheduleId(null);
     }
   };
 
@@ -765,7 +788,15 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh, onA
                                 </span>
                               )}
                             </div>
-                          <div className="ml-4 flex items-start">
+                          <div className="ml-4 flex items-start flex-wrap gap-2">
+                            <button
+                              onClick={() => handleExportSchedule(schedule)}
+                              disabled={exportingScheduleId === schedule.id}
+                              className="inline-flex items-center gap-2 rounded-full border border-emerald-200 px-3 py-1 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 disabled:opacity-60 dark:border-emerald-700 dark:text-emerald-200 dark:hover:bg-emerald-900/30"
+                            >
+                              <Download className="h-4 w-4" />
+                              {exportingScheduleId === schedule.id ? 'Hazırlanıyor...' : 'PDF indir'}
+                            </button>
                             <button
                               onClick={() => openScheduleFeedbackModal(schedule)}
                               className="inline-flex items-center gap-2 rounded-full border border-blue-200 px-3 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-200 dark:hover:bg-blue-900/30"
