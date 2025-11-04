@@ -23,6 +23,7 @@ import PomodoroTimer from './PomodoroTimer';
 import FormulaCardsSection from './FormulaCardsSection';
 import NotesSection from './NotesSection';
 import StudentWeeklySchedule from './StudentWeeklySchedule';
+import SelfStudyPlanner from './SelfStudyPlanner';
 
 const getCurrentWeekRange = () => {
   const now = new Date();
@@ -1232,11 +1233,17 @@ export default function StudentDashboard() {
         )}
         {activeTab === 'schedule' && studentData && (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-900">Haftalık Çalışma Programım</h2>
-            <StudentWeeklySchedule
+            <SelfStudyPlanner
               studentId={studentData.id}
               studentName={studentData.profile?.full_name}
             />
+            <div className="space-y-4">
+              <h2 className="text-2xl font-bold text-gray-900">Haftalık Çalışma Programım</h2>
+              <StudentWeeklySchedule
+                studentId={studentData.id}
+                studentName={studentData.profile?.full_name}
+              />
+            </div>
           </div>
         )}
         {activeTab === 'homeworks' && (
