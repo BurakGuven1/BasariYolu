@@ -163,10 +163,9 @@ export default function TeacherLogin({ isOpen, onClose, onSuccess }: TeacherLogi
         </div>
 
         <div className="mt-4 p-4 bg-green-50 rounded-lg">
-          <p className="text-green-800 text-sm font-medium mb-2">Demo Hesabı:</p>
+          <p className="text-green-800 text-sm font-medium mb-2">İletişim:</p>
           <div className="text-xs text-green-700 space-y-1">
-            <p>Email: demo@ogretmen.com</p>
-            <p>Şifre: Demo123456</p>
+            <p>destek@basariyolum.com</p>
           </div>
         </div>
       </div>

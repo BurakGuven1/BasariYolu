@@ -224,8 +224,8 @@ export default function ClassCodeLogin({ isOpen, onClose, onSuccess }: ClassCode
                   value={classCode}
                   onChange={(e) => setClassCode(e.target.value.toUpperCase())}
                   className="w-full px-4 py-3 text-center text-2xl font-mono font-bold tracking-widest border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white uppercase"
-                  placeholder="ABC123"
-                  maxLength={20}
+                  placeholder="AB1D-12C4-E5GH"
+                  maxLength={15}
                   required
                 />
                 <p className="text-xs text-gray-500 mt-2">

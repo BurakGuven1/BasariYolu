@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Clock, BookOpen, CheckCircle, Target, User, AlertCircle, MessageSquarePlus } from 'lucide-react';
+import { Calendar, Clock, BookOpen, CheckCircle, Target, User, AlertCircle, MessageSquarePlus, Download } from 'lucide-react';
 import {
   getCurrentWeekSchedule,
   markScheduleItemComplete,
@@ -7,6 +7,7 @@ import {
   submitScheduleItemFeedback
 } from '../lib/studyScheduleApi';
 import { rewardScheduleGoal } from '../lib/pointsSystem';
+import { exportStudySchedulePdf } from '../lib/exportSchedulePdf';
 
 interface StudentWeeklyScheduleProps {
   studentId: string;
@@ -23,7 +24,7 @@ const DAYS_OF_WEEK = [
   { value: 6, label: 'Pazar', short: 'Paz' }
 ];
 
-export default function StudentWeeklySchedule({ studentId }: StudentWeeklyScheduleProps) {
+export default function StudentWeeklySchedule({ studentId, studentName }: StudentWeeklyScheduleProps) {
   const [schedule, setSchedule] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedDay, setSelectedDay] = useState<number>(new Date().getDay() === 0 ? 6 : new Date().getDay() - 1);
@@ -39,6 +40,7 @@ export default function StudentWeeklySchedule({ studentId }: StudentWeeklySchedu
     resources: '',
     reflection: ''
   });
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     loadSchedule();
@@ -237,11 +239,31 @@ export default function StudentWeeklySchedule({ studentId }: StudentWeeklySchedu
   const completedItems = schedule.study_schedule_items?.filter((item: any) => item.is_completed).length || 0;
   const completionRate = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
 
+  const handleExportPdf = async () => {
+    if (!schedule?.study_schedule_items?.length) {
+      alert('PDF oluşturmak için program verisi bulunamadı.');
+      return;
+    }
+
+    try {
+      setIsExporting(true);
+      await exportStudySchedulePdf(schedule, {
+        studentName,
+        teacherName: schedule.teacher?.full_name
+      });
+    } catch (error) {
+      console.error('Error exporting schedule pdf', error);
+      alert('PDF oluşturulurken bir sorun oluştu.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header Card */}
       <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
-        <div className="flex items-start justify-between mb-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between mb-4">
           <div>
             <div className="flex items-center space-x-2 mb-2">
               <Calendar className="w-6 h-6" />
@@ -252,37 +274,49 @@ export default function StudentWeeklySchedule({ studentId }: StudentWeeklySchedu
               {new Date(schedule.week_end_date).toLocaleDateString('tr-TR')}
             </p>
           </div>
-          
-          {/* Progress Circle */}
-          <div className="flex flex-col items-center">
-            <div className="relative w-20 h-20">
-              <svg className="transform -rotate-90 w-20 h-20">
-                <circle
-                  cx="40"
-                  cy="40"
-                  r="36"
-                  stroke="currentColor"
-                  strokeWidth="6"
-                  fill="transparent"
-                  className="text-white/30"
-                />
-                <circle
-                  cx="40"
-                  cy="40"
-                  r="36"
-                  stroke="currentColor"
-                  strokeWidth="6"
-                  fill="transparent"
-                  strokeDasharray={`${2 * Math.PI * 36}`}
-                  strokeDashoffset={`${2 * Math.PI * 36 * (1 - completionRate / 100)}`}
-                  className="text-white transition-all duration-500"
-                />
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-xl font-bold">{completionRate}%</span>
+
+          <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-start sm:gap-4">
+            {/* Progress Circle */}
+            <div className="flex flex-col items-center">
+              <div className="relative w-20 h-20">
+                <svg className="transform -rotate-90 w-20 h-20">
+                  <circle
+                    cx="40"
+                    cy="40"
+                    r="36"
+                    stroke="currentColor"
+                    strokeWidth="6"
+                    fill="transparent"
+                    className="text-white/30"
+                  />
+                  <circle
+                    cx="40"
+                    cy="40"
+                    r="36"
+                    stroke="currentColor"
+                    strokeWidth="6"
+                    fill="transparent"
+                    strokeDasharray={`${2 * Math.PI * 36}`}
+                    strokeDashoffset={`${2 * Math.PI * 36 * (1 - completionRate / 100)}`}
+                    className="text-white transition-all duration-500"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-xl font-bold">{completionRate}%</span>
+                </div>
               </div>
+              <span className="text-xs text-blue-100 mt-1">Tamamlandı</span>
             </div>
-            <span className="text-xs text-blue-100 mt-1">Tamamlandı</span>
+
+            <button
+              type="button"
+              onClick={handleExportPdf}
+              disabled={isExporting}
+              className="inline-flex items-center gap-2 rounded-lg bg-white/20 px-4 py-2 text-sm font-semibold text-white backdrop-blur hover:bg-white/30 disabled:opacity-60 disabled:hover:bg-white/20"
+            >
+              <Download className="h-4 w-4" />
+              {isExporting ? 'Hazırlanıyor...' : 'PDF indir'}
+            </button>
           </div>
         </div>
 

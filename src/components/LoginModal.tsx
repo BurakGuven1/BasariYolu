@@ -785,9 +785,9 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
 
         {isLoginMode && (
           <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-            <p className="text-blue-800 text-sm font-medium mb-2">Demo Hesapları:</p>
+            <p className="text-blue-800 text-sm font-medium mb-2">İletişim</p>
             <div className="text-xs text-blue-700 space-y-1">
-              <p>Öğrenci: student@demo.com / 123456</p>
+              <p>destek@basariyolum.com</p>
             </div>
           </div>
         )}
@@ -797,7 +797,7 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
         onClose={() => setShowClassCodeLogin(false)}
         onSuccess={(data) => {
           onLogin(data);
-          if (setUserState) {
+          if (setUserState && data?.isParentLogin) {
             setUserState(data);
           }
           setShowClassCodeLogin(false);

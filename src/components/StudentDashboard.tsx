@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BookOpen, StickyNote, MapIcon, BookmarkCheck, Plus, TrendingUp, Calendar, Target, Award, Clock, CheckCircle, AlertCircle, LogOut, CreditCard as Edit, Trash2, MoreVertical, Users, X, Brain, Crown, Trophy, Timer } from 'lucide-react';
+import { BookOpen, StickyNote, MapIcon, BookmarkCheck, Plus, TrendingUp, Calendar, Target, Award, Clock, CheckCircle, AlertCircle, LogOut, CreditCard as Edit, Trash2, MoreVertical, Users, X, Brain, Crown, Trophy, Timer, FileText } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuth } from '../hooks/useAuth';
 import { useStudentData } from '../hooks/useStudentData';
@@ -23,6 +23,8 @@ import PomodoroTimer from './PomodoroTimer';
 import FormulaCardsSection from './FormulaCardsSection';
 import NotesSection from './NotesSection';
 import StudentWeeklySchedule from './StudentWeeklySchedule';
+import SelfStudyPlanner from './SelfStudyPlanner';
+import TopicSummariesSection from './TopicSummariesSection';
 
 const getCurrentWeekRange = () => {
   const now = new Date();
@@ -50,7 +52,7 @@ export default function StudentDashboard() {
   const [dailyChallenge, setDailyChallenge] = useState<any>(null);
   const { planName } = useFeatureAccess();
   const { user, clearUser } = useAuth();
-  const [activeTab, setActiveTab] = useState<'overview' | 'exams' | 'homeworks' | 'schedule' | 'pomodoro' | 'formulas' | 'maps' | 'notes' | 'analysis' | 'classes' | 'smartplan' | 'subscription'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'exams' | 'homeworks' | 'schedule' | 'summaries' | 'pomodoro' | 'formulas' | 'maps' | 'notes' | 'analysis' | 'classes' | 'smartplan' | 'subscription'>('overview');
   const [showExamForm, setShowExamForm] = useState(false);
   const [showHomeworkForm, setShowHomeworkForm] = useState(false);
   const [showInviteCode, setShowInviteCode] = useState(false);
@@ -1048,6 +1050,7 @@ export default function StudentDashboard() {
               { key: 'classes', label: 'Sınıflarım', icon: Users },
               { key: 'analysis', label: 'AI Analiz', icon: Target },
               { key: 'smartplan', label: 'Akıllı Plan', icon: Brain },
+              { key: 'summaries', label: 'Konu Özetleri', icon: FileText },
               { key: 'formulas', label: 'Formül Kartları', icon: BookmarkCheck },
               { key: 'pomodoro', label: 'Pomodoro', icon: Timer },
               { key: 'maps', label: 'Tarih/Coğrafya', icon: MapIcon },
@@ -1065,7 +1068,7 @@ export default function StudentDashboard() {
               >
                 <Icon className="h-4 w-4" />
                 <span>{label}</span>
-                {(key === 'pomodoro' || key === 'formulas'|| key === 'maps'|| key === 'notes') && (
+                {(key === 'pomodoro' || key === 'formulas'|| key === 'maps'|| key === 'notes' || key === 'summaries') && (
                   <span className="px-2 py-0.5 bg-gradient-to-r from-purple-500 to-blue-500 text-white text-xs rounded-full font-bold">
                     PRO
                   </span>
@@ -1096,6 +1099,33 @@ export default function StudentDashboard() {
         {activeTab === 'overview' && renderOverview()}
         {activeTab === 'exams' && renderExams()}
         {activeTab === 'analysis' && renderAnalysis()}
+        {activeTab === 'summaries' && (
+          <FeatureGate
+            feature="topic_summaries"
+            fallback={
+              <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-2xl border-2 border-indigo-200 p-10 text-center">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-md shadow-indigo-100">
+                  <FileText className="h-8 w-8 text-indigo-500" />
+                </div>
+                <h3 className="mt-6 text-2xl font-bold text-gray-900">Konu özetleri Profesyonel pakette</h3>
+                <p className="mt-3 text-sm text-gray-600">
+                  Problemler, paragraf ve sınavda en sık çıkan konular için hazırlanan PDF özetleri
+                  yalnızca Profesyonel Plan üyelerine açıktır. Hızlı tekrar ve sınav öncesi kamp
+                  desteğini kaçırma.
+                </p>
+                <button
+                  onClick={() => setActiveTab('subscription')}
+                  className="mt-6 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-200 transition hover:bg-indigo-700"
+                >
+                  <Crown className="h-4 w-4" />
+                  Profesyonel pakete yükselt
+                </button>
+              </div>
+            }
+          >
+            <TopicSummariesSection />
+          </FeatureGate>
+        )}
         {activeTab === 'smartplan' && studentData && (
           <AIRecommendations studentId={studentData.id} />
         )}
@@ -1232,11 +1262,17 @@ export default function StudentDashboard() {
         )}
         {activeTab === 'schedule' && studentData && (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-900">Haftalık Çalışma Programım</h2>
-            <StudentWeeklySchedule
+            <SelfStudyPlanner
               studentId={studentData.id}
               studentName={studentData.profile?.full_name}
             />
+            <div className="space-y-4">
+              <h2 className="text-2xl font-bold text-gray-900">Haftalık Çalışma Programım</h2>
+              <StudentWeeklySchedule
+                studentId={studentData.id}
+                studentName={studentData.profile?.full_name}
+              />
+            </div>
           </div>
         )}
         {activeTab === 'homeworks' && (

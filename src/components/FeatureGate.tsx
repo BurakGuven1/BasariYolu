@@ -10,7 +10,15 @@ interface FeatureGateProps {
 }
 
 export default function FeatureGate({ feature, children, fallback }: FeatureGateProps) {
-  const { hasFeature, canUsePomodoro, loading, canUseFormulaCards, canUseHistoricalMaps, canUseStudentNotes } = useFeatureAccess();
+  const {
+    hasFeature,
+    canUsePomodoro,
+    loading,
+    canUseFormulaCards,
+    canUseHistoricalMaps,
+    canUseStudentNotes,
+    canViewTopicSummaries
+  } = useFeatureAccess();
 
   if (loading) {
     return (
@@ -30,6 +38,8 @@ export default function FeatureGate({ feature, children, fallback }: FeatureGate
     hasAccess = canUseHistoricalMaps();
   } else if (feature === 'student_notes') {
     hasAccess = canUseStudentNotes();
+  } else if (feature === 'topic_summaries') {
+    hasAccess = canViewTopicSummaries();
   } else {
     hasAccess = hasFeature(feature);
   }
