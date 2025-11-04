@@ -150,9 +150,6 @@ const generateRecommendationText = (
   }
 };
 
-/**
- * Konu için kaynak önerileri
- */
 const getTopicResources = (subject: string, topic: string) => {
   return [
     {

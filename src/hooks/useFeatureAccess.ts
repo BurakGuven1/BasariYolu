@@ -100,6 +100,13 @@ const canUseStudentNotes = useCallback((): boolean => {
   return planName === 'professional' || planName === 'profesyonel';
 }, [subscription]);
 
+const canViewTopicSummaries = useCallback((): boolean => {
+  if (!subscription?.plan) return false;
+  const planName = subscription.plan.name;
+  // Konu özetleri sadece Profesyonel pakete açıktır
+  return planName === 'professional' || planName === 'profesyonel';
+}, [subscription]);
+
   const canAccessExamTopics = useCallback((year: string): boolean => {
     const freeYears = ['2018', '2019', '2020']; // Temel paket için ücretsiz yıllar
     
@@ -183,6 +190,7 @@ const canUseStudentNotes = useCallback((): boolean => {
     canUseFormulaCards,
     canUseHistoricalMaps,
     canUseStudentNotes,
+    canViewTopicSummaries,
     getFeatureLimit,
     isTrialActive,
     getDaysUntilExpiry,

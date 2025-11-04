@@ -797,7 +797,7 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
         onClose={() => setShowClassCodeLogin(false)}
         onSuccess={(data) => {
           onLogin(data);
-          if (setUserState) {
+          if (setUserState && data?.isParentLogin) {
             setUserState(data);
           }
           setShowClassCodeLogin(false);
