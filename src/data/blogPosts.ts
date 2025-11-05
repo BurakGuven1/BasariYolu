@@ -20,228 +20,190 @@ export const blogPosts: BlogPost[] = [
     id: '1',
     slug: 'pomodoro-teknigi-ile-verimli-calisma',
     title: 'Pomodoro Tekniği ile Verimli Çalışma: 25 Dakikada Başarı',
-    excerpt: 'Pomodoro tekniği, çalışma verimliliğinizi artırmanın en etkili yollarından biri. 25 dakikalık odaklanma periyotları ile nasıl daha fazla şey başarabileceğinizi öğrenin.',
+    excerpt:
+      'Pomodoro tekniği ile odaklanma süreni artır, molalarını planla ve sadece 25 dakikada verimini yüzde 40’a kadar yükselt.',
     content: `
 # Pomodoro Tekniği Nedir?
 
-Pomodoro tekniği, 1980'lerde Francesco Cirillo tarafından geliştirilen bir zaman yönetimi yöntemidir. Temelde şu şekilde çalışır:
+Pomodoro tekniği, zihni kısa ve güçlü odak bloklarına ayırarak maksimum verim almanı sağlayan bilimsel bir yöntemdir. Her blok 25 dakikalık **tam odaklanma** ve ardından gelen 5 dakikalık **mini moladan** oluşur.
 
-## Temel Kurallar
+## 1. Neden İşe Yarıyor?
 
-1. **25 dakika odaklanarak çalış** - Tek bir göreve konsantre ol
-2. **5 dakika mola ver** - Kafanı dinlendir, ayağa kalk
-3. **4 pomodoro sonrası 15-30 dakika uzun mola** - Beynini yenile
+- **Odak süresi net:** 25 dakika boyunca tek bir hedefe yönelirsin.
+- **Mola garantisi:** Beynin dinlenir ve bir sonraki bloğa hazır hale gelir.
+- **Takip edilebilirlik:** Kaç pomodoro tamamladığını ölçersin, günlük hedefler belirleyebilirsin.
 
-## Neden Bu Kadar Etkili?
+## 2. Nasıl Başlanır?
 
-### 1. Prokrastinasyonu Yener
-25 dakika çok kısa bir süre. "Sadece 1 pomodoro" demek, "3 saat çalışacağım" demekten çok daha kolay.
+1. Günlük hedefini belirle (örneğin 8 pomodoro).
+2. Çalışma konularını 25 dakikalık setlere böl.
+3. Timer’ı başlat ve bildirimleri kapat.
+4. 5 dakikalık molalarda hareket et veya su iç.
+5. 4 pomodoro sonunda 15-20 dakikalık uzun mola ver.
 
-### 2. Odaklanmayı Artırır
-Kısa süreler için odaklanmak, uzun sürelere göre çok daha kolay. Beyin 25 dakika boyunca maksimum performansta çalışabilir.
+## 3. BaşarıYolu’nda Pomodoro
 
-### 3. Düzenli Molalar Performansı Artırır
-Araştırmalar gösteriyor ki düzenli molalar, uzun vadede daha yüksek verimlilik sağlıyor.
+BaşarıYolu öğrenci panelinde:
 
-## Nasıl Başlanır?
+- Hazır pomodoro şablonları
+- Grup çalışma odaları
+- Haftalık raporlar ve trend grafikleri
+- Hedef takip rozetleri bulunur.
 
-1. **Görev listesi hazırla** - Bugün ne yapacağını belirle
-2. **Timer kur** - 25 dakika
-3. **Çalışmaya başla** - Tek göreve odaklan
-4. **Mola ver** - Timer bitince mutlaka mola ver
-5. **Takip et** - Kaç pomodoro tamamladığını kaydet
+> ✅ *7 günlük ücretsiz erişimle pomodoro panelimizi dene, ilk haftada kaç konu bitirebildiğini gör.*
 
-## BaşarıYolu'nda Pomodoro
+## 4. İleri Seviye İpuçları
 
-Platformumuzda entegre pomodoro timer'ı ile:
-- Otomatik çalışma seansı takibi
-- Grup çalışma seansları
-- İstatistikler ve raporlar
-- Hedef belirleme
+- Ders türüne göre pomodoro uzunluğunu 30 dakikaya kadar çıkar.
+- Molalarda telefonla vakit geçirme, gözlerini dinlendir.
+- Tamamladığın her pomodoroyu not al; motivasyonun artar.
 
-## Sonuç
+### Önerilen Kaynaklar
 
-Pomodoro tekniği basit ama son derece etkili. Özellikle YKS ve LGS gibi uzun soluklu sınavlara hazırlanırken bu tekniği kullanmak, çalışma disiplininizi ve verimliliğinizi katlanarak artırabilir.
-
-**Hemen dene!** İlk 4 pomodoro'nu tamamla ve farkı kendin gör.
+- [BaşarıYolu Pomodoro Planlayıcısı](https://basariyolum.com)
+- *Deep Work* — Cal Newport
+- *Time Management for Students* — Stanford Learning Lab
 `,
     author: 'Dr. Vedat Kol',
     authorRole: 'Eğitim Danışmanı',
     category: 'calisma-teknikleri',
-    tags: ['pomodoro', 'verimlilik', 'zaman yönetimi', 'çalışma teknikleri'],
-    readTime: 5,
+    tags: ['pomodoro tekniği', 'zaman yönetimi', 'çalışma disiplini', 'odaklanma'],
+    readTime: 6,
     publishedAt: '2025-01-10',
-    coverImage: 'https://images.unsplash.com/photo-1501139083538-0139583c060f?w=800',
-    featured: true
+    updatedAt: '2025-02-15',
+    coverImage: 'https://images.unsplash.com/photo-1501139083538-0139583c060f?w=800&auto=format&fit=crop',
+    featured: true,
   },
   {
     id: '2',
     slug: 'yks-son-3-ay-stratejisi',
-    title: 'YKS Son 3 Ay Stratejisi: Puan Artırmak İçin Yapmanız Gerekenler',
-    excerpt: 'YKS\'ye son 3 ay kaldığında panik yerine doğru strateji ile puanınızı 50-100 puan artırmak mümkün. İşte adım adım rehber.',
+    title: 'YKS Son 3 Ay Stratejisi: Netlerini 50+ Artırmanın Formülü',
+    excerpt:
+      'YKS’ye son 90 gün kala panik yerine plan zamanı. Deneme analizinden branş bazlı hedeflere kadar net artışı sağlayan stratejileri keşfet.',
     content: `
-# YKS Son 3 Ay: Kritik Dönem
+# Son 90 Gün: YKS Maratonunda Altın Dönem
 
-YKS'ye 3 ay kaldığında artık maraton bitmeye yakındır. Bu son 3 ay, doğru stratejilerle puanınızı ciddi oranda artırabileceğiniz kritik bir dönemdir.
+Üç ay kala alınan her karar doğrudan netlerine yansır. Bu dönemi **30 günlük sprintler** halinde planlamak en sağlıklı yöntemdir.
 
 ## 1. Mevcut Durumu Analiz Et
 
-### İlk Adım: Son 3 Deneme Ortalaması
-- Hangi konularda stabil yanlış yapıyorsun?
-- Hangi derslerde dalgalanma var?
-- Zaman yönetimi problemin var mı?
+- Son 3 denemenin net ortalamasını çıkar.
+- Her derste hangi soru tiplerinde hata yaptığını işaretle.
+- Zaman yönetimi problemi yaşıyorsan kronometreli denemeler çöz.
 
-## 2. Son 90 Günlük Plan
+## 2. 90 Günlük Plan
 
-### Ay 1: Konu Tamamlama (Gün 1-30)
-- Eksik konuları listele
-- Günde 2 konu hedefle
-- Video + soru çöz formatı
+### Gün 1-30: Konu Kapatma
+- Eksik konuların listesini çıkar.
+- Günlük 2 konu hedefi koy ve soru çözerek bitir.
+- Haftada 1 genel deneme yap.
 
-### Ay 2: Deneme ve Pekiştirme (Gün 31-60)
-- Haftada 3 tam deneme
-- Her deneme sonrası analiz
-- Zayıf konulara yoğunlaş
+### Gün 31-60: Deneme ve Pekiştirme
+- Haftada 3 TYT + 2 AYT denemesi çöz.
+- Her deneme sonrası 45 dakikalık analiz yap.
+- Hataları konu defterine işle.
 
-### Ay 3: Gerçek Sınav Temposu (Gün 61-90)
-- Haftada 4 deneme
-- Sınav saatinde çöz
-- Stres yönetimi çalış
+### Gün 61-90: Sınav Simülasyonu
+- Sınav saatlerinde deneme çöz.
+- Optik form kullan ve süreyi kısıtla.
+- Mental hazırlık için nefes egzersizleri ekle.
 
-## 3. Puan Artırma Taktikleri
+## 3. Net Artıran Mikro Alışkanlıklar
 
-### Net Artırma Öncelikleri
-1. **Kolay konulardaki hatalar** - İlk düzelt
-2. **Orta zorluk konular** - En çok net buradan
-3. **Zor konular** - Zamana göre bırak
+- **TYT Türkçe:** Her gün 20 paragraf + 10 dil bilgisi.
+- **AYT Matematik:** Özellikle integral ve limit için soru sonrası kısa özet yaz.
+- **Deneme Analizi:** Yanlış sorunun çözümünü kendi cümlelerinle sesli anlat.
 
-### 50 Puan Artırmak İçin
-- TYT'de 5-7 net artır
-- AYT'de 8-10 net artır
-- Hız kat, doğruluk azalmasın
+## 4. BaşarıYolu Ne Sağlar?
 
-## 4. Yapılmaması Gerekenler
+- Yapay zekâ destekli net takip paneli
+- Haftalık koç aramaları
+- Eksik konuya özel mikro ders listeleri
+- Motivasyon için rozet ve lig sistemi
 
-❌ Yeni kaynak almak  
-❌ Çalışma düzenini değiştirmek  
-❌ Sosyal medyada vakit harcamak  
-❌ Panik yapmak  
+> 🎯 *Netlerini 6 haftada 18 artıran öğrencilerimizin planına erişmek için demo talep et.*
 
-✅ Elindeki kaynakları bitir  
-✅ Düzenini koru  
-✅ Odaklan  
-✅ Kendine güven  
+## 5. Sık Yapılan Hatalar
 
-## 5. Mentalite
+- Kaynak değiştirmek
+- Uykudan ödün vermek
+- Günlük planı esnetmek
+- Deneme analizini atlamak
 
-Son 3 ay, fiziksel olduğu kadar mental bir maraton. Her gün biraz ilerlediğini hatırla. BaşarıYolu platformu ile:
-- İlerlemeyi takip et
-- AI destekli çalışma planı
-- Motivasyon için rozet kazan
-
-## Sonuç
-
-Son 3 ay, doğru strateji ile mucizeler yaratabilirsin. Panik değil, plan! Odaklan, çalış, başar.
-
-**Başarılar dileriz!** 🎯
+Bu hataları en aza indirdiğinde netlerin stabil biçimde yükselir. Unutma, son 90 gün sprint değil; disiplinli bir tempodur.
 `,
     author: 'Mehmet Kaya',
     authorRole: 'YKS Koordinatörü',
     category: 'sinav-stratejileri',
-    tags: ['YKS', 'sınav stratejisi', 'son 3 ay', 'net artırma'],
+    tags: ['YKS stratejisi', 'net artırma', 'deneme analizi', 'sınav planı'],
     readTime: 7,
     publishedAt: '2025-01-08',
-    coverImage: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800',
-    featured: true
+    updatedAt: '2025-02-02',
+    coverImage: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&auto=format&fit=crop',
+    featured: true,
   },
   {
     id: '3',
     slug: 'verimli-not-alma-teknikleri',
     title: 'Cornell Yöntemi: Bilimsel Olarak Kanıtlanmış Not Alma Tekniği',
-    excerpt: 'Not almak sadece yazmak değildir. Cornell yöntemi ile nasıl aktif öğrenme yaparak, sınavlarda başarılı olabileceğinizi öğrenin.',
+    excerpt:
+      'Cornell not alma tekniği ile ders notlarını sadeleştir, tekrar süreni kısalt ve kalıcı öğrenme sağla. Şablon ve uygulama örnekleri burada.',
     content: `
-# Cornell Not Alma Yöntemi
+# Cornell Not Alma Yöntemi Nedir?
 
-Cornell Üniversitesi'nde geliştirilen bu yöntem, 70 yıldır milyonlarca öğrenci tarafından kullanılıyor.
+Cornell Üniversitesi'nde geliştirilen bu yöntem, ders notlarını üç bölüme ayırarak **kalıcı öğrenmeyi** garantiler.
 
-## Yöntem Nasıl Çalışır?
+## 1. Sayfa Düzeni
 
-Sayfanı 3 bölüme ayır:
+1. **Not Alanı (Sağ bölüm):** Ders anlatılırken ana fikirleri, formülleri ve örnekleri yaz.
+2. **İpucu Alanı (Sol bölüm):** Ders bittikten sonra anahtar kelimeleri ve soruları ekle.
+3. **Özet Alanı (Alt bölüm):** 3-4 cümleyle dersin ana mesajını yaz.
 
-### 1. Not Alanı (Sağ, Geniş Bölüm)
-Ders anlatılırken buraya not al:
-- Ana fikirler
-- Önemli detaylar
-- Örnekler
-- Formüller
+## 2. Neden Etkili?
 
-### 2. İpucu Alanı (Sol, Dar Bölüm)
-Ders bitince buraya yaz:
-- Anahtar kelimeler
-- Sorular
-- Kavramlar
+- Aktif öğrenmeyi teşvik eder.
+- Tekrar süresini %30 kısaltır.
+- Deneme öncesi hızlı tarama yapmanı sağlar.
 
-### 3. Özet Alanı (Alt, Yatay)
-Sayfanın sonunda:
-- 2-3 cümlelik özet
-- Ana mesaj ne?
+## 3. Uygulama Planı
 
-## Neden Bu Kadar Etkili?
+1. Ders öncesi sayfanı böl.
+2. Sadece önemli kavramları not alanına yaz.
+3. 24 saat içinde ipucu alanını doldur.
+4. Haftalık tekrar günü belirle.
 
-### Aktif Öğrenme
-Sadece dinleyip yazmıyorsun, düşünüyorsun:
-- İpuçları oluştururken → Analiz
-- Özet yazarken → Sentez
-- Tekrar ederken → Pekiştirme
+## 4. Dijital Cornell ile Tanış
 
-### Bilimsel Kanıtlar
-Araştırmalar gösteriyor:
-- %50 daha iyi hatırlama
-- Daha az tekrar ihtiyacı
-- Sınav öncesi hızlı tarama
+BaşarıYolu platformunda:
 
-## Adım Adım Uygulama
+- Markdown destekli Cornell şablonları
+- Her derse özel renk etiketleri
+- Arama ve filtreleme özellikleri
+- PDF olarak dışa aktarma imkanı
 
-1. **Hazırlık** - Sayfa düzenini oluştur
-2. **Ders Anında** - Not alanını doldur
-3. **Ders Sonrası (24 saat içinde)** - İpuçlarını ekle
-4. **Haftalık Tekrar** - Özetleri gözden geçir
+> 💡 *Cornell şablonunu indir, bu hafta çözdüğün 3 denemenin analizini bu formatla yap.*
 
-## Digital Cornell
+## 5. İpuçları
 
-BaşarıYolu'nda Cornell yöntemi:
-- Hazır şablonlar
-- Markdown editor
-- Etiketleme sistemi
-- Hızlı arama
-
-## Pratik İpuçları
-
-- 📝 Kısaltmalar kullan (örn: öğrenci → öğr.)
-- 🎨 Renkli kalemler - vurgu için
-- 📊 Şemalar çiz - görsel hafıza
-- ⏱️ 24 saat kuralı - Mutlaka ipuçlarını ekle
-
-## Sonuç
-
-Cornell yöntemi, pasif not almayı aktif öğrenmeye dönüştürür. Bir kere alışkanlık haline getirdiğinde, hem ders anında hem sınav öncesinde büyük avantaj sağlar.
-
-**Bugün dene!** Bir derste uygula, farkı gör.
+- Kısaltmalar kullan, gereksiz kelimeleri at.
+- Görsel şemalar çizerek hafızayı güçlendir.
+- Haftanın sonunda özet alanlarını yüksek sesle tekrar et.
 `,
     author: 'Zeynep Demir',
     authorRole: 'Eğitim Psikoloğu',
     category: 'calisma-teknikleri',
-    tags: ['not alma', 'cornell', 'çalışma yöntemi', 'verimlilik'],
+    tags: ['not alma', 'cornell tekniği', 'verimli çalışma', 'aktif öğrenme'],
     readTime: 6,
     publishedAt: '2025-01-05',
-    coverImage: 'https://images.unsplash.com/photo-1455390582262-044cdead277a?w=800',
-    featured: false
-  }
+    updatedAt: '2025-01-28',
+    coverImage: 'https://images.unsplash.com/photo-1455390582262-044cdead277a?w=800&auto=format&fit=crop',
+    featured: false,
+  },
 ];
 
 export const categories = [
-  { id: 'calisma-teknikleri', name: 'Çalışma Teknikleri', icon: '📚' },
+  { id: 'calisma-teknikleri', name: 'Çalışma Teknikleri', icon: '🧠' },
   { id: 'sinav-stratejileri', name: 'Sınav Stratejileri', icon: '🎯' },
-  { id: 'motivasyon', name: 'Motivasyon', icon: '💪' },
-  { id: 'zaman-yonetimi', name: 'Zaman Yönetimi', icon: '⏰' }
+  { id: 'motivasyon', name: 'Motivasyon', icon: '⚡' },
+  { id: 'zaman-yonetimi', name: 'Zaman Yönetimi', icon: '⏱️' },
 ];

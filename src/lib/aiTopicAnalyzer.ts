@@ -42,51 +42,12 @@ const calculateFrequencyScore = (subject: string, topic: string): number => {
   const score = Math.min((avgPerYear / 5) * 100, 100);
   return parseFloat(score.toFixed(2));
 };
-/**
- * Öğrencinin bu konudaki zayıflığını hesapla
- */
-const calculateWeaknessScore = async (
-  studentId: string,
-  subject: string,
-  topic: string
-): Promise<number> => {
-  try {
-    // Son 10 denemede bu konu kaç kez işaretlenmiş
-    const { data: weakTopics } = await supabase
-      .from('exam_weak_topics')
-      .select('wrong_count, total_count')
-      .eq('student_id', studentId)
-      .eq('subject', subject)
-      .eq('topic', topic)
-      .order('created_at', { ascending: false })
-      .limit(10);
-
-    if (!weakTopics || weakTopics.length === 0) return 0;
-
-    // Ortalama yanlış yüzdesi
-    let totalWrong = 0;
-    let totalQuestions = 0;
-
-    weakTopics.forEach((wt) => {
-      totalWrong += wt.wrong_count;
-      totalQuestions += wt.total_count;
-    });
-
-    if (totalQuestions === 0) return 0;
-
-    const wrongPercentage = (totalWrong / totalQuestions) * 100;
-    return parseFloat(wrongPercentage.toFixed(2));
-  } catch (error) {
-    console.error('Error calculating weakness:', error);
-    return 0;
-  }
-};
 
 /**
  * Konu için öneriler oluştur
  */
 export const generateTopicRecommendations = async (
-  studentId: string,
+  _studentId: string,
   weakTopics: WeakTopic[]
 ): Promise<TopicRecommendation[]> => {
   const recommendations: TopicRecommendation[] = [];

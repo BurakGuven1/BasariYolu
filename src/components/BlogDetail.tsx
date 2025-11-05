@@ -1,5 +1,17 @@
-import { useEffect, useState } from 'react';
-import { Clock, Calendar, Tag, ArrowLeft, Share2, Facebook, Twitter, Linkedin } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Clock,
+  Calendar,
+  Tag,
+  ArrowLeft,
+  Share2,
+  Facebook,
+  Twitter,
+  Linkedin,
+  BookmarkPlus,
+  Sparkles,
+  Target,
+} from 'lucide-react';
 import { blogPosts, BlogPost } from '../data/blogPosts';
 import ReactMarkdown from 'react-markdown';
 
@@ -12,33 +24,53 @@ export default function BlogDetail({ slug, onNavigateBack }: BlogDetailProps) {
   const [post, setPost] = useState<BlogPost | null>(null);
 
   useEffect(() => {
-    const foundPost = blogPosts.find(p => p.slug === slug);
+    const foundPost = blogPosts.find((candidate) => candidate.slug === slug);
     if (foundPost) {
       setPost(foundPost);
-      // Scroll to top
-      window.scrollTo(0, 0);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       onNavigateBack();
     }
   }, [slug, onNavigateBack]);
 
+  const relatedPosts = useMemo(() => {
+    if (!post) {
+      return [];
+    }
+    return blogPosts
+      .filter((candidate) => candidate.id !== post.id && candidate.category === post.category)
+      .slice(0, 3);
+  }, [post]);
+
   const handleShare = async (platform: 'twitter' | 'facebook' | 'linkedin' | 'copy') => {
+    if (!post) {
+      return;
+    }
     const url = window.location.href;
-    const title = post?.title || '';
+    const title = post.title;
 
     switch (platform) {
       case 'twitter':
-        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}`, '_blank');
+        window.open(
+          `https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}`,
+          '_blank',
+        );
         break;
       case 'facebook':
-        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
+        window.open(
+          `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
+          '_blank',
+        );
         break;
       case 'linkedin':
-        window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`, '_blank');
+        window.open(
+          `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`,
+          '_blank',
+        );
         break;
       case 'copy':
         await navigator.clipboard.writeText(url);
-        alert('Link kopyalandı!');
+        alert('Bağlantı panoya kopyalandı!');
         break;
     }
   };
@@ -46,23 +78,19 @@ export default function BlogDetail({ slug, onNavigateBack }: BlogDetailProps) {
   if (!post) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
       </div>
     );
   }
 
-  const relatedPosts = blogPosts
-    .filter(p => p.id !== post.id && p.category === post.category)
-    .slice(0, 3);
-
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Header Image */}
       <div className="relative h-96 bg-gradient-to-br from-blue-600 to-purple-600">
         <img
           src={post.coverImage}
           alt={post.title}
           className="w-full h-full object-cover opacity-30"
+          loading="eager"
         />
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="max-w-4xl mx-auto px-4 text-center">
@@ -73,208 +101,174 @@ export default function BlogDetail({ slug, onNavigateBack }: BlogDetailProps) {
               <ArrowLeft className="h-5 w-5" />
               Blog'a Dön
             </button>
-            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-              {post.title}
-            </h1>
-            <div className="flex items-center justify-center gap-6 text-white/90">
+            <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">{post.title}</h1>
+            <div className="flex items-center justify-center gap-6 text-white/90 flex-wrap">
               <span className="flex items-center gap-2">
                 <Calendar className="h-5 w-5" />
                 {new Date(post.publishedAt).toLocaleDateString('tr-TR', {
                   year: 'numeric',
                   month: 'long',
-                  day: 'numeric'
+                  day: 'numeric',
                 })}
               </span>
               <span className="flex items-center gap-2">
                 <Clock className="h-5 w-5" />
                 {post.readTime} dakika okuma
               </span>
+              <span className="flex items-center gap-2">
+                <BookmarkPlus className="h-5 w-5" />
+                {post.tags.join(', ')}
+              </span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 py-12">
-        <div className="grid lg:grid-cols-4 gap-8">
-          {/* Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="sticky top-24 space-y-6">
-              {/* Author */}
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md">
-                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full mx-auto mb-4 flex items-center justify-center text-white text-2xl font-bold">
-                  {post.author.charAt(0)}
-                </div>
-                <h3 className="text-center font-bold text-gray-900 dark:text-white mb-1">
-                  {post.author}
-                </h3>
-                <p className="text-center text-sm text-gray-600 dark:text-gray-400">
-                  {post.authorRole}
-                </p>
-              </div>
-
-              {/* Share */}
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md">
-                <h3 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                  <Share2 className="h-5 w-5" />
-                  Paylaş
-                </h3>
-                <div className="space-y-2">
-                  <button
-                    onClick={() => handleShare('twitter')}
-                    className="w-full flex items-center gap-3 px-4 py-2 bg-[#1DA1F2] text-white rounded-lg hover:bg-[#1a8cd8] transition-colors"
-                  >
-                    <Twitter className="h-5 w-5" />
-                    Twitter
-                  </button>
-                  <button
-                    onClick={() => handleShare('facebook')}
-                    className="w-full flex items-center gap-3 px-4 py-2 bg-[#4267B2] text-white rounded-lg hover:bg-[#365899] transition-colors"
-                  >
-                    <Facebook className="h-5 w-5" />
-                    Facebook
-                  </button>
-                  <button
-                    onClick={() => handleShare('linkedin')}
-                    className="w-full flex items-center gap-3 px-4 py-2 bg-[#0077B5] text-white rounded-lg hover:bg-[#006399] transition-colors"
-                  >
-                    <Linkedin className="h-5 w-5" />
-                    LinkedIn
-                  </button>
-                  <button
-                    onClick={() => handleShare('copy')}
-                    className="w-full flex items-center gap-3 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-                  >
-                    <Share2 className="h-5 w-5" />
-                    Linki Kopyala
-                  </button>
-                </div>
-              </div>
-
-              {/* Tags */}
-              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md">
-                <h3 className="font-bold text-gray-900 dark:text-white mb-4">
-                  Etiketler
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {post.tags.map(tag => (
-                    <span
-                      key={tag}
-                      className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm"
-                    >
-                      <Tag className="h-3 w-3" />
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
+      <div className="max-w-5xl mx-auto px-4 py-12 grid lg:grid-cols-[1fr_320px] gap-8">
+        <article className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
+          <div className="flex items-center gap-4 border-b border-gray-100 dark:border-gray-700 pb-6 mb-6">
+            <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 text-white flex items-center justify-center text-2xl font-bold">
+              {post.author.charAt(0)}
+            </div>
+            <div>
+              <p className="font-semibold text-gray-900 dark:text-white">{post.author}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{post.authorRole}</p>
             </div>
           </div>
 
-          {/* Main Content */}
-          <div className="lg:col-span-3">
-            <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-md">
-              <div className="prose prose-lg dark:prose-invert max-w-none">
-                <ReactMarkdown
-                  components={{
-                    h1: ({ children }) => (
-                      <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4 mt-8">
-                        {children}
-                      </h1>
-                    ),
-                    h2: ({ children }) => (
-                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3 mt-6">
-                        {children}
-                      </h2>
-                    ),
-                    h3: ({ children }) => (
-                      <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 mt-4">
-                        {children}
-                      </h3>
-                    ),
-                    p: ({ children }) => (
-                      <p className="text-gray-700 dark:text-gray-300 mb-4 leading-relaxed">
-                        {children}
-                      </p>
-                    ),
-                    ul: ({ children }) => (
-                      <ul className="list-disc list-inside space-y-2 mb-4 text-gray-700 dark:text-gray-300">
-                        {children}
-                      </ul>
-                    ),
-                    ol: ({ children }) => (
-                      <ol className="list-decimal list-inside space-y-2 mb-4 text-gray-700 dark:text-gray-300">
-                        {children}
-                      </ol>
-                    ),
-                    strong: ({ children }) => (
-                      <strong className="font-bold text-gray-900 dark:text-white">
-                        {children}
-                      </strong>
-                    ),
-                    blockquote: ({ children }) => (
-                      <blockquote className="border-l-4 border-blue-500 pl-4 italic text-gray-600 dark:text-gray-400 my-4">
-                        {children}
-                      </blockquote>
-                    ),
-                  }}
+          <div className="prose dark:prose-invert prose-lg max-w-none prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline">
+            <ReactMarkdown>{post.content}</ReactMarkdown>
+          </div>
+
+          <div className="mt-10 flex flex-wrap gap-3">
+            {post.tags.map((tag) => (
+              <span
+                key={tag}
+                className="inline-flex items-center gap-2 rounded-full bg-blue-50 dark:bg-blue-500/10 px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-300"
+              >
+                <Tag className="h-4 w-4" />
+                {tag}
+              </span>
+            ))}
+          </div>
+        </article>
+
+        <aside className="space-y-8">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 sticky top-28">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <Share2 className="h-5 w-5" />
+              Yazıyı Paylaş
+            </h2>
+            <div className="space-y-2">
+              <button
+                onClick={() => handleShare('twitter')}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-200 transition-colors hover:border-blue-600 hover:text-blue-600"
+              >
+                <Twitter className="h-4 w-4" />
+                Twitter'da Paylaş
+              </button>
+              <button
+                onClick={() => handleShare('facebook')}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-200 transition-colors hover:border-blue-600 hover:text-blue-600"
+              >
+                <Facebook className="h-4 w-4" />
+                Facebook'ta Paylaş
+              </button>
+              <button
+                onClick={() => handleShare('linkedin')}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-200 transition-colors hover:border-blue-600 hover:text-blue-600"
+              >
+                <Linkedin className="h-4 w-4" />
+                LinkedIn'de Paylaş
+              </button>
+              <button
+                onClick={() => handleShare('copy')}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+              >
+                Bağlantıyı Kopyala
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+              Blog bültenine katıl
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+              Haftalık canlı etkinlikler, deneme analiz şablonları ve yeni blog yazılarımızı
+              ilk öğrenen olmak için e-posta listemize katıl.
+            </p>
+            <a
+              href="mailto:destek@basariyolum.com?subject=Blog%20B%C3%BClteni%20Kayd%C4%B1"
+              className="inline-flex items-center justify-center gap-2 w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+            >
+              <Sparkles className="h-4 w-4" />
+              Ücretsiz Kaydol
+            </a>
+          </div>
+
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                <Target className="h-5 w-5" />
+                BaşarıYolu ile tanış
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                Yapay zekâ destekli ders planları, pomodoro takip sistemi ve koçluk görüşmeleriyle
+                sınav hazırlığını tek platformda yönet.
+              </p>
+              <div className="flex flex-col gap-3">
+                <a
+                  href="/#pricing"
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
                 >
-                  {post.content}
-                </ReactMarkdown>
+                  Planları İncele
+                </a>
+                <a
+                  href="/#teacher"
+                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-200 transition-colors hover:border-blue-600 hover:text-blue-600"
+                >
+                  Demo Talep Et
+                </a>
               </div>
             </div>
+        </aside>
+      </div>
 
-            {/* Related Posts */}
-                {relatedPosts.length > 0 && (
-                <div className="mt-12">
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-                    İlgili Yazılar
-                    </h2>
-                    <div className="grid md:grid-cols-3 gap-6">
-                    {relatedPosts.map(relatedPost => (
-                        <button
-                        key={relatedPost.id}
-                        onClick={() => {
-                            // ✅ İlgili yazıya geçiş
-                            const newPath = `/blog/${relatedPost.slug}`;
-                            window.history.pushState({}, '', newPath);
-                            
-                            // ✅ Parent component'e bildir
-                            // Sayfa yenileme yerine state güncelleme yapacağız
-                            setPost(null); // Loading state
-                            
-                            setTimeout(() => {
-                            const foundPost = blogPosts.find(p => p.slug === relatedPost.slug);
-                            if (foundPost) {
-                                setPost(foundPost);
-                                window.scrollTo(0, 0);
-                            }
-                            }, 0);
-                        }}
-                        className="group bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-shadow text-left w-full"
-                        >
-                        <div className="relative h-40 overflow-hidden">
-                            <img
-                            src={relatedPost.coverImage}
-                            alt={relatedPost.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            />
-                        </div>
-                        <div className="p-4">
-                            <h3 className="font-bold text-gray-900 dark:text-white mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2">
-                            {relatedPost.title}
-                            </h3>
-                            <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                            <Clock className="h-3 w-3" />
-                            {relatedPost.readTime} dk
-                            </div>
-                        </div>
-                        </button>
-                    ))}
-                    </div>
-                </div>
-                )}
-          </div>
+      <div className="max-w-6xl mx-auto px-4 pb-16">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+            Diğer önerilen içerikler
+          </h2>
+          {relatedPosts.length === 0 ? (
+            <p className="text-gray-600 dark:text-gray-300">
+              Bu kategori için başka içerik ekleniyor. Yakında yeni yazılarla güncellenecek.
+            </p>
+          ) : (
+            <div className="grid md:grid-cols-3 gap-6">
+              {relatedPosts.map((related) => (
+                <a
+                  key={related.id}
+                  href={`/blog/${related.slug}`}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    window.history.pushState({}, '', `/blog/${related.slug}`);
+                    window.dispatchEvent(new PopStateEvent('popstate'));
+                  }}
+                  className="group bg-gray-50 dark:bg-gray-900 rounded-xl p-6 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors"
+                >
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
+                    {new Date(related.publishedAt).toLocaleDateString('tr-TR')}
+                  </p>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-2">
+                    {related.title}
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-3">
+                    {related.excerpt}
+                  </p>
+                </a>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

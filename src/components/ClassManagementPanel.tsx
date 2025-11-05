@@ -859,7 +859,7 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh, onA
                         <div className="text-2xl font-bold text-orange-600">
                           {scheduleFeedbackSummary.partial}
                         </div>
-                        <div className="text-xs text-orange-700 dark:text-orange-200">Kismen tamamlanan</div>
+                        <div className="text-xs text-orange-700 dark:text-orange-200">ısmen tamamlanan</div>
                       </div>
                       <div className="rounded-lg bg-gray-100 p-3 text-center dark:bg-gray-800">
                         <div className="text-2xl font-bold text-gray-700 dark:text-gray-200">
@@ -911,7 +911,7 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh, onA
                               {feedback.goal_status === 'achieved'
                                 ? 'Tamamlandi'
                                 : feedback.goal_status === 'partial'
-                                ? 'Kismen tamamlandi'
+                                ? 'Kısmen tamamlandi'
                                 : 'Ertelendi'}
                             </span>
                           </div>
