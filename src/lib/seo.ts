@@ -1,7 +1,7 @@
 const SITE_NAME = 'BaşarıYolu';
 const DEFAULT_DESCRIPTION =
   'BaşarıYolu ile YKS ve LGS hazırlığını yapay zeka destekli çalışma planları, zengin kaynaklar ve uzman rehberliğiyle güçlendir.';
-const DEFAULT_IMAGE = '/logo.svg';
+const DEFAULT_IMAGE = '/Logom.webp';
 
 type StructuredData = Record<string, unknown> | Record<string, unknown>[];
 
@@ -156,7 +156,7 @@ const getDefaultStructuredData = (baseUrl: string) => ({
   '@type': 'Organization',
   name: SITE_NAME,
   url: baseUrl,
-  logo: `${baseUrl}/logo.svg`,
+  logo: `${baseUrl}/Logom.webp`,
   sameAs: [
     'https://www.instagram.com/basari_yolumm',
   ],
@@ -213,7 +213,7 @@ export const getBlogPostStructuredData = (post: {
       name: SITE_NAME,
       logo: {
       '@type': 'ImageObject',
-      url: `${baseUrl}/logo.svg`,
+      url: `${baseUrl}/Logom.webp`,
       },
     },
     mainEntityOfPage: {

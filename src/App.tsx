@@ -23,7 +23,20 @@ import BlogList from './components/BlogList';
 import BlogDetail from './components/BlogDetail';
 import TermsOfService from './pages/TermsOfService';
 import PrivacyPolicy from './pages/PrivacyPolicy';
-import RefundPolicy from './pages/RefundPolicy'; 
+import RefundPolicy from './pages/RefundPolicy';
+import InstitutionRegisterModal from './components/InstitutionRegisterModal';
+import InstitutionLoginModal from './components/InstitutionLoginModal';
+import InstitutionDashboard from './components/InstitutionDashboard';
+import { InstitutionSession, refreshInstitutionSession } from './lib/institutionApi';
+import { supabase } from './lib/supabase';
+import { blogPosts } from './data/blogPosts';
+import {
+  applySeo,
+  getBlogListingStructuredData,
+  getBlogPostStructuredData,
+  getOrganizationStructuredData,
+} from './lib/seo';
+
 import { PomodoroProvider } from './contexts/PomodoroContext';
 import NotFoundPage from './pages/NotFoundPage';
 
@@ -33,12 +46,43 @@ function App() {
   const [targetUpgradePlan, setTargetUpgradePlan] = useState<any>(null);
   const [showStudentParentLoginModal, setShowStudentParentLoginModal] = useState(false);
   const [showTeacherLoginModal, setShowTeacherLoginModal] = useState(false);
-  
-  const [currentView, setCurrentView] = useState<'home' | 'dashboard' | 'blog' | 'blog-detail' | 'terms' | 'privacy' | 'refund' | 'not-found'>('home');
+  const [institutionSession, setInstitutionSession] = useState<InstitutionSession | null>(null);
+  const [showInstitutionRegisterModal, setShowInstitutionRegisterModal] = useState(false);
+  const [showInstitutionLoginModal, setShowInstitutionLoginModal] = useState(false);
+
+  const [currentView, setCurrentView] = useState<'home' | 'dashboard' | 'blog' | 'blog-detail' | 'terms' | 'privacy' | 'refund' | 'not-found' | 'institution-login' | 'institution-register' | 'institution-dashboard'>('home');
   
   const [selectedBlogSlug, setSelectedBlogSlug] = useState<string>('');
   const [teacherUser, setTeacherUser] = useState<any>(null);
   const [hasClassViewerSession, setHasClassViewerSession] = useState(false);
+
+  const isInstitutionUser =
+    Boolean(institutionSession) || user?.profile?.user_type === 'institution_owner';
+
+  React.useEffect(() => {
+    const storedInstitution = localStorage.getItem('institutionSession');
+    if (storedInstitution) {
+      try {
+        const parsedSession: InstitutionSession = JSON.parse(storedInstitution);
+        setInstitutionSession(parsedSession);
+      } catch {
+        localStorage.removeItem('institutionSession');
+      }
+    }
+  }, []);
+
+  React.useEffect(() => {
+    const handleOpenInstitutionLogin = () => setShowInstitutionLoginModal(true);
+    const handleOpenInstitutionRegister = () => setShowInstitutionRegisterModal(true);
+
+    window.addEventListener('openInstitutionLogin', handleOpenInstitutionLogin);
+    window.addEventListener('openInstitutionRegister', handleOpenInstitutionRegister);
+
+    return () => {
+      window.removeEventListener('openInstitutionLogin', handleOpenInstitutionLogin);
+      window.removeEventListener('openInstitutionRegister', handleOpenInstitutionRegister);
+    };
+  }, []);
 
   React.useEffect(() => {
     const teacherSession = localStorage.getItem('teacherSession');
@@ -65,12 +109,146 @@ function App() {
       setCurrentView('privacy');
     } else if (path === '/refund-policy' || path === '/iade-politikasi') {
       setCurrentView('refund');
+    } else if (path === '/institution/register') {
+      setCurrentView('institution-register');
+      setShowInstitutionRegisterModal(true);
+    } else if (path === '/institution/login') {
+      setCurrentView('institution-login');
+      setShowInstitutionLoginModal(true);
+    } else if (path === '/institution') {
+      const storedInstitution = localStorage.getItem('institutionSession');
+      if (storedInstitution) {
+        setCurrentView('institution-dashboard');
+      } else {
+        setCurrentView('institution-login');
+        setShowInstitutionLoginModal(true);
+      }
     } else if (path === '/' || path === '') {
       setCurrentView('home');
     } else {
       setCurrentView('not-found');
     }
   }, []);
+
+  React.useEffect(() => {
+    if (institutionSession) {
+      localStorage.setItem('institutionSession', JSON.stringify(institutionSession));
+    }
+  }, [institutionSession]);
+
+  React.useEffect(() => {
+    if (institutionSession) {
+      if (
+        currentView === 'institution-login' ||
+        currentView === 'institution-register' ||
+        currentView === 'home'
+      ) {
+        setCurrentView('institution-dashboard');
+      }
+    }
+  }, [institutionSession, currentView]);
+
+  React.useEffect(() => {
+    if (!institutionSession && currentView === 'institution-dashboard') {
+      setCurrentView('home');
+    }
+  }, [institutionSession, currentView]);
+
+  React.useEffect(() => {
+    const selectedPost = selectedBlogSlug
+      ? blogPosts.find((post) => post.slug === selectedBlogSlug)
+      : undefined;
+
+    switch (currentView) {
+      case 'dashboard':
+        applySeo({
+          title: 'BasariYolu | Ogrenci Paneli',
+          description: 'BasariYolu ogrenci paneli ile calisma planlarini, ilerlemeni ve hedeflerini tek ekrandan takip et.',
+          path: '/dashboard',
+          type: 'website',
+          noIndex: true,
+        });
+        break;
+      case 'blog-detail':
+        if (selectedPost) {
+          applySeo({
+            title: `${selectedPost.title} | BasariYolu Blog`,
+            description: selectedPost.excerpt,
+            path: `/blog/${selectedPost.slug}`,
+            type: 'article',
+            image: selectedPost.coverImage,
+            keywords: selectedPost.tags,
+            publishedTime: selectedPost.publishedAt,
+            modifiedTime: selectedPost.updatedAt ?? selectedPost.publishedAt,
+            structuredData: getBlogPostStructuredData(selectedPost),
+          });
+        }
+        break;
+      case 'blog':
+        applySeo({
+          title: 'BasariYolu Blog | YKS ve LGS Hazirlik Ipuclari',
+          description: 'Uzman kadromuzdan calisma planlari, sinav stratejileri ve motivasyon rehberleriyle YKS ve LGS hazirligini guclendir.',
+          path: '/blog',
+          type: 'blog',
+          keywords: ['YKS blog', 'LGS blog', 'calisma teknikleri', 'sinav stratejileri', 'motivasyon'],
+          structuredData: getBlogListingStructuredData(
+            blogPosts.map(({ title, slug, excerpt }) => ({ title, slug, excerpt })),
+          ),
+        });
+        break;
+      case 'terms':
+        applySeo({
+          title: 'BasariYolu Kullanim Sartlari',
+          description: 'BasariYolu platformu kullanim sartlari ve hizmet kosullari hakkinda bilgi alin.',
+          path: '/terms-of-service',
+          type: 'article',
+        });
+        break;
+      case 'privacy':
+        applySeo({
+          title: 'BasariYolu Gizlilik Politikasi',
+          description: 'BasariYolu kullanici verilerinin guvenligi ve gizlilik politikasini okuyun.',
+          path: '/privacy-policy',
+          type: 'article',
+        });
+        break;
+      case 'refund':
+        applySeo({
+          title: 'BasariYolu Iade Politikasi',
+          description: 'BasariYolu uyeliklerinde iade surecleri ve kosullari.',
+          path: '/refund-policy',
+          type: 'article',
+        });
+        break;
+      case 'institution-dashboard':
+        applySeo({
+          title: 'BasariYolu | Kurum Paneli',
+          description: 'BasariYolu kurum paneli ile ogretmen ve siniflarini tek yerden yonet, soru bankasi olustur.',
+          path: '/institution',
+          type: 'website',
+          noIndex: true,
+        });
+        break;
+      case 'not-found':
+        applySeo({
+          title: 'BasariYolu | Sayfa Bulunamadi',
+          description: 'Aradiginiz sayfa bulunamadi. BasariYolu ana sayfasina donerek aradiginiz icerigi kesfedin.',
+          path: window.location.pathname,
+          type: 'website',
+          noIndex: true,
+        });
+        break;
+      default:
+        applySeo({
+          title: 'BasariYolu | Yapay Zeka Destekli Sinav Hazirlik Platformu',
+          description: 'BasariYolu ile YKS ve LGS hazirliginda yapay zeka destekli calisma planlari ve uzman koclukla hedeflerine ulas.',
+          path: '/',
+          type: 'website',
+          keywords: ['YKS', 'LGS', 'ders calisma plani', 'pomodoro timer', 'ogrenci koclugu'],
+          structuredData: getOrganizationStructuredData(),
+        });
+    }
+  }, [currentView, selectedBlogSlug]);
 
   React.useEffect(() => {
     const handlePopState = () => {
@@ -88,6 +266,20 @@ function App() {
         setCurrentView('privacy');
       } else if (path === '/refund-policy' || path === '/iade-politikasi') {
         setCurrentView('refund');
+      } else if (path === '/institution/register') {
+        setCurrentView('institution-register');
+        setShowInstitutionRegisterModal(true);
+      } else if (path === '/institution/login') {
+        setCurrentView('institution-login');
+        setShowInstitutionLoginModal(true);
+      } else if (path === '/institution') {
+        const storedInstitution = localStorage.getItem('institutionSession');
+        if (storedInstitution) {
+          setCurrentView('institution-dashboard');
+        } else {
+          setCurrentView('institution-login');
+          setShowInstitutionLoginModal(true);
+        }
       } else if (path === '/') {
         setCurrentView('home');
       } else {
@@ -124,8 +316,10 @@ function App() {
       
       localStorage.removeItem('teacherSession');
       localStorage.removeItem('classViewerSession');
+      localStorage.removeItem('institutionSession');
       setTeacherUser(null);
-      
+      setInstitutionSession(null);
+
       await clearUser();
       setCurrentView('home');
     } catch (err) {
@@ -173,6 +367,76 @@ function App() {
     }
   };
 
+  const handleInstitutionLoginSuccess = async (session: InstitutionSession) => {
+    if (!session || !session.institution) {
+      localStorage.removeItem('institutionSession');
+      await supabase.auth.signOut();
+      alert('Kurum kaydi bulunamadi. Lutfen yeniden deneyin.');
+      setShowInstitutionLoginModal(false);
+      setCurrentView('home');
+      return;
+    }
+
+    if (!session.institution.is_active) {
+      localStorage.removeItem('institutionSession');
+      await supabase.auth.signOut();
+      setInstitutionSession(null);
+      setCurrentView('home');
+      alert(
+        'Kurum hesabiniz henuz aktif degil. Basvurunuz onaylandiginda kurumsal girisi kullanabilirsiniz.'
+      );
+      setShowInstitutionLoginModal(false);
+      return;
+    }
+
+    setInstitutionSession(session);
+    localStorage.setItem('institutionSession', JSON.stringify(session));
+    setShowInstitutionLoginModal(false);
+    setShowInstitutionRegisterModal(false);
+    if (window.location.pathname !== '/institution') {
+      window.history.pushState({}, '', '/institution');
+    }
+    setCurrentView('institution-dashboard');
+  };
+
+  const handleInstitutionRegisterSuccess = (_session: InstitutionSession) => {
+    setShowInstitutionRegisterModal(false);
+    setShowInstitutionLoginModal(false);
+    localStorage.removeItem('institutionSession');
+    setInstitutionSession(null);
+    setCurrentView('home');
+    alert('Basvurunuz alindi. Onaylandiginda bilgilendirileceksiniz.');
+  };
+
+  const handleInstitutionLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error('Institution logout error', err);
+    } finally {
+      localStorage.removeItem('institutionSession');
+      setInstitutionSession(null);
+      setShowInstitutionLoginModal(false);
+      setShowInstitutionRegisterModal(false);
+      if (window.location.pathname.startsWith('/institution')) {
+        window.history.pushState({}, '', '/');
+      }
+      setCurrentView('home');
+    }
+  };
+
+  const handleInstitutionRefresh = React.useCallback(async () => {
+    try {
+      const latest = await refreshInstitutionSession();
+      if (latest) {
+        setInstitutionSession(latest);
+        localStorage.setItem('institutionSession', JSON.stringify(latest));
+      }
+    } catch (err) {
+      console.error('Institution session refresh error', err);
+    }
+  }, []);
+
   const handleNavigateToBlog = () => {
     setCurrentView('blog');
     window.history.pushState({}, '', '/blog');
@@ -193,10 +457,10 @@ function App() {
   };
 
   React.useEffect(() => {
-    if (user && currentView === 'home') {
+    if (user && currentView === 'home' && !isInstitutionUser) {
       setCurrentView('dashboard');
     }
-  }, [user, currentView]);
+  }, [user, currentView, isInstitutionUser]);
 
   React.useEffect(() => {
     if (!loading && !teacherUser && !user && currentView === 'dashboard') {
@@ -250,7 +514,7 @@ function App() {
             <div>
               <h3 className="text-lg font-semibold mb-4">BaşarıYolu</h3>
               <p className="text-gray-400 text-sm">
-                Türkiye'nin en kapsamlı öğrenci takip platformu. 
+                Türkiye'nin en kapsamlı öğrenci takip platformu.
                 Yapay zeka desteğiyle akademik başarınızı artırın.
               </p>
             </div>
@@ -281,12 +545,12 @@ function App() {
               <ul className="space-y-2 text-sm text-gray-400">
                 <li>
                   <button onClick={handleNavigateToTerms} className="hover:text-white">
-                    Kullanım Şartları
+                    KullanÄ±m ÅartlarÄ±
                   </button>
                 </li>
                 <li>
                   <button onClick={handleNavigateToPrivacy} className="hover:text-white">
-                    Gizlilik Politikası
+                    Gizlilik PolitikasÄ±
                   </button>
                 </li>
                 <li>
@@ -349,6 +613,21 @@ function App() {
       return <PrivacyPolicy />;
     } else if (currentView === 'refund') {
       return <RefundPolicy />;
+    } else if (currentView === 'institution-dashboard') {
+      if (!institutionSession) {
+        return (
+          <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+            <p className="text-sm text-gray-500 dark:text-gray-300">Kurum oturumu bulunamadı.</p>
+          </div>
+        );
+      }
+      return (
+        <InstitutionDashboard
+          session={institutionSession}
+          onLogout={handleInstitutionLogout}
+          onRefresh={handleInstitutionRefresh}
+        />
+      );
     } else if (currentView === 'not-found') {
       return <NotFoundPage onNavigateHome={handleNavigateHome} />;
     } else {
@@ -356,64 +635,112 @@ function App() {
     }
   };
 
-  return (
-    <ErrorBoundary>
-      <PomodoroProvider studentId={user?.id}>
-        {(currentView === 'home' || currentView === 'blog' || currentView === 'blog-detail' || 
-          currentView === 'terms' || currentView === 'privacy' || currentView === 'refund') && !teacherUser && (
-          <Navbar 
-            user={user} 
-            onStudentParentLogin={() => setShowStudentParentLoginModal(true)}
-            onTeacherLogin={() => setShowTeacherLoginModal(true)}
-            onLogout={handleLogout}
-            onMenuToggle={() => {}}
-            onNavigateToBlog={handleNavigateToBlog}
-            onNavigateHome={handleNavigateHome}
-          />
-        )}
-        
-        {renderContent()}
-        
-        <LoginModal
-          isOpen={showStudentParentLoginModal}
-          onClose={() => setShowStudentParentLoginModal(false)}
-          onLogin={handleLogin}
-          setUserState={setParentUser}
+  const shouldShowNavbar =
+    (currentView === 'home' ||
+      currentView === 'blog' ||
+      currentView === 'blog-detail' ||
+      currentView === 'terms' ||
+      currentView === 'privacy' ||
+      currentView === 'refund') &&
+    !teacherUser &&
+    !institutionSession;
+
+  const appContent = (
+    <>
+      {shouldShowNavbar && (
+        <Navbar
+          user={user}
+          onStudentParentLogin={() => setShowStudentParentLoginModal(true)}
+          onTeacherLogin={() => setShowTeacherLoginModal(true)}
+          onInstitutionLogin={() => {
+            setShowInstitutionLoginModal(true);
+            window.history.pushState({}, '', '/institution/login');
+          }}
+          onLogout={handleLogout}
+          onMenuToggle={() => {}}
+          onNavigateToBlog={handleNavigateToBlog}
+          onNavigateHome={handleNavigateHome}
         />
-        
-        <TeacherLogin
-          isOpen={showTeacherLoginModal}
-          onClose={() => setShowTeacherLoginModal(false)}
-          onSuccess={(teacher) => {
-            setShowTeacherLoginModal(false);
-            setTeacherUser(teacher);
-            setCurrentView('dashboard');
-            console.log('Teacher login success, setting view to dashboard');
+      )}
+
+      {renderContent()}
+
+      <LoginModal
+        isOpen={showStudentParentLoginModal}
+        onClose={() => setShowStudentParentLoginModal(false)}
+        onLogin={handleLogin}
+        setUserState={setParentUser}
+      />
+
+      <TeacherLogin
+        isOpen={showTeacherLoginModal}
+        onClose={() => setShowTeacherLoginModal(false)}
+        onSuccess={(teacher) => {
+          setShowTeacherLoginModal(false);
+          setTeacherUser(teacher);
+          setCurrentView('dashboard');
+          console.log('Teacher login success, setting view to dashboard');
+        }}
+      />
+
+      <InstitutionRegisterModal
+        isOpen={showInstitutionRegisterModal}
+        onClose={() => setShowInstitutionRegisterModal(false)}
+        onSuccess={handleInstitutionRegisterSuccess}
+        onSwitchToLogin={() => {
+          setShowInstitutionRegisterModal(false);
+          setShowInstitutionLoginModal(true);
+          window.history.pushState({}, '', '/institution/login');
+        }}
+      />
+
+      <InstitutionLoginModal
+        isOpen={showInstitutionLoginModal}
+        onClose={() => setShowInstitutionLoginModal(false)}
+        onSuccess={handleInstitutionLoginSuccess}
+        onSwitchToRegister={() => {
+          setShowInstitutionLoginModal(false);
+          setShowInstitutionRegisterModal(true);
+          window.history.pushState({}, '', '/institution/register');
+        }}
+      />
+
+      {showUpgradeModal && targetUpgradePlan && (
+        <UpgradeModal
+          isOpen={showUpgradeModal}
+          onClose={() => {
+            setShowUpgradeModal(false);
+            setTargetUpgradePlan(null);
+          }}
+          targetPlanId={targetUpgradePlan.id}
+          targetPlanName={targetUpgradePlan.name}
+          targetPlanPrice={{
+            monthly: targetUpgradePlan.monthlyPrice,
+            yearly: targetUpgradePlan.yearlyPrice
+          }}
+          currentBillingCycle={targetUpgradePlan.billingCycle || 'monthly'}
+          onSuccess={() => {
+            window.location.reload();
           }}
         />
+      )}
+    </>
+  );
 
-        {showUpgradeModal && targetUpgradePlan && (
-          <UpgradeModal
-            isOpen={showUpgradeModal}
-            onClose={() => {
-              setShowUpgradeModal(false);
-              setTargetUpgradePlan(null);
-            }}
-            targetPlanId={targetUpgradePlan.id}
-            targetPlanName={targetUpgradePlan.name}
-            targetPlanPrice={{
-              monthly: targetUpgradePlan.monthlyPrice,
-              yearly: targetUpgradePlan.yearlyPrice
-            }}
-            currentBillingCycle={targetUpgradePlan.billingCycle || 'monthly'}
-            onSuccess={() => {
-              window.location.reload();
-            }}
-          />
-        )}
-      </PomodoroProvider>
+  return (
+    <ErrorBoundary>
+      {currentView === 'institution-dashboard' ? (
+        appContent
+      ) : (
+        <PomodoroProvider studentId={user?.id}>
+          {appContent}
+        </PomodoroProvider>
+      )}
     </ErrorBoundary>
   );
 }
 
 export default App;
+
+
+
