@@ -6,6 +6,7 @@ interface NavbarProps {
   user?: any;
   onStudentParentLogin: () => void;
   onTeacherLogin: () => void;
+  onInstitutionLogin?: () => void;
   onLogout: () => void;
   onMenuToggle: () => void;
   onNavigateToBlog?: () => void; // ✅ Ekle
@@ -16,6 +17,7 @@ export default function Navbar({
   user, 
   onStudentParentLogin, 
   onTeacherLogin, 
+  onInstitutionLogin, 
   onLogout,
   onNavigateToBlog,
   onNavigateHome
@@ -134,6 +136,14 @@ export default function Navbar({
                 >
                   Öğretmen/Sınıf Girişi
                 </button>
+                {onInstitutionLogin && (
+                  <button
+                    onClick={onInstitutionLogin}
+                    className="rounded-lg border border-blue-500 px-4 py-2 text-sm font-semibold text-blue-600 hover:bg-blue-50 transition-colors"
+                  >
+                    Kurum Girişi
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -212,6 +222,17 @@ export default function Navbar({
                   >
                     Öğretmen/Sınıf Girişi
                   </button>
+                  {onInstitutionLogin && (
+                    <button
+                      onClick={() => {
+                        onInstitutionLogin();
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="w-full border border-blue-500 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors font-bold"
+                    >
+                      Kurum Girişi
+                    </button>
+                  )}
                 </div>
               )}
             </div>

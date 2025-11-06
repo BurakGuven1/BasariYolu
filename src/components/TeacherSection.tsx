@@ -202,6 +202,36 @@ export default function TeacherSection() {
           </div>
         </div>
 
+        <div className="mt-6 rounded-2xl border border-blue-100 bg-white p-6 shadow-sm">
+          <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:justify-between sm:text-left">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-wide text-blue-600">
+                Kurum ve dershane cozumleri
+              </p>
+              <h4 className="mt-2 text-xl font-bold text-gray-900">
+                Kurum panelini aktif etmek icin basvurun
+              </h4>
+              <p className="mt-1 text-sm text-gray-600">
+                Kuruma ozel soru bankasi, sinav olusturma ve veli raporlari icin hizli kayit olusturun.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <button
+                onClick={() => window.dispatchEvent(new Event('openInstitutionRegister'))}
+                className="rounded-lg border border-blue-500 px-5 py-2 text-sm font-semibold text-blue-600 hover:bg-blue-50 transition-colors"
+              >
+                Kurum Kaydi Olustur
+              </button>
+              <button
+                onClick={() => window.dispatchEvent(new Event('openInstitutionLogin'))}
+                className="rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
+              >
+                Kurum Girişi
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Security & Features */}
         <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-8">
           <div className="text-center">
