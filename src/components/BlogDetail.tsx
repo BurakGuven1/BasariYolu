@@ -9,7 +9,6 @@ import {
   Twitter,
   Linkedin,
   BookmarkPlus,
-  Sparkles,
   Target,
 } from 'lucide-react';
 import { blogPosts, BlogPost } from '../data/blogPosts';
@@ -136,7 +135,7 @@ export default function BlogDetail({ slug, onNavigateBack }: BlogDetailProps) {
             </div>
           </div>
 
-          <div className="prose dark:prose-invert prose-lg max-w-none prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline">
+          <div className="prose prose-lg max-w-none text-gray-900 dark:text-gray-100 dark:prose-invert prose-headings:text-gray-900 dark:prose-headings:text-white prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline">
             <ReactMarkdown>{post.content}</ReactMarkdown>
           </div>
 
@@ -188,23 +187,6 @@ export default function BlogDetail({ slug, onNavigateBack }: BlogDetailProps) {
                 Bağlantıyı Kopyala
               </button>
             </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
-              Blog bültenine katıl
-            </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-              Haftalık canlı etkinlikler, deneme analiz şablonları ve yeni blog yazılarımızı
-              ilk öğrenen olmak için e-posta listemize katıl.
-            </p>
-            <a
-              href="mailto:destek@basariyolum.com?subject=Blog%20B%C3%BClteni%20Kayd%C4%B1"
-              className="inline-flex items-center justify-center gap-2 w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
-            >
-              <Sparkles className="h-4 w-4" />
-              Ücretsiz Kaydol
-            </a>
           </div>
 
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">

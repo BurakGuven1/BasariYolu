@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { X, Mail, Lock, Building2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { loginInstitutionAccount, InstitutionSession } from '../lib/institutionApi';
@@ -59,46 +58,48 @@ export default function InstitutionLoginModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-      <div className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl max-w-md w-full p-6 relative max-h-[90vh] overflow-y-auto">
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-200"
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10 bg-white rounded-full p-1 transition-colors"
           aria-label="Kapat"
         >
           <X className="h-6 w-6" />
         </button>
 
-        <div className="flex flex-col items-center text-center">
-          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
-            <Building2 className="h-8 w-8 text-blue-600" />
+        <div className="text-center mb-6">
+          <div className="flex justify-center mb-4">
+            <div className="h-16 w-16 rounded-full bg-indigo-100 flex items-center justify-center">
+              <Building2 className="h-8 w-8 text-indigo-600" />
+            </div>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Kurum Girişi</h2>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+          <h2 className="text-2xl font-bold text-gray-900">Kurum Girişi</h2>
+          <p className="text-gray-600 mt-2 text-sm">
             Soru bankası, ders planları ve raporlara erişmek için hesabınızla giriş yapın.
           </p>
         </div>
 
         {error && (
-          <div className="mt-6 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 flex items-start gap-2">
             <AlertCircle className="h-5 w-5 flex-shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="mb-1 block text-sm font-semibold text-gray-700 dark:text-gray-200">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Kurum E-posta
             </label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
               <input
                 type="email"
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                className="w-full rounded-lg border border-gray-300 pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 placeholder="ornek@kurum.com"
                 required
                 autoComplete="email"
@@ -107,26 +108,28 @@ export default function InstitutionLoginModal({
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-semibold text-gray-700 dark:text-gray-200">Sifre</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Şifre
+            </label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
               <input
                 type={showPassword ? 'text' : 'password'}
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
-                className="w-full rounded-lg border border-gray-300 pl-9 pr-10 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="********"
+                className="w-full pl-10 pr-12 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                placeholder="Şifrenizi giriniz"
                 required
                 autoComplete="current-password"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((prev) => !prev)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                aria-label={showPassword ? 'Sifreyi gizle' : 'Sifreyi goster'}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                aria-label={showPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}
               >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
               </button>
             </div>
           </div>
@@ -134,28 +137,30 @@ export default function InstitutionLoginModal({
           <button
             type="submit"
             disabled={loading}
-            className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 py-3 text-sm font-semibold text-white shadow hover:bg-blue-700 transition disabled:opacity-60"
+            className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (
-              <>
-                <span className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                giriş yapılıyor...
-              </>
+              <div className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Giriş yapılıyor...
+              </div>
             ) : (
               'Kurum Girişi Yap'
             )}
           </button>
         </form>
 
-        <div className="mt-6 rounded-lg bg-blue-50 p-4 text-xs text-blue-800">
-          <p className="font-semibold text-blue-900">Aktifleştirme bekleyen hesap</p>
-          <p className="mt-1 leading-relaxed">
+        <div className="mt-6 rounded-lg bg-indigo-50 p-4">
+          <p className="text-indigo-800 text-sm font-medium mb-2">
+            Aktifleştirme Bekleyen Hesap
+          </p>
+          <p className="text-xs text-indigo-700 leading-relaxed">
             Kurum başvurunuz onaylanana kadar panelde sınırlı erişim sağlanır. Onay sonrası soru oluşturma ve
             sınav yayınlama özellikleri otomatik açılır.
           </p>
         </div>
 
-        <div className="mt-4 text-center text-sm text-gray-600 dark:text-gray-300">
+        <div className="mt-4 text-center text-sm text-gray-600">
           <span>Yeni kurum musunuz? </span>
           <button
             type="button"
@@ -163,7 +168,7 @@ export default function InstitutionLoginModal({
               onClose();
               onSwitchToRegister();
             }}
-            className="font-semibold text-blue-600 hover:text-blue-700"
+            className="font-semibold text-blue-600 hover:text-blue-700 transition-colors"
           >
             Kurum kaydı oluştur
           </button>

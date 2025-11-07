@@ -1,6 +1,11 @@
 
-import { Building2, Users, FileSpreadsheet, ClipboardList, ShieldCheck, LogOut, Mail, CheckCircle2, Layers } from 'lucide-react';
+import { useState } from 'react';
+import { Building2, Users, FileSpreadsheet, ClipboardList, ShieldCheck, LogOut, Mail, CheckCircle2, Layers, Copy } from 'lucide-react';
 import { InstitutionSession } from '../lib/institutionApi';
+import InstitutionQuestionBankPanel from './InstitutionQuestionBankPanel';
+import InstitutionStudentApprovalPanel from './InstitutionStudentApprovalPanel';
+import InstitutionEngagementPanel from './InstitutionEngagementPanel';
+import InstitutionTeacherManagementPanel from './InstitutionTeacherManagementPanel';
 
 interface InstitutionDashboardProps {
   session: InstitutionSession;
@@ -9,6 +14,7 @@ interface InstitutionDashboardProps {
 }
 
 export default function InstitutionDashboard({ session, onLogout, onRefresh }: InstitutionDashboardProps) {
+  const [teacherCodeCopyMessage, setTeacherCodeCopyMessage] = useState<string | null>(null);
   const isActive = session.institution.is_active;
   const statusKey = isActive ? 'approved' : session.institution.status;
   const statusBadges: Record<
@@ -31,6 +37,26 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
 
   const status = statusBadges[statusKey] ?? statusBadges.pending;
   const roleLabel = roleLabels[session.role] ?? session.role;
+  const isTeacherRole = session.role === 'teacher';
+  const canManageInstitution = ['owner', 'manager'].includes(session.role);
+  const canAccessQuestionBank = canManageInstitution || isTeacherRole;
+
+  const handleCopyTeacherInviteCode = async () => {
+    if (!session.institution.teacher_invite_code) {
+      return;
+    }
+    try {
+      if (typeof navigator === 'undefined' || !navigator.clipboard) {
+        throw new Error('Clipboard API not available');
+      }
+      await navigator.clipboard.writeText(session.institution.teacher_invite_code);
+      setTeacherCodeCopyMessage('Öğretmen davet kodu kopyalandı.');
+    } catch {
+      setTeacherCodeCopyMessage('Kod kopyalanamadı, lütfen tekrar deneyin.');
+    } finally {
+      setTimeout(() => setTeacherCodeCopyMessage(null), 2500);
+    }
+  };
 
   let statusMessage = '';
   let statusHint = '';
@@ -46,26 +72,41 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
     statusHint = 'Onay sonrası tüm kurum özellikleri otomatik açılacak. Durumu aşağıdaki düğmeden yenileyebilirsiniz.';
   }
 
-  const quickActions = [
-    {
-      key: 'question-bank',
-      icon: ClipboardList,
-      title: 'Soru Bankası',
-      description: 'Kendi sorularınızı kaydedin, ders ve zorluk seviyesine göre etiketleyin.',
-    },
-    {
-      key: 'exam-builder',
-      icon: FileSpreadsheet,
-      title: 'Sınav Oluştur',
-      description: 'Test, yazılı veya deneme sınavları hazırlayın ve sınıflara atayın.',
-    },
-    {
-      key: 'team',
-      icon: Users,
-      title: 'Ekip & Roller',
-      description: 'Öğretmenleri kurumunuza ekleyin ve yetkilerini yönetin.',
-    },
-  ];
+  const quickActions = canManageInstitution
+    ? [
+        {
+          key: 'question-bank',
+          icon: ClipboardList,
+          title: 'Soru Bankası',
+          description: 'Kendi sorularınızı kaydedin, ders ve zorluk seviyesine göre etiketleyin.',
+        },
+        {
+          key: 'exam-builder',
+          icon: FileSpreadsheet,
+          title: 'Sınav Oluştur',
+          description: 'Test, yazılı veya deneme sınavları hazırlayın ve sınıflara atayın.',
+        },
+        {
+          key: 'team',
+          icon: Users,
+          title: 'Ekip & Roller',
+          description: 'Öğretmenleri kurumunuza ekleyin ve yetkilerini yönetin.',
+        },
+      ]
+    : [
+        {
+          key: 'question-bank',
+          icon: ClipboardList,
+          title: 'Soru Bankası',
+          description: 'Yeni sorular ekleyin, yayımlayın ve mevcutları düzenleyin.',
+        },
+        {
+          key: 'exam-builder',
+          icon: FileSpreadsheet,
+          title: 'Sınav Taslakları',
+          description: 'Size atanan sınavları hazırlayıp öğrencilere açın.',
+        },
+      ];
 
   const onboardingSteps = [
     {
@@ -110,17 +151,34 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
             </span>
           </div>
 
-          <button
-            onClick={onLogout}
-            className="inline-flex items-center gap-1 rounded-lg bg-gray-900 px-3 py-2 text-xs font-semibold text-white hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600"
-          >
-            <LogOut className="h-4 w-4" />
-            Çıkış
-          </button>
+          <div className="flex flex-col items-end gap-1">
+            <div className="flex items-center gap-2">
+              {canManageInstitution && session.institution.teacher_invite_code && (
+                <button
+                  onClick={handleCopyTeacherInviteCode}
+                  className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 transition hover:border-blue-300 hover:bg-blue-100 dark:border-blue-900/40 dark:bg-blue-900/20 dark:text-blue-200"
+                >
+                  <Copy className="h-4 w-4" />
+                  Öğretmen kodu
+                </button>
+              )}
+              <button
+                onClick={onLogout}
+                className="inline-flex items-center gap-1 rounded-lg bg-gray-900 px-3 py-2 text-xs font-semibold text-white hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600"
+              >
+                <LogOut className="h-4 w-4" />
+                Çıkış
+              </button>
+            </div>
+            {teacherCodeCopyMessage && (
+              <p className="text-xs text-blue-600 dark:text-blue-300">{teacherCodeCopyMessage}</p>
+            )}
+          </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-6xl space-y-8 px-6 py-10">
+        {!isTeacherRole && (
         <section className="grid gap-6 lg:grid-cols-[2fr,1fr]">
           <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
             <h2 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">Hesap durumu</h2>
@@ -219,6 +277,18 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
             </div>
           </div>
         </section>
+        )}
+
+        {isTeacherRole && (
+          <section className="rounded-2xl border border-blue-100 bg-blue-50 p-6 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-900/20 dark:text-blue-100">
+            <h2 className="text-lg font-semibold text-blue-900 dark:text-blue-100">Öğretmen paneline hoş geldiniz</h2>
+            <p className="mt-2">
+              Bu alanda kurumunuz için soru bankası oluşturabilir, sınav taslaklarını düzenleyebilir ve size atanan
+              görevleri takip edebilirsiniz. Yalnızca kurum yöneticilerinin görebildiği finans, öğrenci ve öğretmen
+              yönetimi bölümleri size gösterilmez.
+            </p>
+          </section>
+        )}
 
         <section className="grid gap-6 lg:grid-cols-3">
           {quickActions.map((action) => {
@@ -251,6 +321,81 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
           })}
         </section>
 
+        {canManageInstitution && session.institution.student_invite_code && (
+          <section className="rounded-2xl border border-indigo-100 bg-indigo-50/80 p-5 shadow-sm dark:border-indigo-800/40 dark:bg-indigo-900/20">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">
+                  Öğrenci davet kodu
+                </p>
+                <p className="mt-1 font-mono text-2xl font-bold text-indigo-900 dark:text-white">
+                  {session.institution.student_invite_code}
+                </p>
+                <p className="mt-2 text-xs text-indigo-800 dark:text-indigo-200">
+                  Öğrenciler bu kodu “Kurum/Öğrenci” girişinden ad-soyad, telefon, e-posta ve şifre ile birlikte girerek
+                  kayıt başvurusu yapar. Onaylanana kadar sisteme erişemezler.
+                </p>
+              </div>
+              <div className="flex flex-col items-end gap-2">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                        await navigator.clipboard.writeText(session.institution.student_invite_code || '');
+                        alert('Davet kodu panoya kopyalandı.');
+                      } else {
+                        throw new Error('Clipboard API not available');
+                      }
+                    } catch (err) {
+                      console.error(err);
+                      alert('Kopyalama sırasında bir hata oluştu.');
+                    }
+                  }}
+                  className="rounded-lg bg-white px-4 py-2 text-xs font-semibold text-indigo-600 shadow hover:bg-indigo-100 dark:bg-indigo-900/40 dark:text-indigo-200 dark:hover:bg-indigo-900/60"
+                >
+                  Kodu kopyala
+                </button>
+                <p className="text-xs text-indigo-800 dark:text-indigo-200">
+                  Onaylı öğrenci: {session.institution.approved_student_count ?? 0}
+                  {session.institution.student_quota && session.institution.student_quota > 0
+                    ? ` / ${session.institution.student_quota}`
+                    : ' (sınırsız paket)'}
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 grid gap-3 text-xs text-indigo-900 dark:text-indigo-100 sm:grid-cols-2">
+              <div className="rounded-xl border border-white/70 bg-white/80 p-3 dark:border-indigo-800/60 dark:bg-indigo-900/30">
+                <p className="font-semibold">Başvuru süreci</p>
+                <p className="mt-1">
+                  Kodla gelen öğrenciler “Öğrenci Onay” paneline düşer. Kota dolduysa öğrenciler otomatik olarak bilgilendirilir
+                  ve kontenjan artırımı için destek kanalına yönlendirilir.
+                </p>
+              </div>
+              <div className="rounded-xl border border-white/70 bg-white/80 p-3 dark:border-indigo-800/60 dark:bg-indigo-900/30">
+                <p className="font-semibold">Öğrenci paneli</p>
+                <p className="mt-1">
+                  Onay sonrası öğrenciler kurum sınav taslaklarını ve ileride duyuru/ödev akışını “Kurum/Öğrenci” girişinden
+                  görebilir.
+                </p>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {isActive && canAccessQuestionBank && <InstitutionQuestionBankPanel session={session} />}
+
+        {canManageInstitution && (
+          <>
+            <InstitutionTeacherManagementPanel institutionId={session.institution.id} userId={session.user.id} />
+            <InstitutionStudentApprovalPanel institutionId={session.institution.id} />
+            {isActive && (
+              <InstitutionEngagementPanel institutionId={session.institution.id} userId={session.user.id} />
+            )}
+          </>
+        )}
+
+        {canManageInstitution && (
         <section className="grid gap-6 lg:grid-cols-[1.2fr,1fr]">
           <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
             <h2 className="mb-3 text-lg font-semibold text-gray-900 dark:text-white">
@@ -314,6 +459,7 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
             </div>
           </div>
         </section>
+        )}
       </main>
     </div>
   );
