@@ -5,6 +5,8 @@ import {
   fetchInstitutionStudentPortalData,
   fetchInstitutionStudentStatus,
   submitInstitutionStudentSignup,
+  type InstitutionAnnouncement,
+  type InstitutionAssignment,
   type InstitutionExamResult,
   type InstitutionStudentRequest,
 } from '../lib/institutionStudentApi';
@@ -43,6 +45,8 @@ export default function InstitutionStudentAccessModal({ open, onClose }: Institu
     blueprints: InstitutionExamBlueprint[];
     results: InstitutionExamResult[];
     userId: string;
+    announcements: InstitutionAnnouncement[];
+    assignments: InstitutionAssignment[];
   } | null>(null);
 
   const handlePortalRefresh = async () => {
@@ -58,6 +62,8 @@ export default function InstitutionStudentAccessModal({ open, onClose }: Institu
               ...prev,
               blueprints: portalData.blueprints,
               results: portalData.results,
+              announcements: portalData.announcements,
+              assignments: portalData.assignments,
             }
           : prev,
       );
@@ -153,6 +159,8 @@ export default function InstitutionStudentAccessModal({ open, onClose }: Institu
         blueprints: portalData.blueprints,
         results: portalData.results,
         userId: user.id,
+        announcements: portalData.announcements,
+        assignments: portalData.assignments,
       });
       setView('portal');
     } catch (err: any) {
@@ -179,7 +187,7 @@ export default function InstitutionStudentAccessModal({ open, onClose }: Institu
           </p>
           <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
           <p className="text-gray-600 mt-2 text-sm">
-            Kurumunuzun ilettiği davet koduyla sisteme kayıt olabilir veya onay sonrası giriş yapabilirsiniz.
+            Kurumunuzdan aldığınız davet koduyla sınav taslaklarına, duyurulara ve ödevlere güvenle erişebilirsiniz.
           </p>
         </div>
 
@@ -386,6 +394,8 @@ export default function InstitutionStudentAccessModal({ open, onClose }: Institu
               request={portalContext.request}
               blueprints={portalContext.blueprints}
               results={portalContext.results}
+              announcements={portalContext.announcements}
+              assignments={portalContext.assignments}
               studentId={portalContext.request.student_profile_id ?? undefined}
               userId={portalContext.userId}
               onExamSubmitted={handlePortalRefresh}

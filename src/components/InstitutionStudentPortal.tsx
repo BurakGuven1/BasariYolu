@@ -1,16 +1,21 @@
-import React, { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
   ArrowLeft,
   Award,
   BookMarked,
+  CalendarDays,
   CheckCircle,
   Clock,
   Loader2,
+  Megaphone,
+  NotebookPen,
   Play,
 } from 'lucide-react';
 import type {
   InstitutionExamAnswerRecord,
+  InstitutionAnnouncement,
+  InstitutionAssignment,
   InstitutionExamResult,
   InstitutionStudentRequest,
 } from '../lib/institutionStudentApi';
@@ -26,6 +31,8 @@ interface InstitutionStudentPortalProps {
   request: InstitutionStudentRequest;
   blueprints: InstitutionExamBlueprint[];
   results?: InstitutionExamResult[];
+  announcements?: InstitutionAnnouncement[];
+  assignments?: InstitutionAssignment[];
   studentId?: string;
   userId?: string;
   onExamSubmitted?: () => void;
@@ -56,11 +63,48 @@ const formatDate = (value: string | null) => {
 const getLatestResult = (entries: InstitutionExamResult[]) => entries[0];
 const getErrorMessage = (error: unknown, fallback: string) =>
   error instanceof Error ? error.message : fallback;
+const formatShortDate = (value: string | null) => {
+  if (!value) return '-';
+  try {
+    return new Date(value).toLocaleDateString('tr-TR', {
+      day: '2-digit',
+      month: 'short',
+    });
+  } catch {
+    return value;
+  }
+};
+
+const getAnnouncementTone = (type: string) => {
+  switch (type) {
+    case 'warning':
+      return 'border-yellow-200 bg-yellow-50 text-yellow-800';
+    case 'success':
+      return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+    case 'urgent':
+      return 'border-red-200 bg-red-50 text-red-700';
+    default:
+      return 'border-blue-200 bg-blue-50 text-blue-700';
+  }
+};
+
+const getAssignmentTone = (status: string) => {
+  switch (status) {
+    case 'completed':
+      return 'text-emerald-600';
+    case 'archived':
+      return 'text-gray-500';
+    default:
+      return 'text-blue-600';
+  }
+};
 
 export default function InstitutionStudentPortal({
   request,
   blueprints,
   results = [],
+  announcements = [],
+  assignments = [],
   studentId,
   userId,
   onExamSubmitted,
@@ -103,6 +147,22 @@ export default function InstitutionStudentPortal({
     useState<{ correct: number; wrong: number; empty: number; score: number } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const startTimeRef = useRef<number | null>(null);
+
+  const latestAnnouncements = useMemo(() => {
+    return [...announcements]
+      .sort((a, b) => new Date(b.publish_at).getTime() - new Date(a.publish_at).getTime())
+      .slice(0, 4);
+  }, [announcements]);
+
+  const upcomingAssignments = useMemo(() => {
+    return [...assignments]
+      .sort((a, b) => {
+        const aTime = a.due_date ? new Date(a.due_date).getTime() : Number.MAX_SAFE_INTEGER;
+        const bTime = b.due_date ? new Date(b.due_date).getTime() : Number.MAX_SAFE_INTEGER;
+        return aTime - bTime;
+      })
+      .slice(0, 4);
+  }, [assignments]);
 
   const resetExamState = () => {
     setActiveBlueprint(null);
@@ -269,11 +329,11 @@ export default function InstitutionStudentPortal({
   const renderOverview = () => (
     <div className="space-y-6">
       <header className="rounded-2xl border border-gray-200 bg-white p-5">
-        <p className="text-xs uppercase tracking-wide text-blue-500">Kurum öğrenci alanı</p>
+        <p className="text-xs uppercase tracking-wide text-blue-500">Kurum Öğrenci Alanı</p>
         <h2 className="text-xl font-semibold text-gray-900">{institutionName}</h2>
         <p className="mt-2 text-sm text-gray-600">
-          Kurumunuz tarafından yayınlanan sınav taslakları aşağıda listelenir. Öğretmen duyuruları ve
-          ödevler bu panelde yakında gösterilecek.
+          Kurumunuzun paylaştığı sınav taslakları, duyurular ve ödevler bu panelde toplanır; yeni gönderiler otomatik
+          olarak burada görünür.
         </p>
       </header>
 
@@ -301,6 +361,90 @@ export default function InstitutionStudentPortal({
         </div>
       </section>
 
+      <section className="grid gap-6 lg:grid-cols-2">
+        <div className="rounded-2xl border border-gray-200 bg-white p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-gray-500">Kurumsal duyurular</p>
+              <h3 className="text-lg font-semibold text-gray-900">Güncel bilgiler</h3>
+            </div>
+            <Megaphone className="h-5 w-5 text-purple-500" />
+          </div>
+          {latestAnnouncements.length === 0 ? (
+            <p className="text-sm text-gray-500">Henüz paylaşılmış bir duyuru yok.</p>
+          ) : (
+            <div className="space-y-3">
+              {latestAnnouncements.map((announcement) => (
+                <div
+                  key={announcement.id}
+                  className={`rounded-xl border px-4 py-3 ${getAnnouncementTone(announcement.type)} bg-opacity-70`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-semibold text-sm text-gray-900">{announcement.title}</p>
+                    <span className="text-xs text-gray-600">{formatShortDate(announcement.publish_at)}</span>
+                  </div>
+                  <p className="mt-2 text-sm text-gray-700">{announcement.content}</p>
+                  <p className="mt-1 text-xs text-gray-500 capitalize">
+                    {announcement.type === 'urgent'
+                      ? 'Acil'
+                      : announcement.type === 'success'
+                        ? 'Başarı'
+                        : announcement.type === 'warning'
+                          ? 'Uyarı'
+                          : 'Bilgilendirme'}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-2xl border border-gray-200 bg-white p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-gray-500">Ödev & Çalışmalar</p>
+              <h3 className="text-lg font-semibold text-gray-900">Gündemdeki görevler</h3>
+            </div>
+            <NotebookPen className="h-5 w-5 text-rose-500" />
+          </div>
+          {upcomingAssignments.length === 0 ? (
+            <p className="text-sm text-gray-500">
+              Kurumunuz henüz bir ödev paylaşmadı; yeni görevler burada listelenecek.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {upcomingAssignments.map((assignment) => (
+                <div
+                  key={assignment.id}
+                  className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-semibold text-gray-900">{assignment.title}</p>
+                    <span className={`text-xs ${getAssignmentTone(assignment.status)}`}>
+                      {assignment.status === 'active'
+                        ? 'Aktif'
+                        : assignment.status === 'completed'
+                          ? 'Tamamlandı'
+                          : 'Arşivlendi'}
+                    </span>
+                  </div>
+                  {assignment.description && (
+                    <p className="mt-1 text-gray-600 line-clamp-2">{assignment.description}</p>
+                  )}
+                  <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
+                    <span className="inline-flex items-center gap-1">
+                      <CalendarDays className="h-3.5 w-3.5" />
+                      {assignment.due_date ? `Bitiş: ${formatShortDate(assignment.due_date)}` : 'Tarih yok'}
+                    </span>
+                    {assignment.subject && <span>{assignment.subject}</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
       <section className="rounded-2xl border border-gray-200 bg-white p-5">
         <div className="mb-4 flex items-center justify-between">
           <div>
@@ -310,7 +454,7 @@ export default function InstitutionStudentPortal({
         </div>
         {blueprints.length === 0 ? (
           <p className="text-sm text-gray-500">
-            Kurumunuz henüz paylaşılan bir sınav eklemedi. Sınav oluşturulduğunda burada görünecek.
+            Kurumunuz henüz paylaşılmış bir sınav eklemedi. Sınav oluşturulduğunda burada görünecek.
           </p>
         ) : (
           <div className="space-y-4">
@@ -394,8 +538,7 @@ export default function InstitutionStudentPortal({
                                   %{historyItem.score ?? 0}
                                 </span>
                                 <span>
-                                  {historyItem.correct_count} doğru • {historyItem.wrong_count} yanlış •{' '}
-                                  {historyItem.empty_count} boş
+                                  {historyItem.correct_count} doğru • {historyItem.wrong_count} yanlış • {historyItem.empty_count} boş
                                 </span>
                                 <span className="text-gray-500">{formatDate(historyItem.created_at)}</span>
                               </li>
@@ -417,6 +560,7 @@ export default function InstitutionStudentPortal({
       </section>
     </div>
   );
+
 
   const renderExamView = () => {
     if (!activeBlueprint) {

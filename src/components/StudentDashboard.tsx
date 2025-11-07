@@ -30,6 +30,8 @@ import type { InstitutionExamBlueprint } from '../lib/institutionQuestionApi';
 import {
   fetchInstitutionStudentPortalData,
   fetchInstitutionStudentStatus,
+  type InstitutionAnnouncement,
+  type InstitutionAssignment,
   type InstitutionExamResult,
   type InstitutionStudentRequest,
 } from '../lib/institutionStudentApi';
@@ -110,6 +112,8 @@ export default function StudentDashboard() {
   const [institutionPortalLoading, setInstitutionPortalLoading] = useState(false);
   const [institutionPortalError, setInstitutionPortalError] = useState<string | null>(null);
   const [institutionExamResults, setInstitutionExamResults] = useState<InstitutionExamResult[]>([]);
+  const [institutionAnnouncements, setInstitutionAnnouncements] = useState<InstitutionAnnouncement[]>([]);
+  const [institutionAssignments, setInstitutionAssignments] = useState<InstitutionAssignment[]>([]);
   const [institutionPortalReloadKey, setInstitutionPortalReloadKey] = useState(0);
 
   const {
@@ -167,6 +171,8 @@ export default function StudentDashboard() {
         setInstitutionRequest(null);
         setInstitutionBlueprints([]);
         setInstitutionExamResults([]);
+        setInstitutionAnnouncements([]);
+        setInstitutionAssignments([]);
         setInstitutionPortalError(null);
         setInstitutionPortalLoading(false);
         return;
@@ -184,6 +190,8 @@ export default function StudentDashboard() {
         setInstitutionRequest(request ?? null);
         setInstitutionBlueprints(portal.blueprints ?? []);
         setInstitutionExamResults(portal.results ?? []);
+        setInstitutionAnnouncements(portal.announcements ?? []);
+        setInstitutionAssignments(portal.assignments ?? []);
       } catch (err: any) {
         if (!cancelled) {
           console.error('Institution portal load error:', err);
@@ -1106,6 +1114,8 @@ export default function StudentDashboard() {
         request={institutionRequest}
         blueprints={institutionBlueprints}
         results={institutionExamResults}
+        announcements={institutionAnnouncements}
+        assignments={institutionAssignments}
         studentId={studentData?.id}
         userId={user?.id ?? undefined}
         onExamSubmitted={triggerInstitutionPortalReload}

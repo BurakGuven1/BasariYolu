@@ -53,6 +53,33 @@ export interface InstitutionExamResult {
   created_at: string;
 }
 
+export interface InstitutionAnnouncement {
+  id: string;
+  institution_id: string;
+  created_by: string | null;
+  title: string;
+  content: string;
+  type: 'info' | 'success' | 'warning' | 'urgent';
+  audience: 'students' | 'teachers' | 'all';
+  publish_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InstitutionAssignment {
+  id: string;
+  institution_id: string;
+  created_by: string | null;
+  title: string;
+  description: string | null;
+  subject: string | null;
+  due_date: string | null;
+  resources: Record<string, any>[]; // eslint-disable-line @typescript-eslint/no-explicit-any
+  status: 'active' | 'completed' | 'archived';
+  created_at: string;
+  updated_at: string;
+}
+
 export interface SubmitInstitutionExamResultPayload {
   institutionId: string;
   examBlueprintId: string;
@@ -239,7 +266,12 @@ export async function fetchInstitutionStudentStatus(userId: string) {
 export async function fetchInstitutionStudentPortalData(
   institutionId: string,
   userId: string,
-): Promise<{ blueprints: InstitutionExamBlueprint[]; results: InstitutionExamResult[] }> {
+): Promise<{
+  blueprints: InstitutionExamBlueprint[];
+  results: InstitutionExamResult[];
+  announcements: InstitutionAnnouncement[];
+  assignments: InstitutionAssignment[];
+}> {
   const { data: blueprints, error: blueprintError } = await supabase
     .from('institution_exam_blueprints')
     .select('*')
@@ -274,9 +306,34 @@ export async function fetchInstitutionStudentPortalData(
     }
   }
 
+  const { data: announcementsData, error: announcementsError } = await supabase
+    .from('institution_announcements')
+    .select('*')
+    .eq('institution_id', institutionId)
+    .order('publish_at', { ascending: false })
+    .limit(20);
+
+  if (announcementsError) {
+    throw announcementsError;
+  }
+
+  const { data: assignmentsData, error: assignmentsError } = await supabase
+    .from('institution_assignments')
+    .select('*')
+    .eq('institution_id', institutionId)
+    .order('due_date', { ascending: true })
+    .order('created_at', { ascending: false })
+    .limit(20);
+
+  if (assignmentsError) {
+    throw assignmentsError;
+  }
+
   return {
     blueprints: (blueprints as InstitutionExamBlueprint[]) ?? [],
     results,
+    announcements: (announcementsData as InstitutionAnnouncement[]) ?? [],
+    assignments: (assignmentsData as InstitutionAssignment[]) ?? [],
   };
 }
 

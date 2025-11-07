@@ -1,10 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import { Users, Plus, BookOpen, Settings, LogOut, Copy, Eye, EyeOff, CreditCard as Edit } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Users, Plus, BookOpen, Settings, LogOut, Copy, Eye, EyeOff, CreditCard as Edit, Building2, School, RefreshCw } from 'lucide-react';
 import { getTeacherClasses, createClass, getClassData } from '../lib/teacherApi';
 import { PACKAGE_OPTIONS, calculateClassPrice } from '../types/teacher';
 import ClassManagementPanel from './ClassManagementPanel';
 import { sendAnnouncementNotification } from '../lib/notificationApi';
 import { supabase } from '../lib/supabase';
+import InstitutionQuestionBankPanel from './InstitutionQuestionBankPanel';
+import {
+  acceptInstitutionTeacherInvite,
+  listTeacherInstitutionRequests,
+  listTeacherInstitutionTasks,
+  listTeacherInstitutions,
+  updateInstitutionTeacherTaskStatus,
+  type InstitutionSession,
+  type InstitutionTeacherRequest,
+  type InstitutionTeacherTask,
+  type InstitutionTeacherTaskStatus,
+  type TeacherInstitutionMembership,
+} from '../lib/institutionApi';
 
 interface TeacherDashboardProps {
   teacherUser?: any;
@@ -27,12 +40,31 @@ export default function TeacherDashboard({ teacherUser, onLogout }: TeacherDashb
     package_type: '9_months' as 'monthly' | '3_months' | '9_months'
   });
   const [createLoading, setCreateLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'classes' | 'institutions'>('classes');
+  const [institutionMemberships, setInstitutionMemberships] = useState<TeacherInstitutionMembership[]>([]);
+  const [institutionsLoading, setInstitutionsLoading] = useState(false);
+  const [selectedMembershipId, setSelectedMembershipId] = useState<string | null>(null);
+  const [institutionError, setInstitutionError] = useState<string | null>(null);
+  const [joinCode, setJoinCode] = useState('');
+  const [joinLoading, setJoinLoading] = useState(false);
+  const [joinMessage, setJoinMessage] = useState<string | null>(null);
+  const [joinError, setJoinError] = useState<string | null>(null);
+  const [urlInviteProcessed, setUrlInviteProcessed] = useState(false);
+  const [initialInviteCode, setInitialInviteCode] = useState<string | null>(null);
+  const [institutionTasks, setInstitutionTasks] = useState<InstitutionTeacherTask[]>([]);
+  const [tasksLoading, setTasksLoading] = useState(false);
+  const [taskError, setTaskError] = useState<string | null>(null);
+  const [teacherRequests, setTeacherRequests] = useState<InstitutionTeacherRequest[]>([]);
+  const [requestsLoading, setRequestsLoading] = useState(false);
+  const [requestError, setRequestError] = useState<string | null>(null);
 
   useEffect(() => {
     if (teacherUser) {
       console.log('TeacherDashboard - using provided teacherUser:', teacherUser);
       setTeacher(teacherUser);
       loadClasses(teacherUser.id);
+      loadTeacherInstitutions(teacherUser.id);
+      loadTeacherRequests(teacherUser.id);
       return;
     }
 
@@ -44,12 +76,48 @@ export default function TeacherDashboard({ teacherUser, onLogout }: TeacherDashb
       console.log('TeacherDashboard - teacher data:', teacherData);
       setTeacher(teacherData);
       loadClasses(teacherData.id);
+      loadTeacherInstitutions(teacherData.id);
+      loadTeacherRequests(teacherData.id);
     } else {
       console.log('TeacherDashboard - no session, redirecting to home');
       // Don't redirect here, let App.tsx handle it
       setLoading(false);
     }
   }, [teacherUser]);
+
+  useEffect(() => {
+    if (!teacher || urlInviteProcessed) {
+      return;
+    }
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('teacher_invite') || params.get('teacherInvite');
+    if (code) {
+      setInitialInviteCode(code);
+      params.delete('teacher_invite');
+      params.delete('teacherInvite');
+      const query = params.toString();
+      const next = `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`;
+      window.history.replaceState({}, '', next);
+    }
+    setUrlInviteProcessed(true);
+  }, [teacher, urlInviteProcessed]);
+
+useEffect(() => {
+  if (!teacher || !initialInviteCode) {
+    return;
+  }
+  joinInstitutionByCode(initialInviteCode);
+  setInitialInviteCode(null);
+}, [teacher, initialInviteCode]);
+
+useEffect(() => {
+  if (teacher && selectedMembershipId) {
+    const membership = institutionMemberships.find((item) => item.id === selectedMembershipId) ?? null;
+    loadTeacherTasks(membership);
+  } else {
+    setInstitutionTasks([]);
+  }
+}, [teacher, selectedMembershipId, institutionMemberships]);
 
   const loadClasses = async (teacherId: string) => {
     try {
@@ -70,6 +138,92 @@ export default function TeacherDashboard({ teacherUser, onLogout }: TeacherDashb
       console.error('Error loading classes:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const joinInstitutionByCode = async (rawCode: string) => {
+    if (!teacher) return;
+    const normalized = rawCode.trim().toUpperCase();
+    if (!normalized) {
+      setJoinError('Lütfen geçerli bir kurum kodu girin.');
+      return;
+    }
+
+  setJoinLoading(true);
+  setJoinError(null);
+  setJoinMessage(null);
+  try {
+    await acceptInstitutionTeacherInvite(normalized);
+    setJoinMessage('Başvurunuz alındı. Kurum onayı sonrası erişiminiz açılacak.');
+    setJoinCode('');
+    await loadTeacherRequests(teacher.id);
+  } catch (error: any) {
+      console.error('joinInstitutionByCode error:', error);
+      setJoinError(error?.message ?? 'Kurum kodu doğrulanamadı.');
+    } finally {
+      setJoinLoading(false);
+    }
+  };
+
+  const handleJoinSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    joinInstitutionByCode(joinCode);
+  };
+
+  const loadTeacherInstitutions = async (teacherId: string) => {
+    setInstitutionsLoading(true);
+    setInstitutionError(null);
+    try {
+      const memberships = await listTeacherInstitutions(teacherId);
+      setInstitutionMemberships(memberships);
+      setSelectedMembershipId((prev) => {
+        if (prev && memberships.some((membership) => membership.id === prev)) {
+          return prev;
+        }
+        return memberships[0]?.id ?? null;
+      });
+    } catch (error: any) {
+      console.error('Error loading institutions:', error);
+      setInstitutionError(error?.message ?? 'Kurum bilgileri alınamadı.');
+    } finally {
+      setInstitutionsLoading(false);
+    }
+  };
+
+  const loadTeacherRequests = async (teacherId: string) => {
+    setRequestsLoading(true);
+    setRequestError(null);
+    try {
+      const rows = await listTeacherInstitutionRequests(teacherId);
+      setTeacherRequests(rows);
+      if (rows.some((request) => request.status === 'approved')) {
+        await loadTeacherInstitutions(teacherId);
+      }
+    } catch (error: any) {
+      console.error('Error loading teacher requests:', error);
+      setRequestError(error?.message ?? 'Başvurular alınamadı.');
+    } finally {
+      setRequestsLoading(false);
+    }
+  };
+
+  const loadTeacherTasks = async (membership?: TeacherInstitutionMembership | null, overrideTeacherId?: string) => {
+    const targetMembership = membership ?? selectedMembership;
+    if (!teacher || !targetMembership) {
+      setInstitutionTasks([]);
+      return;
+    }
+    const teacherId = overrideTeacherId ?? teacher.id;
+    setTasksLoading(true);
+    setTaskError(null);
+    try {
+      const tasks = await listTeacherInstitutionTasks(targetMembership.institution.id, teacherId);
+      setInstitutionTasks(tasks);
+    } catch (error: any) {
+      console.error('Error loading teacher tasks:', error);
+      setTaskError(error?.message ?? 'Görevler yüklenemedi.');
+    } finally {
+      setTasksLoading(false);
     }
   };
 
@@ -120,8 +274,22 @@ export default function TeacherDashboard({ teacherUser, onLogout }: TeacherDashb
   };
 
   const copyInviteCode = (code: string) => {
+    if (typeof navigator === 'undefined' || !navigator.clipboard) {
+      alert('Tarayıcı panoya erişimi desteklemiyor.');
+      return;
+    }
     navigator.clipboard.writeText(code);
     alert('Davet kodu kopyalandı!');
+  };
+
+  const handleTeacherTaskStatusChange = async (taskId: string, status: InstitutionTeacherTaskStatus) => {
+    try {
+      const updated = await updateInstitutionTeacherTaskStatus(taskId, status);
+      setInstitutionTasks((prev) => prev.map((task) => (task.id === taskId ? updated : task)));
+    } catch (error: any) {
+      console.error('Teacher task status update error:', error);
+      alert(error?.message ?? 'Görev güncellenemedi.');
+    }
   };
 
   const handleAnnouncementCreated = async (announcementId: string) => {
@@ -161,6 +329,41 @@ export default function TeacherDashboard({ teacherUser, onLogout }: TeacherDashb
       default: return status;
     }
   };
+
+  const showInstitutionTab = institutionMemberships.length > 0;
+  const selectedMembership = useMemo(
+    () => institutionMemberships.find((membership) => membership.id === selectedMembershipId) ?? null,
+    [institutionMemberships, selectedMembershipId],
+  );
+  const teacherEmail = teacher?.email || teacher?.email_address || null;
+  const derivedInstitutionSession: InstitutionSession | null = useMemo(() => {
+    if (!selectedMembership || !selectedMembership.institution) {
+      return null;
+    }
+    const institution = selectedMembership.institution;
+    return {
+      membershipId: selectedMembership.id,
+      role: selectedMembership.role,
+      institution: {
+        id: institution.id,
+        name: institution.name,
+        logo_url: institution.logo_url,
+        contact_email: institution.contact_email,
+        contact_phone: institution.contact_phone,
+        status: institution.status,
+        is_active: institution.is_active,
+        created_at: institution.created_at,
+        student_invite_code: institution.student_invite_code ?? null,
+        teacher_invite_code: institution.teacher_invite_code ?? null,
+        student_quota: institution.student_quota ?? null,
+        approved_student_count: institution.approved_student_count ?? null,
+      },
+      user: {
+        id: teacher?.id ?? selectedMembership.user_id,
+        email: teacherEmail,
+      },
+    };
+  }, [selectedMembership, teacher?.id, teacherEmail]);
   
 
   if (loading) {
@@ -169,6 +372,205 @@ export default function TeacherDashboard({ teacherUser, onLogout }: TeacherDashb
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Yükleniyor...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (!loading && activeTab === 'institutions') {
+    if (institutionsLoading) {
+      return (
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Kurum verileri yükleniyor...</p>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Kurumlarım</h1>
+              <p className="text-gray-600">
+                Bağlı olduğunuz kurumların soru bankası ve sınav taslaklarını buradan yönetebilirsiniz.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={() => setActiveTab('classes')}
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:border-gray-300 hover:bg-white"
+              >
+                Sınıflarıma dön
+              </button>
+              <button
+                onClick={handleLogout}
+                className="flex items-center space-x-2 bg-red-100 text-red-700 px-4 py-2 rounded-lg hover:bg-red-200 transition-colors"
+              >
+                <LogOut className="h-4 w-4" />
+                <span>Çıkış Yap</span>
+              </button>
+            </div>
+          </div>
+
+          {institutionError && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {institutionError}
+            </div>
+          )}
+
+          {joinMessage && (
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+              {joinMessage}
+            </div>
+          )}
+          {joinError && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {joinError}
+            </div>
+          )}
+
+          {!showInstitutionTab && (
+            <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-10 text-center text-gray-600">
+              <Building2 className="mx-auto mb-4 h-12 w-12 text-gray-400" />
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">Henüz bir kuruma bağlı değilsiniz</h2>
+              <p className="text-sm text-gray-500">
+                Kurum yöneticinizden davet aldıktan sonra bu alanda kurum panelleri görünecek.
+              </p>
+            </div>
+          )}
+
+          {showInstitutionTab && (
+            <>
+              <div className="grid gap-4 md:grid-cols-2">
+                {institutionMemberships.map((membership) => (
+                  <button
+                    key={membership.id}
+                    type="button"
+                    onClick={() => setSelectedMembershipId(membership.id)}
+                    className={`flex w-full flex-col gap-3 rounded-2xl border p-4 text-left transition ${
+                      selectedMembershipId === membership.id
+                        ? 'border-blue-500 bg-blue-50 shadow-sm'
+                        : 'border-gray-200 bg-white hover:border-blue-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
+                        {membership.institution.logo_url ? (
+                          <img
+                            src={membership.institution.logo_url}
+                            alt={membership.institution.name}
+                            className="h-full w-full rounded-full object-cover"
+                          />
+                        ) : (
+                          <School className="h-6 w-6 text-blue-600" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">{membership.institution.name}</p>
+                        <p className="text-xs text-gray-500">
+                          Rolünüz: {membership.role === 'teacher' ? 'Öğretmen' : membership.role}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center text-xs text-gray-500">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                          membership.institution.is_active
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-yellow-100 text-yellow-700'
+                        }`}
+                      >
+                        {membership.institution.is_active ? 'Aktif' : 'Onay bekliyor'}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              {derivedInstitutionSession ? (
+                <div className="space-y-6">
+                  <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                    <h2 className="text-lg font-semibold text-gray-900">Seçili kurum</h2>
+                    <p className="text-sm text-gray-500">
+                      {derivedInstitutionSession.institution.name} ·{' '}
+                      {derivedInstitutionSession.institution.contact_email || 'E-posta yok'}
+                    </p>
+                  </div>
+                  <InstitutionQuestionBankPanel session={derivedInstitutionSession} />
+                  <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                    <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <p className="text-xs uppercase tracking-wide text-gray-500">Görevlerim</p>
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          {derivedInstitutionSession.institution.name} · Kurumsal görevler
+                        </h3>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => loadTeacherTasks(selectedMembership ?? undefined)}
+                        className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 transition hover:border-blue-300 hover:text-blue-600"
+                      >
+                        <RefreshCw className="h-4 w-4" />
+                        Yenile
+                      </button>
+                    </div>
+                    {taskError && (
+                      <p className="mb-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                        {taskError}
+                      </p>
+                    )}
+                    {tasksLoading ? (
+                      <p className="text-sm text-gray-500">Görevler yükleniyor...</p>
+                    ) : institutionTasks.length === 0 ? (
+                      <p className="text-sm text-gray-500">Bu kurum tarafından size atanmış görev bulunmuyor.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {institutionTasks.map((task) => (
+                          <div
+                            key={task.id}
+                            className="rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700"
+                          >
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                              <div>
+                                <p className="font-semibold text-gray-900">{task.title}</p>
+                                <p className="text-xs text-gray-500">
+                                  {task.due_date
+                                    ? `Bitiş: ${new Date(task.due_date).toLocaleDateString('tr-TR')}`
+                                    : 'Bitiş tarihi yok'}
+                                </p>
+                              </div>
+                              <select
+                                value={task.status}
+                                onChange={(event) =>
+                                  handleTeacherTaskStatusChange(task.id, event.target.value as InstitutionTeacherTaskStatus)
+                                }
+                                className="rounded-lg border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-700"
+                              >
+                                <option value="pending">Bekliyor</option>
+                                <option value="in_progress">Devam ediyor</option>
+                                <option value="completed">Tamamlandı</option>
+                              </select>
+                            </div>
+                            {task.description && (
+                              <p className="mt-2 text-sm text-gray-600">{task.description}</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-8 text-center text-gray-500">
+                  Lütfen bir kurum seçin.
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
     );
@@ -211,6 +613,93 @@ export default function TeacherDashboard({ teacherUser, onLogout }: TeacherDashb
             <LogOut className="h-4 w-4" />
             <span>Çıkış Yap</span>
           </button>
+        </div>
+
+        {showInstitutionTab && (
+          <div className="mb-8 flex flex-col gap-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="font-semibold text-blue-900">Kurumsal görevleriniz var</p>
+              <p className="text-xs text-blue-700">
+                {institutionMemberships.length} kurumda öğretmen yetkisine sahipsiniz. Kurum panellerine geçerek soru
+                bankası ve sınav taslaklarını yönetebilirsiniz.
+              </p>
+            </div>
+            <button
+              onClick={() => setActiveTab('institutions')}
+              className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-white px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50"
+            >
+              <Building2 className="h-4 w-4" />
+              Kurumlarım
+            </button>
+          </div>
+        )}
+
+        <div className="mb-8 rounded-xl border border-purple-200 bg-white p-4 shadow-sm space-y-3">
+          <div>
+            <h3 className="text-lg font-semibold text-purple-800">Kurum kodu ile katıl</h3>
+            <p className="text-sm text-purple-600">Kodla başvuru yaptığınızda kurum onayı sonrası erişiminiz açılır.</p>
+          </div>
+          <form className="flex flex-col gap-3 sm:flex-row sm:items-end" onSubmit={handleJoinSubmit}>
+            <label className="flex-1 text-sm font-medium text-gray-700">
+              Kurum kodu
+              <input
+                value={joinCode}
+                onChange={(event) => setJoinCode(event.target.value.toUpperCase())}
+                placeholder="Örn. KRM12345"
+                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-gray-900 focus:border-purple-400 focus:outline-none"
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={joinLoading || !joinCode.trim()}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-purple-700 disabled:cursor-not-allowed disabled:bg-purple-300"
+            >
+              {joinLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Building2 className="h-4 w-4" />}
+              Koda katıl
+            </button>
+          </form>
+          {joinMessage && <p className="text-xs text-emerald-600">{joinMessage}</p>}
+          {joinError && <p className="text-xs text-red-600">{joinError}</p>}
+          {requestError && <p className="text-xs text-red-600">{requestError}</p>}
+          {requestsLoading ? (
+            <p className="text-sm text-gray-500">Başvurularınız yükleniyor...</p>
+          ) : teacherRequests.length === 0 ? (
+            <p className="text-sm text-gray-500">Henüz kurum başvurunuz bulunmuyor.</p>
+          ) : (
+            <div className="space-y-2 text-sm">
+              {teacherRequests.map((request) => (
+                <div
+                  key={request.id}
+                  className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div>
+                    <p className="font-semibold text-gray-900">{request.institution?.name ?? 'Kurum'}</p>
+                    <p className="text-xs text-gray-500">
+                      Başvuru: {new Date(request.created_at).toLocaleDateString('tr-TR')}
+                    </p>
+                    {request.status === 'rejected' && request.rejection_reason && (
+                      <p className="text-xs text-red-600">Neden: {request.rejection_reason}</p>
+                    )}
+                  </div>
+                  <span
+                    className={`mt-1 inline-flex items-center justify-center rounded-full px-3 py-1 text-[11px] font-semibold ${
+                      request.status === 'approved'
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : request.status === 'pending'
+                          ? 'bg-amber-100 text-amber-700'
+                          : 'bg-red-100 text-red-700'
+                    }`}
+                  >
+                    {request.status === 'approved'
+                      ? 'Onaylandı'
+                      : request.status === 'pending'
+                        ? 'Onay bekliyor'
+                        : 'Reddedildi'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Stats */}
