@@ -3,7 +3,7 @@
 
   - Rename local variables to avoid clashes and explicitly return values
 */
-
+DROP FUNCTION IF EXISTS public.accept_institution_teacher_invite(text);
 CREATE OR REPLACE FUNCTION public.accept_institution_teacher_invite(p_invite_code text)
 RETURNS TABLE (
   membership_id uuid,
@@ -25,8 +25,7 @@ BEGIN
   IF v_user_id IS NULL THEN
     RAISE EXCEPTION 'Giriş yapmalısınız.';
   END IF;
-
-  INSERT INTO public.profiles (id, full_name, email, role)
+  INSERT INTO public.profiles (id, full_name, email,role)
   SELECT
     v_user_id,
     COALESCE(auth_user.raw_user_meta_data ->> 'full_name', ''),
@@ -35,7 +34,6 @@ BEGIN
   FROM auth.users auth_user
   WHERE auth_user.id = v_user_id
   ON CONFLICT (id) DO NOTHING;
-
   SELECT *
   INTO v_invite
   FROM public.institution_teacher_invites
