@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { BookOpen, StickyNote, MapIcon, BookmarkCheck, Plus, TrendingUp, Calendar, Target, Award, Clock, CheckCircle, AlertCircle, LogOut, CreditCard as Edit, Trash2, MoreVertical, Users, X, Brain, Crown, Trophy, Timer, FileText } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuth } from '../hooks/useAuth';
@@ -25,6 +25,14 @@ import NotesSection from './NotesSection';
 import StudentWeeklySchedule from './StudentWeeklySchedule';
 import SelfStudyPlanner from './SelfStudyPlanner';
 import TopicSummariesSection from './TopicSummariesSection';
+import InstitutionStudentPortal from './InstitutionStudentPortal';
+import type { InstitutionExamBlueprint } from '../lib/institutionQuestionApi';
+import {
+  fetchInstitutionStudentPortalData,
+  fetchInstitutionStudentStatus,
+  type InstitutionExamResult,
+  type InstitutionStudentRequest,
+} from '../lib/institutionStudentApi';
 
 const getCurrentWeekRange = () => {
   const now = new Date();
@@ -97,6 +105,12 @@ export default function StudentDashboard() {
   const [classInviteCodeInput, setClassInviteCodeInput] = useState('');
   const [showExamTopics, setShowExamTopics] = useState(false);
   const { subscription } = useFeatureAccess();
+  const [institutionRequest, setInstitutionRequest] = useState<InstitutionStudentRequest | null>(null);
+  const [institutionBlueprints, setInstitutionBlueprints] = useState<InstitutionExamBlueprint[]>([]);
+  const [institutionPortalLoading, setInstitutionPortalLoading] = useState(false);
+  const [institutionPortalError, setInstitutionPortalError] = useState<string | null>(null);
+  const [institutionExamResults, setInstitutionExamResults] = useState<InstitutionExamResult[]>([]);
+  const [institutionPortalReloadKey, setInstitutionPortalReloadKey] = useState(0);
 
   const {
     studentData,
@@ -109,6 +123,9 @@ export default function StudentDashboard() {
     loading,
     refetch
   } = useStudentData(user?.id);
+
+  const institutionProfile = studentData?.profile;
+  const isInstitutionStudent = Boolean(institutionProfile?.institution_student && institutionProfile?.institution_id);
 
   const loadWeeklyQuestionPlan = React.useCallback(async () => {
     if (!studentData) {
@@ -141,6 +158,54 @@ export default function StudentDashboard() {
       setQuestionPlanLoading(false);
     }
   }, [studentData]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadInstitutionData = async () => {
+      if (!isInstitutionStudent || !user?.id || !institutionProfile?.institution_id) {
+        setInstitutionRequest(null);
+        setInstitutionBlueprints([]);
+        setInstitutionExamResults([]);
+        setInstitutionPortalError(null);
+        setInstitutionPortalLoading(false);
+        return;
+      }
+
+      setInstitutionPortalLoading(true);
+      setInstitutionPortalError(null);
+      try {
+        const [request, portal] = await Promise.all([
+          fetchInstitutionStudentStatus(user.id),
+          fetchInstitutionStudentPortalData(institutionProfile.institution_id, user.id),
+        ]);
+
+        if (cancelled) return;
+        setInstitutionRequest(request ?? null);
+        setInstitutionBlueprints(portal.blueprints ?? []);
+        setInstitutionExamResults(portal.results ?? []);
+      } catch (err: any) {
+        if (!cancelled) {
+          console.error('Institution portal load error:', err);
+          setInstitutionPortalError(err?.message ?? 'Kurum verileri yüklenemedi.');
+        }
+      } finally {
+        if (!cancelled) {
+          setInstitutionPortalLoading(false);
+        }
+      }
+    };
+
+    loadInstitutionData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isInstitutionStudent, user?.id, institutionProfile?.institution_id, institutionPortalReloadKey]);
+
+  const triggerInstitutionPortalReload = () => {
+    setInstitutionPortalReloadKey((prev) => prev + 1);
+  };
 
   const handleCreateWeeklyGoal = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1011,6 +1076,58 @@ export default function StudentDashboard() {
     <AIInsights examResults={examResults} studentData={studentData} />
   );
 
+  const renderInstitutionClasses = () => {
+    if (institutionPortalLoading) {
+      return (
+        <div className="text-center text-gray-500 py-10">
+          Kurum verileri yükleniyor...
+        </div>
+      );
+    }
+
+    if (institutionPortalError) {
+      return (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {institutionPortalError}
+        </div>
+      );
+    }
+
+    if (!institutionRequest || institutionRequest.status !== 'approved') {
+      return (
+        <div className="text-center text-gray-600 py-8">
+          Kurum erişiminiz henüz onaylanmadı. Kurum sorumlusundan başvurunuzu onaylamasını isteyin.
+        </div>
+      );
+    }
+
+    return (
+      <InstitutionStudentPortal
+        request={institutionRequest}
+        blueprints={institutionBlueprints}
+        results={institutionExamResults}
+        studentId={studentData?.id}
+        userId={user?.id ?? undefined}
+        onExamSubmitted={triggerInstitutionPortalReload}
+      />
+    );
+  };
+
+  const mainTabs = [
+    { key: 'overview', label: 'Genel Bakış', icon: TrendingUp },
+    { key: 'exams', label: 'Denemeler', icon: BookOpen },
+    { key: 'homeworks', label: 'Ödevler', icon: Calendar },
+    { key: 'classes', label: isInstitutionStudent ? 'Kurumlarım' : 'Sınıflarım', icon: Users },
+    { key: 'analysis', label: 'AI Analiz', icon: Target },
+    { key: 'smartplan', label: 'Akıllı Plan', icon: Brain },
+    { key: 'summaries', label: 'Konu Özetleri', icon: FileText },
+    { key: 'formulas', label: 'Formül Kartları', icon: BookmarkCheck },
+    { key: 'pomodoro', label: 'Pomodoro', icon: Timer },
+    { key: 'maps', label: 'Tarih/Coğrafya', icon: MapIcon },
+    { key: 'notes', label: 'Notlarım', icon: StickyNote },
+    { key: 'subscription', label: 'Aboneliğim', icon: Crown },
+  ];
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -1043,20 +1160,7 @@ export default function StudentDashboard() {
 
         <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-2">
-            {[
-              { key: 'overview', label: 'Genel Bakış', icon: TrendingUp },
-              { key: 'exams', label: 'Denemeler', icon: BookOpen },
-              { key: 'homeworks', label: 'Ödevler', icon: Calendar },
-              { key: 'classes', label: 'Sınıflarım', icon: Users },
-              { key: 'analysis', label: 'AI Analiz', icon: Target },
-              { key: 'smartplan', label: 'Akıllı Plan', icon: Brain },
-              { key: 'summaries', label: 'Konu Özetleri', icon: FileText },
-              { key: 'formulas', label: 'Formül Kartları', icon: BookmarkCheck },
-              { key: 'pomodoro', label: 'Pomodoro', icon: Timer },
-              { key: 'maps', label: 'Tarih/Coğrafya', icon: MapIcon },
-              { key: 'notes', label: 'Notlarım', icon: StickyNote },
-              { key: 'subscription', label: 'Aboneliğim', icon: Crown },
-            ].map(({ key, label, icon: Icon }) => (
+            {mainTabs.map(({ key, label, icon: Icon }) => (
               <button
                 key={key}
                 onClick={() => setActiveTab(key as any)}
@@ -1130,137 +1234,133 @@ export default function StudentDashboard() {
           <AIRecommendations studentId={studentData.id} />
         )}
         {activeTab === 'classes' && (
-          <div className="bg-white rounded-lg p-6 shadow-sm">
-            <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-6">
-              <h3 className="text-lg font-semibold">Sınıflarım</h3>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setShowJoinClassModal(true)}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-green-700 sm:w-auto"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span>Sınıfa Katıl</span>
-                </button>
-              </div>
+          isInstitutionStudent ? (
+            <div className="bg-white rounded-lg p-6 shadow-sm">
+              {renderInstitutionClasses()}
             </div>
-            <div className="space-y-4">
-              {studentClasses.length === 0 ? (
-                <div className="text-center py-8">
-                  <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600">Henüz hiçbir sınıfa katılmadınız</p>
-                  {classAnnouncements.length > 0 && (
-                    <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                      <p className="text-blue-800 text-sm font-medium">Sınıf Duyuruları</p>
-                      <div className="mt-2 space-y-2">
-                        {classAnnouncements.slice(0, 3).map((announcement) => (
-                          <div key={announcement.id} className="text-left p-2 bg-white rounded border">
-                            <p className="font-medium text-sm">{announcement.title}</p>
-                            <p className="text-xs text-gray-600">{announcement.content}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+          ) : (
+            <div className="bg-white rounded-lg p-6 shadow-sm">
+              <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-6">
+                <h3 className="text-lg font-semibold">Sınıflarım</h3>
+                <div className="flex flex-wrap gap-2">
                   <button
                     onClick={() => setShowJoinClassModal(true)}
-                    className="mt-4 w-full rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-green-700 sm:w-auto"
+                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-green-700 sm:w-auto"
                   >
-                    İlk Sınıfa Katıl
+                    <Plus className="h-4 w-4" />
+                    <span>Sınıfa Katıl</span>
                   </button>
                 </div>
-              ) : (
-                studentClasses.map((classData) => (
-                  <div key={classData.id} className="border rounded-lg p-4">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start mb-4">
-                      <div>
-                        <h4 className="font-semibold">{classData.classes?.class_name}</h4>
-                        <p className="text-sm text-gray-600">
-                          Öğretmen: {classData.classes?.teachers?.full_name}
-                        </p>
-                        {classData.classes?.teachers?.school_name && (
-                          <p className="text-xs text-gray-500">
-                            {classData.classes.teachers.school_name}
-                          </p>
-                        )}
-                      </div>
-                      <span className="text-sm bg-green-100 text-green-800 px-2 py-1 rounded">
-                        Aktif
-                      </span>
-                    </div>
-                    <div className="text-sm text-gray-600 mb-4">
-                      <p>Katılım Tarihi: {new Date(classData.joined_at).toLocaleDateString('tr-TR')}</p>
-                    </div>
-                    
-                    {/* Show class assignments for this class */}
-                    {classAssignments.filter(a => a.class_id === classData.class_id).length > 0 && (
-                      <div className="mt-3 p-2 bg-blue-50 rounded">
-                        <p className="text-blue-800 text-sm font-medium mb-2">Sınıf Ödevleri:</p>
-                        {classAssignments
-                          .filter(a => a.class_id === classData.class_id)
-                          .slice(0, 3)
-                          .map((assignment) => (
-                            <div key={assignment.id} className="text-sm text-blue-700 mb-1 p-2 bg-white rounded border-l-2 border-blue-400">
-                              <div className="font-medium">{assignment.title}</div>
-                              <div className="text-xs text-blue-600">
-                                {assignment.subject} - Son teslim: {new Date(assignment.due_date).toLocaleDateString('tr-TR')}
-                              </div>
-                              {assignment.description && (
-                                <div className="text-xs text-blue-500 mt-1">{assignment.description}</div>
-                              )}
+              </div>
+              <div className="space-y-4">
+                {studentClasses.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600">Henüz hiçbir sınıfa katılmadınız</p>
+                    {classAnnouncements.length > 0 && (
+                      <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                        <p className="text-blue-800 text-sm font-medium">Sınıf Duyuruları</p>
+                        <div className="mt-2 space-y-2">
+                          {classAnnouncements.slice(0, 3).map((announcement) => (
+                            <div key={announcement.id} className="text-left p-2 bg-white rounded border">
+                              <p className="font-medium text-sm">{announcement.title}</p>
+                              <p className="text-xs text-gray-600">{announcement.content}</p>
                             </div>
                           ))}
+                        </div>
                       </div>
                     )}
-
-                    {/* Show class announcements */}
-                    {classAnnouncements.filter(a => a.class_id === classData.class_id).length > 0 && (
-                      <div className="mt-3 p-2 bg-purple-50 rounded">
-                        <p className="text-purple-800 text-sm font-medium mb-2">Sınıf Duyuruları:</p>
-                        {classAnnouncements
-                          .filter(a => a.class_id === classData.class_id)
-                          .slice(0, 3)
-                          .map((announcement) => (
-                            <div key={announcement.id} className="text-sm text-purple-700 mb-1 p-2 bg-white rounded border-l-2 border-purple-400">
-                              <div className="font-medium">{announcement.title}</div>
-                              <div className="text-xs text-purple-600 mt-1">{announcement.content}</div>
-                              <div className="text-xs text-purple-500 mt-1">
-                                {new Date(announcement.created_at).toLocaleDateString('tr-TR')}
-                              </div>
-                            </div>
-                          ))}
-                      </div>
-                    )}
-
-                    {/* Show class exam results */}
-                    {classExamResults.filter(r => r.class_exams?.class_id === classData.class_id).length > 0 && (
-                      <div className="mt-3 p-2 bg-orange-50 rounded">
-                        <p className="text-orange-800 text-sm font-medium mb-2">Sınıf Sınav Sonuçları:</p>
-                        {classExamResults
-                          .filter(r => r.class_exams?.class_id === classData.class_id)
-                          .slice(0, 3)
-                          .map((result) => (
-                            <div key={result.id} className="text-sm text-orange-700 mb-1 p-2 bg-white rounded border-l-2 border-orange-400">
-                              <div className="font-medium">{result.class_exams?.exam_name}</div>
-                              <div className="text-xs text-orange-600">
-                                Puan: {result.score?.toFixed(1) || 'N/A'} - 
-                                Doğru: {result.correct_answers || 0} - 
-                                Yanlış: {result.wrong_answers || 0} - 
-                                Boş: {result.empty_answers || 0}
-                              </div>
-                              <div className="text-xs text-orange-500 mt-1">
-                                {new Date(result.class_exams?.exam_date).toLocaleDateString('tr-TR')}
-                              </div>
-                            </div>
-                          ))}
-                      </div>
-                    )}
+                    <button
+                      onClick={() => setShowJoinClassModal(true)}
+                      className="mt-4 w-full rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-green-700 sm:w-auto"
+                    >
+                      İlk Sınıfa Katıl
+                    </button>
                   </div>
-                ))
-              )}
+                ) : (
+                  studentClasses.map((classData) => (
+                    <div key={classData.id} className="border rounded-lg p-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start mb-4">
+                        <div>
+                          <h4 className="font-semibold">{classData.classes?.class_name}</h4>
+                          <p className="text-sm text-gray-600">
+                            Öğretmen: {classData.classes?.teachers?.full_name}
+                          </p>
+                          {classData.classes?.teachers?.school_name && (
+                            <p className="text-xs text-gray-500">
+                              {classData.classes.teachers.school_name}
+                            </p>
+                          )}
+                        </div>
+                        <span className="text-sm bg-green-100 text-green-800 px-2 py-1 rounded">
+                          Aktif
+                        </span>
+                      </div>
+                      <div className="text-sm text-gray-600 mb-4">
+                        <p>Katılım Tarihi: {new Date(classData.joined_at).toLocaleDateString('tr-TR')}</p>
+                      </div>
+                      {classAssignments.filter(a => a.class_id === classData.class_id).length > 0 && (
+                        <div className="mt-3 p-2 bg-blue-50 rounded">
+                          <p className="text-blue-800 text-sm font-medium mb-2">Sınıf Ödevleri:</p>
+                          {classAssignments
+                            .filter(a => a.class_id === classData.class_id)
+                            .slice(0, 3)
+                            .map((assignment) => (
+                              <div key={assignment.id} className="text-sm text-blue-700 mb-1 p-2 bg-white rounded border-l-2 border-blue-400">
+                                <div className="font-medium">{assignment.title}</div>
+                                <div className="text-xs text-blue-600">
+                                  {assignment.subject} - Son teslim: {new Date(assignment.due_date).toLocaleDateString('tr-TR')}
+                                </div>
+                                {assignment.description && (
+                                  <div className="text-xs text-blue-500 mt-1">{assignment.description}</div>
+                                )}
+                              </div>
+                            ))}
+                        </div>
+                      )}
+                      {classAnnouncements.filter(a => a.class_id === classData.class_id).length > 0 && (
+                        <div className="mt-3 p-2 bg-purple-50 rounded">
+                          <p className="text-purple-800 text-sm font-medium mb-2">Sınıf Duyuruları:</p>
+                          {classAnnouncements
+                            .filter(a => a.class_id === classData.class_id)
+                            .slice(0, 3)
+                            .map((announcement) => (
+                              <div key={announcement.id} className="text-sm text-purple-700 mb-1 p-2 bg-white rounded border-l-2 border-purple-400">
+                                <div className="font-medium">{announcement.title}</div>
+                                <div className="text-xs text-purple-600 mt-1">{announcement.content}</div>
+                                <div className="text-xs text-purple-500 mt-1">
+                                  {new Date(announcement.created_at).toLocaleDateString('tr-TR')}
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      )}
+                      {classExamResults.filter(r => r.class_exams?.class_id === classData.class_id).length > 0 && (
+                        <div className="mt-3 p-2 bg-orange-50 rounded">
+                          <p className="text-orange-800 text-sm font-medium mb-2">Sınıf Sınav Sonuçları:</p>
+                          {classExamResults
+                            .filter(r => r.class_exams?.class_id === classData.class_id)
+                            .slice(0, 3)
+                            .map((result) => (
+                              <div key={result.id} className="text-sm text-orange-700 mb-1 p-2 bg-white rounded border-l-2 border-orange-400">
+                                <div className="font-medium">{result.class_exams?.exam_name}</div>
+                                <div className="text-xs text-orange-600">
+                                  Puan: {result.score?.toFixed(1) || 'N/A'} - Doğru: {result.correct_answers || 0} - Yanlış: {result.wrong_answers || 0} - Boş: {result.empty_answers || 0}
+                                </div>
+                                <div className="text-xs text-orange-500 mt-1">
+                                  {new Date(result.class_exams?.exam_date).toLocaleDateString('tr-TR')}
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
-          </div>
-        )}
-        {activeTab === 'schedule' && studentData && (
+          )
+        )}        {activeTab === 'schedule' && studentData && (
           <div className="space-y-6">
             <SelfStudyPlanner
               studentId={studentData.id}
@@ -1780,7 +1880,7 @@ export default function StudentDashboard() {
                   onChange={(e) => setStudyFormData(prev => ({ ...prev, subject: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                 >
-                  <option value="">Ders Seçin</option>
+                  <option value="Ders Seçin">Ders Seçin</option>
                   <option value="Matematik">Matematik</option>
                   <option value="Türkçe">Türkçe</option>
                   <option value="Fen">Fen Bilimleri</option>
@@ -1958,3 +2058,5 @@ export default function StudentDashboard() {
     </div>
   );
 }
+
+

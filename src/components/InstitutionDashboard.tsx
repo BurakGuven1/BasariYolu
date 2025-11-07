@@ -1,6 +1,8 @@
 
 import { Building2, Users, FileSpreadsheet, ClipboardList, ShieldCheck, LogOut, Mail, CheckCircle2, Layers } from 'lucide-react';
 import { InstitutionSession } from '../lib/institutionApi';
+import InstitutionQuestionBankPanel from './InstitutionQuestionBankPanel';
+import InstitutionStudentApprovalPanel from './InstitutionStudentApprovalPanel';
 
 interface InstitutionDashboardProps {
   session: InstitutionSession;
@@ -250,6 +252,74 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
             );
           })}
         </section>
+
+        {session.institution.student_invite_code && (
+          <section className="rounded-2xl border border-indigo-100 bg-indigo-50/80 p-5 shadow-sm dark:border-indigo-800/40 dark:bg-indigo-900/20">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-300">
+                  Öğrenci davet kodu
+                </p>
+                <p className="mt-1 font-mono text-2xl font-bold text-indigo-900 dark:text-white">
+                  {session.institution.student_invite_code}
+                </p>
+                <p className="mt-2 text-xs text-indigo-800 dark:text-indigo-200">
+                  Öğrenciler bu kodu “Kurum/Öğrenci” girişinden ad-soyad, telefon, e-posta ve şifre ile birlikte girerek
+                  kayıt başvurusu yapar. Onaylanana kadar sisteme erişemezler.
+                </p>
+              </div>
+              <div className="flex flex-col items-end gap-2">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                        await navigator.clipboard.writeText(session.institution.student_invite_code || '');
+                        alert('Davet kodu panoya kopyalandı.');
+                      } else {
+                        throw new Error('Clipboard API not available');
+                      }
+                    } catch (err) {
+                      console.error(err);
+                      alert('Kopyalama sırasında bir hata oluştu.');
+                    }
+                  }}
+                  className="rounded-lg bg-white px-4 py-2 text-xs font-semibold text-indigo-600 shadow hover:bg-indigo-100 dark:bg-indigo-900/40 dark:text-indigo-200 dark:hover:bg-indigo-900/60"
+                >
+                  Kodu kopyala
+                </button>
+                <p className="text-xs text-indigo-800 dark:text-indigo-200">
+                  Onaylı öğrenci: {session.institution.approved_student_count ?? 0}
+                  {session.institution.student_quota && session.institution.student_quota > 0
+                    ? ` / ${session.institution.student_quota}`
+                    : ' (sınırsız paket)'}
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 grid gap-3 text-xs text-indigo-900 dark:text-indigo-100 sm:grid-cols-2">
+              <div className="rounded-xl border border-white/70 bg-white/80 p-3 dark:border-indigo-800/60 dark:bg-indigo-900/30">
+                <p className="font-semibold">Başvuru süreci</p>
+                <p className="mt-1">
+                  Kodla gelen öğrenciler “Öğrenci Onay” paneline düşer. Kota dolduysa öğrenciler otomatik olarak bilgilendirilir
+                  ve kontenjan artırımı için destek kanalına yönlendirilir.
+                </p>
+              </div>
+              <div className="rounded-xl border border-white/70 bg-white/80 p-3 dark:border-indigo-800/60 dark:bg-indigo-900/30">
+                <p className="font-semibold">Öğrenci paneli</p>
+                <p className="mt-1">
+                  Onay sonrası öğrenciler kurum sınav taslaklarını ve ileride duyuru/ödev akışını “Kurum/Öğrenci” girişinden
+                  görebilir.
+                </p>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {isActive && <InstitutionQuestionBankPanel session={session} />}
+
+        {['owner', 'manager'].includes(session.role) && (
+          <InstitutionStudentApprovalPanel institutionId={session.institution.id} />
+        )}
 
         <section className="grid gap-6 lg:grid-cols-[1.2fr,1fr]">
           <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">

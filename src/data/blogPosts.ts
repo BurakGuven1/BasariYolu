@@ -68,7 +68,7 @@ BaşarıYolu öğrenci panelinde:
     authorRole: 'Eğitim Danışmanı',
     category: 'calisma-teknikleri',
     tags: ['pomodoro tekniği', 'zaman yönetimi', 'çalışma disiplini', 'odaklanma'],
-    readTime: 6,
+    readTime: 5,
     publishedAt: '2025-01-10',
     updatedAt: '2025-02-15',
     coverImage: 'https://images.unsplash.com/photo-1501139083538-0139583c060f?w=800&auto=format&fit=crop',
@@ -136,7 +136,7 @@ Bu hataları en aza indirdiğinde netlerin stabil biçimde yükselir. Unutma, so
     authorRole: 'YKS Koordinatörü',
     category: 'sinav-stratejileri',
     tags: ['YKS stratejisi', 'net artırma', 'deneme analizi', 'sınav planı'],
-    readTime: 7,
+    readTime: 5,
     publishedAt: '2025-01-08',
     updatedAt: '2025-02-02',
     coverImage: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&auto=format&fit=crop',
@@ -189,7 +189,7 @@ BaşarıYolu platformunda:
 - Görsel şemalar çizerek hafızayı güçlendir.
 - Haftanın sonunda özet alanlarını yüksek sesle tekrar et.
 `,
-    author: 'Zeynep Demir',
+    author: 'Zeynep Demirev',
     authorRole: 'Eğitim Psikoloğu',
     category: 'calisma-teknikleri',
     tags: ['not alma', 'cornell tekniği', 'verimli çalışma', 'aktif öğrenme'],

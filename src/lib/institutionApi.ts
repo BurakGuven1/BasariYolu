@@ -14,6 +14,9 @@ export interface InstitutionSession {
     status: string;
     is_active: boolean;
     created_at: string;
+    student_invite_code?: string | null;
+    student_quota?: number | null;
+    approved_student_count?: number | null;
   };
   user: {
     id: string;
@@ -138,6 +141,9 @@ export const registerInstitutionAccount = async ({
       status: institution.status,
       is_active: institution.is_active,
       created_at: institution.created_at,
+      student_invite_code: institution.student_invite_code ?? null,
+      student_quota: institution.student_quota ?? 0,
+      approved_student_count: institution.approved_student_count ?? 0,
     },
     user: {
       id: user.id,
@@ -193,7 +199,10 @@ export const getInstitutionSessionForUser = async (userId: string): Promise<Inst
           contact_phone,
           status,
           is_active,
-          created_at
+          created_at,
+          student_invite_code,
+          student_quota,
+          approved_student_count
         )
       `,
     )

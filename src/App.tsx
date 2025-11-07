@@ -27,6 +27,7 @@ import RefundPolicy from './pages/RefundPolicy';
 import InstitutionRegisterModal from './components/InstitutionRegisterModal';
 import InstitutionLoginModal from './components/InstitutionLoginModal';
 import InstitutionDashboard from './components/InstitutionDashboard';
+import InstitutionStudentAccessModal from './components/InstitutionStudentAccessModal';
 import { InstitutionSession, refreshInstitutionSession } from './lib/institutionApi';
 import { supabase } from './lib/supabase';
 import { blogPosts } from './data/blogPosts';
@@ -49,6 +50,7 @@ function App() {
   const [institutionSession, setInstitutionSession] = useState<InstitutionSession | null>(null);
   const [showInstitutionRegisterModal, setShowInstitutionRegisterModal] = useState(false);
   const [showInstitutionLoginModal, setShowInstitutionLoginModal] = useState(false);
+  const [showInstitutionStudentModal, setShowInstitutionStudentModal] = useState(false);
 
   const [currentView, setCurrentView] = useState<'home' | 'dashboard' | 'blog' | 'blog-detail' | 'terms' | 'privacy' | 'refund' | 'not-found' | 'institution-login' | 'institution-register' | 'institution-dashboard'>('home');
   
@@ -656,6 +658,7 @@ function App() {
             setShowInstitutionLoginModal(true);
             window.history.pushState({}, '', '/institution/login');
           }}
+          onInstitutionStudentAccess={() => setShowInstitutionStudentModal(true)}
           onLogout={handleLogout}
           onMenuToggle={() => {}}
           onNavigateToBlog={handleNavigateToBlog}
@@ -703,6 +706,11 @@ function App() {
           setShowInstitutionRegisterModal(true);
           window.history.pushState({}, '', '/institution/register');
         }}
+      />
+
+      <InstitutionStudentAccessModal
+        open={showInstitutionStudentModal}
+        onClose={() => setShowInstitutionStudentModal(false)}
       />
 
       {showUpgradeModal && targetUpgradePlan && (
