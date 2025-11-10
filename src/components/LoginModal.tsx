@@ -142,9 +142,6 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
 
     console.log('✅ Parent user created');
 
-    // Save to localStorage
-    localStorage.setItem('tempParentUser', JSON.stringify(parentUser));
-    
     // ✅ setUserState kullan
     if (setUserState) {
       console.log('✅ Using setUserState directly');

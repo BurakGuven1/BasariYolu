@@ -1,16 +1,18 @@
-import { useState, useEffect, useRef } from 'react';
-import { 
-  getParentData, 
-  getExamResults, 
-  getHomeworks, 
-  getStudySession 
+import { useEffect, useRef, useState } from 'react';
+import {
+  getParentData,
+  getExamResults,
+  getHomeworks,
+  getStudySession,
 } from '../lib/supabase';
+import { useParentSession } from '../contexts/ParentSessionContext';
 
-export const useParentData = (userId: string | undefined) => {
+export const useParentData = (userId?: string) => {
+  const { parentUser } = useParentSession();
   const [parentData, setParentData] = useState<any>(null);
   const [children, setChildren] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   const lastUserId = useRef<string | undefined>(undefined);
   const isFetching = useRef(false);
 
@@ -20,7 +22,6 @@ export const useParentData = (userId: string | undefined) => {
       return;
     }
 
-    // Aynı userId için tekrar fetch yapma
     if (lastUserId.current === userId || isFetching.current) {
       return;
     }
@@ -30,14 +31,9 @@ export const useParentData = (userId: string | undefined) => {
     setLoading(true);
 
     try {
-      console.log('👨‍👩‍👧 Fetching parent data for:', userId);
-
-      // Temporary parent login
       if (userId.startsWith('parent_')) {
-        const tempUser = JSON.parse(localStorage.getItem('tempParentUser') || '{}');
-        
-        if (tempUser.connectedStudents && tempUser.connectedStudents.length > 0) {
-          const childrenWithData = tempUser.connectedStudents.map((student: any) => ({
+        if (parentUser) {
+          const tempChildren = (parentUser.connectedStudents || []).map((student: any) => ({
             ...student,
             exam_results: student.exam_results || [],
             homeworks: student.homeworks || [],
@@ -45,47 +41,47 @@ export const useParentData = (userId: string | undefined) => {
             weekly_study_goal: student.weekly_study_goal,
             profiles: student.profiles || {
               full_name: student.full_name || 'Öğrenci',
-              email: student.email || ''
-            }
+              email: student.email || '',
+            },
           }));
-          
-          console.log('✅ Parent data loaded:', childrenWithData.length, 'children');
-          setChildren(childrenWithData);
+          setParentData(parentUser);
+          setChildren(tempChildren);
         } else {
+          setParentData(null);
           setChildren([]);
         }
-      } else {
-        // Regular parent login
-        const { data: parent } = await getParentData(userId);
-        setParentData(parent);
+        return;
+      }
 
-        if (parent?.parent_student_connections) {
-          const childrenWithData = await Promise.all(
-            parent.parent_student_connections.map(async (connection: any) => {
-              const student = connection.students;
-              
-              const [examResults, homeworks, studySessions] = await Promise.all([
-                getExamResults(student.id),
-                getHomeworks(student.id),
-                getStudySession(student.id)
-              ]);
-              
-              return {
-                ...student,
-                exam_results: examResults.data || [],
-                homeworks: homeworks.data || [],
-                study_sessions: studySessions.data || []
-              };
-            })
-          );
-          
-          setChildren(childrenWithData);
-        } else {
-          setChildren([]);
-        }
+      const { data: parent } = await getParentData(userId);
+      setParentData(parent);
+
+      if (parent?.parent_student_connections) {
+        const childrenWithData = await Promise.all(
+          parent.parent_student_connections.map(async (connection: any) => {
+            const student = connection.students;
+
+            const [examResults, homeworks, studySessions] = await Promise.all([
+              getExamResults(student.id),
+              getHomeworks(student.id),
+              getStudySession(student.id),
+            ]);
+
+            return {
+              ...student,
+              exam_results: examResults.data || [],
+              homeworks: homeworks.data || [],
+              study_sessions: studySessions.data || [],
+            };
+          }),
+        );
+
+        setChildren(childrenWithData);
+      } else {
+        setChildren([]);
       }
     } catch (error) {
-      console.error('❌ Error fetching parent data:', error);
+      console.error('Error fetching parent data:', error);
       setChildren([]);
     } finally {
       setLoading(false);
@@ -95,12 +91,12 @@ export const useParentData = (userId: string | undefined) => {
 
   useEffect(() => {
     fetchData();
-  }, [userId]);
+  }, [userId, parentUser]);
 
   return {
     parentData,
     children,
     loading,
-    refetch: fetchData
+    refetch: fetchData,
   };
 };

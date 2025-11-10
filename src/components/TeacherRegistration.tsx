@@ -114,19 +114,9 @@ export default function TeacherRegistration({ isOpen, onClose, onSuccess }: Teac
         onSuccess?.(teacher, true);
         onClose();
       } else {
-        const teacherSession = {
-          id: teacher.id,
-          email: teacher.email,
-          full_name: teacher.full_name,
-          school_name: teacher.school_name,
-          loginTime: new Date().toISOString()
-        };
-
-        localStorage.setItem('teacherSession', JSON.stringify(teacherSession));
         alert('Ogretmen kaydiniz tamamlandi! Panelinize yonlendiriliyorsunuz.');
-        onSuccess?.(teacherSession, false);
+        onSuccess?.(teacher, false);
         onClose();
-        window.location.reload();
       }
 
       // Reset form

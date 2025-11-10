@@ -29,15 +29,6 @@ export default function TeacherLogin({ isOpen, onClose, onSuccess }: TeacherLogi
     try {
       const { data: teacher } = await loginTeacher(formData.email, formData.password);
       
-      // Store teacher session (simple approach for now)
-      localStorage.setItem('teacherSession', JSON.stringify({
-        id: teacher.id,
-        email: teacher.email,
-        full_name: teacher.full_name,
-        school_name: teacher.school_name,
-        loginTime: new Date().toISOString()
-      }));
-
       onSuccess(teacher);
       onClose();
       
