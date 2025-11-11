@@ -761,8 +761,8 @@ export const generatePerformanceInsights = (studentData: any) => {
       type: 'danger',
       icon: '⚠️',
       title: 'Hey ',
-      message: 'Bu hafta çıkmış sorulardan soru çözmediğini biliyorum, Haydi başlayalım!',
-      action: 'Hemen son yıllarda çıkmış konulardan soru çöz🚀'
+      message: 'Bu hafta çıkmış sorulardan soru çözmediğini biliyorum.',
+      action: 'Hemen son yıllarda çıkmış konulardan soru çözmeye başlamak'
     });
   }
 

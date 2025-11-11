@@ -1,5 +1,5 @@
 ﻿import { useState } from 'react';
-import { User, Bell, Menu, X, Package, GraduationCap, Goal, Book } from 'lucide-react';
+import { User, Bell, Menu, X, Package, GraduationCap, Goal, Book, BookOpenCheck } from 'lucide-react';
 import Logo from './Logo';
 
 interface NavbarProps {
@@ -12,6 +12,7 @@ interface NavbarProps {
   onMenuToggle: () => void;
   onNavigateToBlog?: () => void;
   onNavigateHome?: () => void;
+  onNavigateToQuestionBank?: () => void;
 }
 
 const ACTION_BASE = 'inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-all duration-200 hover:shadow-sm active:scale-95';
@@ -26,6 +27,7 @@ export default function Navbar({
   onMenuToggle,
   onNavigateToBlog,
   onNavigateHome,
+  onNavigateToQuestionBank,
 }: NavbarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -57,6 +59,12 @@ export default function Navbar({
       return;
     }
 
+    if (sectionId === 'question-bank') {
+      onNavigateToQuestionBank?.();
+      setIsMobileMenuOpen(false);
+      return;
+    }
+
     if (onNavigateHome && window.location.pathname !== '/') {
       onNavigateHome();
       setTimeout(() => {
@@ -71,9 +79,10 @@ export default function Navbar({
 
   const navItems = [
     { id: 'pricing', label: 'Paketler', icon: Package },
-    { id: 'exam-topics', label: 'ÖSYM-MEB Çıkmış Konular', icon: Goal },
-    { id: 'teacher', label: 'Öğretmenler', icon: GraduationCap },
+    { id: 'exam-topics', label: 'OSYM-MEB Cikmis Konular', icon: Goal },
+    { id: 'teacher', label: 'Ogretmenler', icon: GraduationCap },
     { id: 'blog', label: 'Blog', icon: Book },
+    { id: 'question-bank', label: 'Soru Bankasi', icon: BookOpenCheck },
   ];
 
   const isAuthenticated = Boolean(user && user.id);
@@ -102,7 +111,7 @@ export default function Navbar({
             onClick={onLogout}
             className="rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 transition-all duration-200 hover:border-red-300 hover:bg-red-100 hover:shadow-sm active:scale-95"
           >
-            Çıkış
+            Çıkış Yap
           </button>
         </div>
       );

@@ -6,6 +6,7 @@ import ClassManagementPanel from './ClassManagementPanel';
 import { sendAnnouncementNotification } from '../lib/notificationApi';
 import { supabase } from '../lib/supabase';
 import InstitutionQuestionBankPanel from './InstitutionQuestionBankPanel';
+import InstitutionStudentExamPanel from './InstitutionStudentExamPanel';
 import {
   acceptInstitutionTeacherInvite,
   listTeacherInstitutionRequests,
@@ -60,27 +61,12 @@ export default function TeacherDashboard({ teacherUser, onLogout }: TeacherDashb
 
   useEffect(() => {
     if (teacherUser) {
-      console.log('TeacherDashboard - using provided teacherUser:', teacherUser);
       setTeacher(teacherUser);
       loadClasses(teacherUser.id);
       loadTeacherInstitutions(teacherUser.id);
       loadTeacherRequests(teacherUser.id);
-      return;
-    }
-
-    // Get teacher from localStorage
-    const teacherSession = localStorage.getItem('teacherSession');
-    console.log('TeacherDashboard - checking session:', !!teacherSession);
-    if (teacherSession) {
-      const teacherData = JSON.parse(teacherSession);
-      console.log('TeacherDashboard - teacher data:', teacherData);
-      setTeacher(teacherData);
-      loadClasses(teacherData.id);
-      loadTeacherInstitutions(teacherData.id);
-      loadTeacherRequests(teacherData.id);
     } else {
-      console.log('TeacherDashboard - no session, redirecting to home');
-      // Don't redirect here, let App.tsx handle it
+      console.log('TeacherDashboard - no teacherUser provided');
       setLoading(false);
     }
   }, [teacherUser]);
@@ -112,7 +98,7 @@ useEffect(() => {
 
 useEffect(() => {
   if (teacher && selectedMembershipId) {
-    const membership = institutionMemberships.find((item) => item.id === selectedMembershipId) ?? null;
+    const membership = institutionMemberships.find((item) => item.id === selectedMembershipId);
     loadTeacherTasks(membership);
   } else {
     setInstitutionTasks([]);
@@ -207,7 +193,7 @@ useEffect(() => {
     }
   };
 
-  const loadTeacherTasks = async (membership?: TeacherInstitutionMembership | null, overrideTeacherId?: string) => {
+  const loadTeacherTasks = async (membership?: TeacherInstitutionMembership, overrideTeacherId?: string) => {
     const targetMembership = membership ?? selectedMembership;
     if (!teacher || !targetMembership) {
       setInstitutionTasks([]);
@@ -332,7 +318,7 @@ useEffect(() => {
 
   const showInstitutionTab = institutionMemberships.length > 0;
   const selectedMembership = useMemo(
-    () => institutionMemberships.find((membership) => membership.id === selectedMembershipId) ?? null,
+    () => institutionMemberships.find((membership) => membership.id === selectedMembershipId),
     [institutionMemberships, selectedMembershipId],
   );
   const teacherEmail = teacher?.email || teacher?.email_address || null;
@@ -501,6 +487,11 @@ useEffect(() => {
                     </p>
                   </div>
                   <InstitutionQuestionBankPanel session={derivedInstitutionSession} />
+                  <InstitutionStudentExamPanel
+                    institutionId={derivedInstitutionSession.institution.id}
+                    institutionName={derivedInstitutionSession.institution.name}
+                    teacherUserId={teacher?.id ?? selectedMembership?.user_id ?? null}
+                  />
                   <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                     <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
                       <div>
@@ -511,7 +502,7 @@ useEffect(() => {
                       </div>
                       <button
                         type="button"
-                        onClick={() => loadTeacherTasks(selectedMembership ?? undefined)}
+                        onClick={() => loadTeacherTasks(selectedMembership)}
                         className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-600 transition hover:border-blue-300 hover:text-blue-600"
                       >
                         <RefreshCw className="h-4 w-4" />

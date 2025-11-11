@@ -10,7 +10,7 @@ export default function ParentDashboard() {
   const [inviteCode, setInviteCode] = useState('');
   const [loading, setLoading] = useState(false);
   
-  const { user, clearUser } = useAuth();
+  const { user, clearUser, setParentUser } = useAuth();
   
   // ✅ user.connectedStudents'tan al
   const children = user?.connectedStudents || [];
@@ -67,18 +67,16 @@ export default function ParentDashboard() {
         weekly_study_goal: weeklyGoal.data
       };
 
-      // ✅ Update localStorage
-      const currentParentData = JSON.parse(localStorage.getItem('tempParentUser') || '{}');
       const updatedParentData = {
-        ...currentParentData,
-        connectedStudents: [...(currentParentData.connectedStudents || []), completeStudent]
+        ...user,
+        connectedStudents: [...(user?.connectedStudents || []), completeStudent],
       };
-      
-      localStorage.setItem('tempParentUser', JSON.stringify(updatedParentData));
-      
-      console.log('✅ Child added, reloading...');
-      alert('Çocuk başarıyla eklendi!');
-      window.location.reload();
+
+      setParentUser(updatedParentData);
+      setInviteCode('');
+      setShowAddChild(false);
+      alert('Cocuk basariyla eklendi!');
+
       
     } catch (error: any) {
       console.error('❌ Add child error:', error);

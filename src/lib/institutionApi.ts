@@ -1,4 +1,64 @@
 ﻿import { supabase, SUPABASE_URL } from './supabase';
+import type { InstitutionExamResult } from './institutionStudentApi';
+const STUDENT_ARTIFACT_BUCKET = 'student-exam-artifacts';
+const ALLOWED_ARTIFACT_MIME_TYPES = [
+  'application/pdf',
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+  'image/webp',
+  'image/heic',
+];
+const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'heic', 'heif'];
+
+const sanitizeFileName = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]/gi, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '') || 'artifact';
+
+const inferArtifactType = (file: File, explicitType?: StudentExamFileType): StudentExamFileType => {
+  if (explicitType) {
+    return explicitType;
+  }
+  const mime = file.type?.toLowerCase();
+  if (mime === 'application/pdf') {
+    return 'pdf';
+  }
+  if (mime?.startsWith('image/')) {
+    return 'image';
+  }
+  const name = file.name?.toLowerCase() ?? '';
+  const ext = name.split('.').pop() ?? '';
+  if (IMAGE_EXTENSIONS.includes(ext)) {
+    return 'image';
+  }
+  if (ext === 'pdf') {
+    return 'pdf';
+  }
+  throw new Error('Yalnızca PDF veya görsel dosyalar yüklenebilir.');
+};
+
+const hasAllowedMime = (file: File) => {
+  const mime = file.type?.toLowerCase();
+  if (mime && ALLOWED_ARTIFACT_MIME_TYPES.includes(mime)) {
+    return true;
+  }
+  const name = file.name?.toLowerCase() ?? '';
+  const ext = name.split('.').pop() ?? '';
+  return IMAGE_EXTENSIONS.includes(ext) || ext === 'pdf';
+};
+
+const resolveTeacherUserId = async (explicit?: string | null) => {
+  if (explicit) {
+    return explicit;
+  }
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  return user?.id ?? null;
+};
 
 export type InstitutionQuestionType = 'multiple_choice' | 'written';
 
@@ -139,6 +199,95 @@ export interface TeacherInstitutionMembership {
   };
 }
 
+export type StudentExamSource = 'institution' | 'school' | 'external';
+export type StudentExamFileType = 'pdf' | 'image';
+
+export interface StudentExamArtifactRecord {
+  id: string;
+  institution_id: string;
+  student_user_id: string;
+  teacher_user_id: string | null;
+  exam_name: string;
+  exam_type: string;
+  source: StudentExamSource;
+  score: number | null;
+  file_url: string;
+  storage_path: string;
+  file_type: StudentExamFileType;
+  metadata: Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+  created_at: string;
+}
+
+export interface UploadStudentExamArtifactPayload {
+  institutionId: string;
+  studentUserId: string;
+  teacherUserId?: string | null;
+  examName: string;
+  examType: string;
+  source?: StudentExamSource;
+  score?: number | null;
+  metadata?: Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+  file: File;
+  fileName?: string;
+}
+
+export interface StudentExamMetricRecord {
+  id: string;
+  institution_id: string;
+  student_user_id: string;
+  recorded_by: string | null;
+  exam_name: string;
+  exam_type: string;
+  source: StudentExamSource;
+  correct_count: number | null;
+  wrong_count: number | null;
+  blank_count: number | null;
+  score: number | null;
+  percentile: number | null;
+  ranking: number | null;
+  notes: string | null;
+  metadata: Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+  created_at: string;
+}
+
+export interface StudentExamMetricInput {
+  institutionId: string;
+  studentUserId: string;
+  examName: string;
+  examType: string;
+  source?: StudentExamSource;
+  correctCount?: number | null;
+  wrongCount?: number | null;
+  blankCount?: number | null;
+  score?: number | null;
+  percentile?: number | null;
+  ranking?: number | null;
+  notes?: string | null;
+  metadata?: Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+  recordedBy?: string | null;
+}
+
+export interface StudentPerformanceSummaryEntry {
+  examName: string | null;
+  score: number | null;
+  source: string | null;
+  createdAt: string | null;
+}
+
+export interface StudentPerformanceSummaryBreakdownItem {
+  source: string | null;
+  count: number;
+  average: number | null;
+}
+
+export interface StudentPerformanceSummary {
+  total_exams: number;
+  average_score: number | null;
+  best_score: number | null;
+  last_scores: StudentPerformanceSummaryEntry[];
+  source_breakdown: StudentPerformanceSummaryBreakdownItem[];
+}
+
 export type InstitutionTeacherTaskStatus = 'pending' | 'in_progress' | 'completed';
 
 export interface InstitutionTeacherTaskInput {
@@ -195,6 +344,8 @@ interface RegisterInstitutionPayload {
 }
 
 const INSTITUTION_LOGO_BUCKET = 'institution-logos';
+const MAX_LOGO_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const ALLOWED_LOGO_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
 const generateInviteCode = () => {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -207,6 +358,14 @@ const buildPublicLogoUrl = (path: string) =>
   `${SUPABASE_URL}/storage/v1/object/public/${INSTITUTION_LOGO_BUCKET}/${path}`;
 
 const uploadInstitutionLogo = async (file: File, ownerId: string) => {
+  if (file.size > MAX_LOGO_FILE_SIZE) {
+    throw new Error('Dosya boyutu 5MB\'dan küçük olmalıdır');
+  }
+
+  if (!ALLOWED_LOGO_MIME_TYPES.includes(file.type)) {
+    throw new Error('Sadece PNG, JPG, WebP formatları desteklenir');
+  }
+
   const fileExt = file.name.split('.').pop();
   const fileName = `${ownerId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${fileExt}`;
 
@@ -577,6 +736,24 @@ export const deleteInstitutionAssignment = async (assignmentId: string) => {
   }
 };
 
+type InstitutionProfileRow = {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  phone: string | null;
+  institution_joined_at: string | null;
+  institution_student: boolean | null;
+  institution_id: string | null;
+};
+
+type InstitutionTeacherMemberRow = Omit<InstitutionTeacherMember, 'profile'> & {
+  profile: InstitutionTeacherMember['profile'] | InstitutionTeacherMember['profile'][] | null;
+};
+
+type TeacherInstitutionMembershipRow = Omit<TeacherInstitutionMembership, 'institution'> & {
+  institution: TeacherInstitutionMembership['institution'] | TeacherInstitutionMembership['institution'][] | null;
+};
+
 export const fetchInstitutionStudentPerformance = async (
   institutionId: string,
 ): Promise<InstitutionStudentPerformance[]> => {
@@ -619,7 +796,7 @@ export const fetchInstitutionStudentPerformance = async (
   });
 
   const performance: InstitutionStudentPerformance[] =
-    profiles?.map((profile: any) => {
+    profiles?.map((profile: InstitutionProfileRow) => {
       const entries = groupedResults.get(profile.id) ?? [];
       const examsTaken = entries.length;
       const averageScore =
@@ -690,7 +867,23 @@ export const listInstitutionTeachers = async (institutionId: string): Promise<In
     throw error;
   }
 
-  return (data as InstitutionTeacherMember[]) ?? [];
+  const rows = (data ?? []) as InstitutionTeacherMemberRow[];
+  return rows.map((row) => {
+    const resolvedProfile = Array.isArray(row.profile) ? row.profile[0] : row.profile;
+    const normalized: InstitutionTeacherMember = {
+      id: row.id,
+      institution_id: row.institution_id,
+      user_id: row.user_id,
+      role: 'teacher',
+      profile: {
+        full_name: resolvedProfile?.full_name ?? null,
+        email: resolvedProfile?.email ?? null,
+        phone: resolvedProfile?.phone ?? null,
+        avatar_url: resolvedProfile?.avatar_url ?? null,
+      },
+    };
+    return normalized;
+  });
 };
 
 export const listTeacherInstitutions = async (userId: string): Promise<TeacherInstitutionMembership[]> => {
@@ -724,7 +917,35 @@ export const listTeacherInstitutions = async (userId: string): Promise<TeacherIn
     throw error;
   }
 
-  return ((data as TeacherInstitutionMembership[]) ?? []).filter((item) => Boolean(item.institution));
+  const rows = (data ?? []) as TeacherInstitutionMembershipRow[];
+  return rows
+    .map((row) => {
+      const institution = Array.isArray(row.institution) ? row.institution[0] : row.institution;
+      if (!institution) {
+        return null;
+      }
+      const membership: TeacherInstitutionMembership = {
+        id: row.id,
+        user_id: row.user_id,
+        role: row.role,
+        institution: {
+          id: institution.id,
+          name: institution.name,
+          logo_url: institution.logo_url ?? null,
+          contact_email: institution.contact_email ?? null,
+          contact_phone: institution.contact_phone ?? null,
+          status: institution.status,
+          is_active: institution.is_active,
+          created_at: institution.created_at,
+          student_invite_code: institution.student_invite_code ?? null,
+          teacher_invite_code: institution.teacher_invite_code ?? null,
+          student_quota: institution.student_quota ?? null,
+          approved_student_count: institution.approved_student_count ?? null,
+        },
+      };
+      return membership;
+    })
+    .filter((item): item is TeacherInstitutionMembership => item !== null);
 };
 
 export const listInstitutionTeacherTasks = async (
@@ -908,7 +1129,7 @@ export const addInstitutionTeacherMember = async (
 
     return {
       status: 'linked',
-      membership: inserted as InstitutionTeacherMember,
+      membership: inserted as unknown as InstitutionTeacherMember,
     };
   }
 
@@ -1072,5 +1293,197 @@ export const rejectInstitutionTeacherRequest = async (requestId: string, reason?
     throw error;
   }
 };
+
+
+
+
+const appendArtifactMetadata = (base: Record<string, any>, file: File) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
+  ...base,
+  originalFileName: file.name,
+  mimeType: file.type ?? null,
+  fileSize: typeof file.size === 'number' ? file.size : null,
+});
+
+export const uploadStudentExamArtifact = async (
+  payload: UploadStudentExamArtifactPayload,
+): Promise<StudentExamArtifactRecord> => {
+  if (!payload.file) {
+    throw new Error('Lütfen PDF veya görsel bir dosya seçin.');
+  }
+  if (!hasAllowedMime(payload.file)) {
+    throw new Error('Yalnızca PDF veya görsel formatındaki dosyalar desteklenir.');
+  }
+
+  const teacherUserId = await resolveTeacherUserId(payload.teacherUserId ?? null);
+  const fileType = inferArtifactType(payload.file);
+  const normalizedName = sanitizeFileName(payload.fileName ?? payload.file.name ?? 'artifact');
+  const storagePath = `${payload.institutionId}/${payload.studentUserId}/${Date.now()}-${normalizedName}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from(STUDENT_ARTIFACT_BUCKET)
+    .upload(storagePath, payload.file, {
+      cacheControl: '3600',
+      upsert: false,
+    });
+
+  if (uploadError) {
+    if (uploadError.message?.includes('not exist')) {
+      throw new Error(
+        'Supabase Storage üzerinde "student-exam-artifacts" isimli bir bucket oluşturmanız gerekiyor.',
+      );
+    }
+    throw uploadError;
+  }
+
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from(STUDENT_ARTIFACT_BUCKET).getPublicUrl(storagePath);
+
+  const insertPayload = {
+    institution_id: payload.institutionId,
+    student_user_id: payload.studentUserId,
+    teacher_user_id: teacherUserId,
+    exam_name: payload.examName,
+    exam_type: payload.examType,
+    source: payload.source ?? 'institution',
+    score: payload.score ?? null,
+    file_url: publicUrl,
+    storage_path: storagePath,
+    file_type: fileType,
+    metadata: appendArtifactMetadata(payload.metadata ?? {}, payload.file),
+  };
+
+  const { data, error } = await supabase
+    .from('student_exam_artifacts')
+    .insert(insertPayload)
+    .select('*')
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data as StudentExamArtifactRecord;
+};
+
+interface ListStudentExamArtifactsOptions {
+  studentUserId: string;
+  institutionId?: string;
+  limit?: number;
+}
+
+export const listStudentExamArtifacts = async (
+  options: ListStudentExamArtifactsOptions,
+): Promise<StudentExamArtifactRecord[]> => {
+  let query = supabase
+    .from('student_exam_artifacts')
+    .select('*')
+    .eq('student_user_id', options.studentUserId)
+    .order('created_at', { ascending: false });
+
+  if (options.institutionId) {
+    query = query.eq('institution_id', options.institutionId);
+  }
+  if (options.limit) {
+    query = query.limit(options.limit);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    throw error;
+  }
+
+  return (data as StudentExamArtifactRecord[]) ?? [];
+};
+
+interface ListStudentExamMetricsOptions {
+  studentUserId: string;
+  institutionId?: string;
+  limit?: number;
+}
+
+export const listStudentExamMetrics = async (
+  options: ListStudentExamMetricsOptions,
+): Promise<StudentExamMetricRecord[]> => {
+  let query = supabase
+    .from('student_exam_metrics')
+    .select('*')
+    .eq('student_user_id', options.studentUserId)
+    .order('created_at', { ascending: false });
+
+  if (options.institutionId) {
+    query = query.eq('institution_id', options.institutionId);
+  }
+  if (options.limit) {
+    query = query.limit(options.limit);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    throw error;
+  }
+
+  return (data as StudentExamMetricRecord[]) ?? [];
+};
+
+export const createStudentExamMetric = async (
+  input: StudentExamMetricInput,
+): Promise<StudentExamMetricRecord> => {
+  const recordedBy = await resolveTeacherUserId(input.recordedBy ?? null);
+  const insertPayload = {
+    institution_id: input.institutionId,
+    student_user_id: input.studentUserId,
+    recorded_by: recordedBy,
+    exam_name: input.examName,
+    exam_type: input.examType,
+    source: input.source ?? 'institution',
+    correct_count: input.correctCount ?? null,
+    wrong_count: input.wrongCount ?? null,
+    blank_count: input.blankCount ?? null,
+    score: input.score ?? null,
+    percentile: input.percentile ?? null,
+    ranking: input.ranking ?? null,
+    notes: input.notes ?? null,
+    metadata: input.metadata ?? {},
+  };
+
+  const { data, error } = await supabase.from('student_exam_metrics').insert(insertPayload).select('*').single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data as StudentExamMetricRecord;
+};
+
+export const fetchStudentPerformanceSummary = async (
+  studentUserId: string,
+): Promise<StudentPerformanceSummary> => {
+  const { data, error } = await supabase.rpc('student_performance_summary', {
+    p_student_id: studentUserId,
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  const payload = Array.isArray(data) ? data[0] : data;
+
+  return {
+    total_exams: payload?.total_exams ?? 0,
+    average_score: payload?.average_score ?? null,
+    best_score: payload?.best_score ?? null,
+    last_scores: (payload?.last_scores as StudentPerformanceSummaryEntry[] | null) ?? [],
+    source_breakdown: (payload?.source_breakdown as StudentPerformanceSummaryBreakdownItem[] | null) ?? [],
+  };
+};
+
+
+
+
+
+
 
 

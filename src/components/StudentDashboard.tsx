@@ -26,6 +26,7 @@ import StudentWeeklySchedule from './StudentWeeklySchedule';
 import SelfStudyPlanner from './SelfStudyPlanner';
 import TopicSummariesSection from './TopicSummariesSection';
 import InstitutionStudentPortal from './InstitutionStudentPortal';
+import StudentExamPerformancePanel from './StudentExamPerformancePanel';
 import type { InstitutionExamBlueprint } from '../lib/institutionQuestionApi';
 import {
   fetchInstitutionStudentPortalData,
@@ -1081,7 +1082,10 @@ export default function StudentDashboard() {
   }
 
   const renderAnalysis = () => (
-    <AIInsights examResults={examResults} studentData={studentData} />
+    <div className="space-y-6">
+      <StudentExamPerformancePanel userId={user?.id} />
+      <AIInsights examResults={examResults} studentData={studentData} />
+    </div>
   );
 
   const renderInstitutionClasses = () => {
