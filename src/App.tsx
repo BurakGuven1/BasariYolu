@@ -1,6 +1,7 @@
 import React from 'react';
 import { useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { BookOpenCheck } from 'lucide-react';
 import ErrorBoundary from './components/ErrorBoundary';
 import { useAuth } from './hooks/useAuth';
 import { packages } from './data/packages';
@@ -25,6 +26,7 @@ import BlogDetail from './components/BlogDetail';
 import TermsOfService from './pages/TermsOfService';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import RefundPolicy from './pages/RefundPolicy';
+import QuestionBankPage from './pages/QuestionBankPage';
 import InstitutionRegisterModal from './components/InstitutionRegisterModal';
 import InstitutionLoginModal from './components/InstitutionLoginModal';
 import InstitutionDashboard from './components/InstitutionDashboard';
@@ -361,6 +363,11 @@ function App() {
     window.scrollTo(0, 0);
   };
 
+  const handleNavigateToQuestionBank = () => {
+    navigate('/question-bank');
+    window.scrollTo(0, 0);
+  };
+
   const handleNavigateToTerms = () => {
     navigate('/terms-of-service');
     window.scrollTo(0, 0);
@@ -515,6 +522,7 @@ function App() {
   );
 
   const HomePageContent = () => renderHomePage();
+  const isQuestionBankAllowed = Boolean(user || teacherUser || institutionSession);
 
 
   const isBlogDetailPath = location.pathname.startsWith('/blog/') && location.pathname !== '/blog';
@@ -522,6 +530,7 @@ function App() {
     (
       location.pathname === '/' ||
       location.pathname === '/blog' ||
+      location.pathname === '/question-bank' ||
       isBlogDetailPath ||
       location.pathname === '/terms-of-service' ||
       location.pathname === '/privacy-policy' ||
@@ -545,6 +554,10 @@ function App() {
       <Route path="/gizlilik-politikasi" element={<Navigate to="/privacy-policy" replace />} />
       <Route path="/refund-policy" element={<RefundPolicy />} />
       <Route path="/iade-politikasi" element={<Navigate to="/refund-policy" replace />} />
+      <Route
+        path="/question-bank"
+        element={isQuestionBankAllowed ? <QuestionBankPage /> : <Navigate to="/" replace />}
+      />
       <Route path="/dashboard" element={<DashboardRoute />} />
       <Route path="/institution" element={<InstitutionDashboardRoute />} />
       <Route path="*" element={<NotFoundPage onNavigateHome={handleNavigateHome} />} />
@@ -567,6 +580,7 @@ function App() {
           onMenuToggle={() => {}}
           onNavigateToBlog={handleNavigateToBlog}
           onNavigateHome={handleNavigateHome}
+          onNavigateToQuestionBank={handleNavigateToQuestionBank}
         />
       )}
 
@@ -627,6 +641,16 @@ function App() {
             window.location.reload();
           }}
         />
+      )}
+
+      {isQuestionBankAllowed && location.pathname !== '/question-bank' && (
+        <button
+          onClick={handleNavigateToQuestionBank}
+          className="fixed bottom-6 right-6 z-40 inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-indigo-700 active:scale-95"
+        >
+          <BookOpenCheck className="h-4 w-4" />
+          Soru Bankası
+        </button>
       )}
     </>
   );

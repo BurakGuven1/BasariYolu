@@ -37,7 +37,7 @@ const inferArtifactType = (file: File, explicitType?: StudentExamFileType): Stud
   if (ext === 'pdf') {
     return 'pdf';
   }
-  throw new Error('Yaln�zca PDF veya g�rsel dosyalar y�klenebilir.');
+  throw new Error('Yalnızca PDF veya görsel dosyalar yüklenebilir.');
 };
 
 const hasAllowedMime = (file: File) => {
@@ -1085,10 +1085,10 @@ export const addInstitutionTeacherMember = async (
 
     if (existingMembership) {
       if (existingMembership.institution_id === institutionId && existingMembership.role === 'teacher') {
-        throw new Error('Bu ��retmen zaten kurumunuza ba�l�.');
+        throw new Error('Bu öğretmen zaten kurumunuza bağlı.');
       }
       if (existingMembership.role === 'teacher') {
-        throw new Error('Bu ��retmen farkl� bir kuruma ba�l�.');
+        throw new Error('Bu öğretmen farklı bir kuruma bağlı.');
       }
     }
 
@@ -1173,7 +1173,7 @@ export const removeInstitutionTeacher = async (membershipId: string) => {
   }
 
   if (!membership || membership.role !== 'teacher') {
-    throw new Error('��retmen kayd� bulunamad�.');
+    throw new Error('Öğretmen kaydı bulunamadı.');
   }
 
   const { error: deleteError } = await supabase
@@ -1222,7 +1222,7 @@ export const acceptInstitutionTeacherInvite = async (inviteCode: string) => {
   const payload = Array.isArray(data) ? data[0] : data;
 
   if (!payload) {
-    throw new Error('Ba�vuru kaydedilemedi.');
+    throw new Error('Başvuru kaydedilemedi.');
   }
 
   return {
@@ -1308,10 +1308,10 @@ export const uploadStudentExamArtifact = async (
   payload: UploadStudentExamArtifactPayload,
 ): Promise<StudentExamArtifactRecord> => {
   if (!payload.file) {
-    throw new Error('L�tfen PDF veya g�rsel bir dosya se�in.');
+    throw new Error('Lütfen PDF veya görsel bir dosya seçin.');
   }
   if (!hasAllowedMime(payload.file)) {
-    throw new Error('Yaln�zca PDF veya g�rsel format�ndaki dosyalar desteklenir.');
+    throw new Error('Yalnızca PDF veya görsel formatındaki dosyalar desteklenir.');
   }
 
   const teacherUserId = await resolveTeacherUserId(payload.teacherUserId ?? null);
@@ -1329,7 +1329,7 @@ export const uploadStudentExamArtifact = async (
   if (uploadError) {
     if (uploadError.message?.includes('not exist')) {
       throw new Error(
-        'Supabase Storage �zerinde "student-exam-artifacts" isimli bir bucket olu�turman�z gerekiyor.',
+        'Supabase Storage üzerinde "student-exam-artifacts" isimli bir bucket oluşturmanız gerekiyor.',
       );
     }
     throw uploadError;

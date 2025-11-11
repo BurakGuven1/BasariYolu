@@ -159,7 +159,7 @@ export default function InstitutionStudentExamPanel({
         institutionId,
         studentUserId: selectedStudentId,
         teacherUserId,
-        examName: artifactForm.examName.trim() || '�simsiz Deneme',
+        examName: artifactForm.examName.trim() || 'İsimsiz Deneme',
         examType: artifactForm.examType.trim() || 'Genel',
         source: artifactForm.source,
         score: numberOrNull(artifactForm.score),
@@ -168,7 +168,7 @@ export default function InstitutionStudentExamPanel({
           submittedFrom: 'teacher-dashboard',
         },
       });
-      showToast('Dosya ba�ar�yla y�klendi.');
+      showToast('Dosya başarıyla yüklendi.');
       setArtifactForm((prev) => ({ ...prev, examName: '', score: '' }));
       setArtifactFile(null);
       setArtifactInputKey((key) => key + 1);
@@ -182,7 +182,7 @@ export default function InstitutionStudentExamPanel({
       }
     } catch (error) {
       console.error('Artifact upload error:', error);
-      showToast(getErrorMessage(error, 'Dosya y�klenemedi.'), 'error');
+      showToast(getErrorMessage(error, 'Dosya yüklenemedi.'), 'error');
     } finally {
       setUploadingArtifact(false);
     }
@@ -202,7 +202,7 @@ export default function InstitutionStudentExamPanel({
         institutionId,
         studentUserId: selectedStudentId,
         recordedBy: teacherUserId,
-        examName: metricForm.examName.trim() || 'Kay�tl� S�nav',
+        examName: metricForm.examName.trim() || 'Kayıtlı Sınav',
         examType: metricForm.examType.trim() || 'Genel',
         source: metricForm.source,
         correctCount: numberOrNull(metricForm.correctCount),
@@ -349,7 +349,7 @@ export default function InstitutionStudentExamPanel({
                     value={artifactForm.examName}
                     onChange={(event) => setArtifactForm((prev) => ({ ...prev, examName: event.target.value }))}
                     className="mt-1 w-full rounded-lg border border-indigo-100 bg-white px-3 py-2 text-sm text-gray-800 focus:border-indigo-300 focus:outline-none"
-                    placeholder="�rn. TYT 12"
+                    placeholder="Örn. TYT 12"
                   />
                 </div>
                 <div>
@@ -427,7 +427,7 @@ export default function InstitutionStudentExamPanel({
                     value={metricForm.examName}
                     onChange={(event) => setMetricForm((prev) => ({ ...prev, examName: event.target.value }))}
                     className="mt-1 w-full rounded-lg border border-emerald-100 bg-white px-3 py-2 text-sm text-gray-800 focus:border-emerald-300 focus:outline-none"
-                    placeholder="Deneme Ad�"
+                    placeholder="Deneme Adı"
                   />
                 </div>
                 <div>
@@ -506,7 +506,7 @@ export default function InstitutionStudentExamPanel({
                   onChange={(event) => setMetricForm((prev) => ({ ...prev, notes: event.target.value }))}
                   rows={3}
                   className="w-full rounded-lg border border-emerald-100 bg-white px-3 py-2 text-sm text-gray-800 focus:border-emerald-300 focus:outline-none"
-                  placeholder="Notlar, �zel bilgiler..."
+                  placeholder="Notlar, özel bilgiler..."
                 />
               </div>
               <button
