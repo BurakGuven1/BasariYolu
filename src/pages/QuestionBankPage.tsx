@@ -12,6 +12,7 @@ import {
 } from '../lib/questionBank';
 import { useAuth } from '../hooks/useAuth';
 import { InstitutionSession, refreshInstitutionSession } from '../lib/institutionApi';
+import { sanitizeHTML } from '../utils/security';
 
 const SUBJECTS = ['Matematik', 'Turkce', 'Fen', 'Sosyal', 'Ingilizce'];
 
@@ -873,7 +874,7 @@ export default function QuestionBankPage() {
                     </div>
                     <div
                       className="prose prose-sm mt-4 max-w-none text-gray-900"
-                      dangerouslySetInnerHTML={{ __html: question.content?.stem ?? '' }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeHTML(question.content?.stem ?? '') }}
                     />
                     {question.content?.options?.length ? (
                       <div className="mt-4 space-y-2">
