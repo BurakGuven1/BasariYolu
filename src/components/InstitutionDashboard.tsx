@@ -1,11 +1,12 @@
 
 import { useMemo, useState, type ComponentType } from 'react';
-import { Building2, Users, FileSpreadsheet, ClipboardList, ShieldCheck, LogOut, Mail, CheckCircle2, Layers, Copy, Download } from 'lucide-react';
+import { Building2, Users, FileSpreadsheet, ClipboardList, ShieldCheck, LogOut, Mail, CheckCircle2, Layers, Copy, Download, BarChart3 } from 'lucide-react';
 import { InstitutionSession } from '../lib/institutionApi';
 import InstitutionQuestionBankPanel from './InstitutionQuestionBankPanel';
 import InstitutionStudentApprovalPanel from './InstitutionStudentApprovalPanel';
 import InstitutionEngagementPanel from './InstitutionEngagementPanel';
 import InstitutionTeacherManagementPanel from './InstitutionTeacherManagementPanel';
+import InstitutionAnalyticsPanel from './InstitutionAnalyticsPanel';
 import { exportStudentsToExcel, exportExamResultsToExcel, exportPerformanceReportToExcel } from '../lib/institutionExportUtils';
 
 interface InstitutionDashboardProps {
@@ -41,7 +42,7 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
   const isTeacherRole = session.role === 'teacher';
   const canManageInstitution = ['owner', 'manager'].includes(session.role);
   const canAccessQuestionBank = canManageInstitution || isTeacherRole;
-  type PanelKey = 'overview' | 'question-bank' | 'teachers' | 'students' | 'engagement';
+  type PanelKey = 'overview' | 'analytics' | 'question-bank' | 'teachers' | 'students' | 'engagement';
   const [activePanel, setActivePanel] = useState<PanelKey>('overview');
 
   type PanelItem = {
@@ -60,6 +61,13 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
         description: 'Durum, davetler ve hızlı özet',
         icon: Building2,
         visible: true,
+      },
+      {
+        key: 'analytics',
+        label: 'Analitik Dashboard',
+        description: 'Performans metrikleri ve analizler',
+        icon: BarChart3,
+        visible: canManageInstitution && isActive,
       },
       {
         key: 'question-bank',
@@ -674,6 +682,17 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
               )}
             </div>
           )}
+
+          {resolvedPanel === 'analytics' &&
+            (canManageInstitution ? (
+              isActive ? (
+                <InstitutionAnalyticsPanel institutionId={session.institution.id} />
+              ) : (
+                renderPanelMessage('Kurum onayı tamamlandığında analitik dashboard aktifleştirilecek.')
+              )
+            ) : (
+              renderPanelMessage('Analitik dashboard yalnızca kurum yöneticilerine açıktır.')
+            ))}
 
           {resolvedPanel === 'question-bank' &&
             (canAccessQuestionBank ? (
