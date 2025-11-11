@@ -43,6 +43,7 @@ import {
 
 import { PomodoroProvider } from './contexts/PomodoroContext';
 import NotFoundPage from './pages/NotFoundPage';
+import FeaturesShowcase from './components/FeaturesShowcase';
 
 const INSTITUTION_MODAL_PATHS = ['/institution/login', '/institution/register'];
 
@@ -554,6 +555,8 @@ function App() {
       <Route path="/gizlilik-politikasi" element={<Navigate to="/privacy-policy" replace />} />
       <Route path="/refund-policy" element={<RefundPolicy />} />
       <Route path="/iade-politikasi" element={<Navigate to="/refund-policy" replace />} />
+      <Route path="/features" element={<FeaturesShowcase />} />
+      <Route path="/ozellikler" element={<Navigate to="/features" replace />} />
       <Route
         path="/question-bank"
         element={isQuestionBankAllowed ? <QuestionBankPage /> : <Navigate to="/" replace />}
