@@ -1,5 +1,5 @@
 ﻿import { useState } from 'react';
-import { User, Bell, Menu, X, Package, GraduationCap, Goal, Book, BookOpenCheck, Sparkles } from 'lucide-react';
+import { User, Bell, Menu, X, Package, GraduationCap, Goal, Book, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Logo from './Logo';
 
@@ -13,7 +13,6 @@ interface NavbarProps {
   onMenuToggle: () => void;
   onNavigateToBlog?: () => void;
   onNavigateHome?: () => void;
-  onNavigateToQuestionBank?: () => void;
 }
 
 const ACTION_BASE = 'inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-all duration-200 hover:shadow-sm active:scale-95';
@@ -27,8 +26,7 @@ export default function Navbar({
   onLogout,
   onMenuToggle,
   onNavigateToBlog,
-  onNavigateHome,
-  onNavigateToQuestionBank,
+  onNavigateHome
 }: NavbarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -60,12 +58,6 @@ export default function Navbar({
       return;
     }
 
-    if (sectionId === 'question-bank') {
-      onNavigateToQuestionBank?.();
-      setIsMobileMenuOpen(false);
-      return;
-    }
-
     if (onNavigateHome && window.location.pathname !== '/') {
       onNavigateHome();
       setTimeout(() => {
@@ -84,7 +76,6 @@ export default function Navbar({
     { id: 'exam-topics', label: 'OSYM-MEB Cikmis Konular', icon: Goal },
     { id: 'teacher', label: 'Ogretmenler', icon: GraduationCap },
     { id: 'blog', label: 'Blog', icon: Book },
-    { id: 'question-bank', label: 'Soru Bankasi', icon: BookOpenCheck, isRoute: true },
   ];
 
   const isAuthenticated = Boolean(user && user.id);
