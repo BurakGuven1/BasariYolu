@@ -1,5 +1,21 @@
+/**
+ * Features Showcase - Apple-style landing page
+ *
+ * Lottie Animations:
+ * - Student: reading-boy (9aYZuECxgE)
+ * - Institution: quiz-mode (7cFIw4FRuj)
+ *
+ * To update animation URLs:
+ * 1. Go to https://lottiefiles.com/free-animation/[slug]
+ * 2. Click "Embed" or "Download"
+ * 3. Copy the .lottie file URL or download JSON
+ * 4. Update lottieUrl prop in FeatureHighlight components below
+ *
+ * Alternative: Download JSON and import locally
+ */
 import { motion, useScroll, useTransform, useInView } from 'framer-motion';
 import { useRef, useState } from 'react';
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import {
   GraduationCap,
   Building2,
@@ -280,9 +296,10 @@ interface FeatureHighlightProps {
   description: string;
   features: Array<{ icon: React.ReactNode; title: string; text: string }>;
   gradient: string;
+  lottieUrl?: string;
 }
 
-function FeatureHighlight({ reverse, badge, title, description, features, gradient }: FeatureHighlightProps) {
+function FeatureHighlight({ reverse, badge, title, description, features, gradient, lottieUrl }: FeatureHighlightProps) {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: '-100px' });
 
@@ -333,10 +350,19 @@ function FeatureHighlight({ reverse, badge, title, description, features, gradie
         >
           <div className={`relative rounded-3xl overflow-hidden shadow-2xl bg-gradient-to-br ${gradient} p-1`}>
             <div className="bg-white dark:bg-gray-900 rounded-3xl p-8 aspect-square flex items-center justify-center">
-              <div className="text-center">
-                <div className={`w-32 h-32 mx-auto mb-6 rounded-full bg-gradient-to-br ${gradient} opacity-20`} />
-                <p className="text-gray-500 dark:text-gray-400">Showcase Image/Animation</p>
-              </div>
+              {lottieUrl ? (
+                <DotLottieReact
+                  src={lottieUrl}
+                  loop
+                  autoplay
+                  className="w-full h-full max-w-md"
+                />
+              ) : (
+                <div className="text-center">
+                  <div className={`w-32 h-32 mx-auto mb-6 rounded-full bg-gradient-to-br ${gradient} opacity-20`} />
+                  <p className="text-gray-500 dark:text-gray-400">Showcase Image/Animation</p>
+                </div>
+              )}
             </div>
           </div>
         </motion.div>
@@ -438,6 +464,7 @@ export default function FeaturesShowcase() {
         title="Yapay Zeka ile Kişiselleştirilmiş Öğrenme"
         description="Her öğrenci benzersizdir. Platformumuz, her öğrencinin güçlü ve zayıf yönlerini analiz ederek özel bir öğrenme yolu oluşturur."
         gradient="from-blue-500 to-indigo-600"
+        lottieUrl="https://lottie.host/embed/9aYZuECxgE/BqxmKGdFwW.lottie"
         features={[
           {
             icon: <Brain className="w-6 h-6 text-white" />,
@@ -464,6 +491,7 @@ export default function FeaturesShowcase() {
         title="Tüm Eğitim Süreçlerinizi Tek Platformda Yönetin"
         description="Soru bankası, öğrenci takibi, performans analizi ve daha fazlası. Kurumunuzu dijital çağa taşıyın."
         gradient="from-purple-500 to-pink-600"
+        lottieUrl="https://lottie.host/embed/7cFIw4FRuj/RgJ7HmLB5Q.lottie"
         features={[
           {
             icon: <Shield className="w-6 h-6 text-white" />,
