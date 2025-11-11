@@ -40,6 +40,7 @@ import {
 
 import { PomodoroProvider } from './contexts/PomodoroContext';
 import NotFoundPage from './pages/NotFoundPage';
+import FeaturesShowcase from './components/FeaturesShowcase';
 
 function App() {
   const { user, loading, setParentUser, clearUser } = useAuth();
@@ -52,7 +53,7 @@ function App() {
   const [showInstitutionLoginModal, setShowInstitutionLoginModal] = useState(false);
   const [showInstitutionStudentModal, setShowInstitutionStudentModal] = useState(false);
 
-  const [currentView, setCurrentView] = useState<'home' | 'dashboard' | 'blog' | 'blog-detail' | 'terms' | 'privacy' | 'refund' | 'not-found' | 'institution-login' | 'institution-register' | 'institution-dashboard'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'dashboard' | 'blog' | 'blog-detail' | 'terms' | 'privacy' | 'refund' | 'not-found' | 'institution-login' | 'institution-register' | 'institution-dashboard' | 'features'>('home');
   
   const [selectedBlogSlug, setSelectedBlogSlug] = useState<string>('');
   const [teacherUser, setTeacherUser] = useState<any>(null);
@@ -125,6 +126,8 @@ function App() {
         setCurrentView('institution-login');
         setShowInstitutionLoginModal(true);
       }
+    } else if (path === '/features' || path === '/ozellikler') {
+      setCurrentView('features');
     } else if (path === '/' || path === '') {
       setCurrentView('home');
     } else {
@@ -445,6 +448,12 @@ function App() {
     window.scrollTo(0, 0);
   };
 
+  const handleNavigateToFeatures = () => {
+    setCurrentView('features');
+    window.history.pushState({}, '', '/features');
+    window.scrollTo(0, 0);
+  };
+
   const handleNavigateToBlogDetail = (slug: string) => {
     setSelectedBlogSlug(slug);
     setCurrentView('blog-detail');
@@ -605,6 +614,8 @@ function App() {
   const renderContent = () => {
     if (currentView === 'dashboard') {
       return renderDashboard();
+    } else if (currentView === 'features') {
+      return <FeaturesShowcase />;
     } else if (currentView === 'blog') {
       return <BlogList onNavigateToDetail={handleNavigateToBlogDetail} />;
     } else if (currentView === 'blog-detail') {
@@ -639,6 +650,7 @@ function App() {
 
   const shouldShowNavbar =
     (currentView === 'home' ||
+      currentView === 'features' ||
       currentView === 'blog' ||
       currentView === 'blog-detail' ||
       currentView === 'terms' ||
@@ -663,6 +675,7 @@ function App() {
           onMenuToggle={() => {}}
           onNavigateToBlog={handleNavigateToBlog}
           onNavigateHome={handleNavigateHome}
+          onNavigateToFeatures={handleNavigateToFeatures}
         />
       )}
 

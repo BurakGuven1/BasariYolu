@@ -1,5 +1,5 @@
 ﻿import { useState } from 'react';
-import { User, Bell, Menu, X, Package, GraduationCap, Goal, Book } from 'lucide-react';
+import { User, Bell, Menu, X, Package, GraduationCap, Goal, Book, Sparkles } from 'lucide-react';
 import Logo from './Logo';
 
 interface NavbarProps {
@@ -12,6 +12,7 @@ interface NavbarProps {
   onMenuToggle: () => void;
   onNavigateToBlog?: () => void;
   onNavigateHome?: () => void;
+  onNavigateToFeatures?: () => void;
 }
 
 const ACTION_BASE = 'inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-all duration-200 hover:shadow-sm active:scale-95';
@@ -26,6 +27,7 @@ export default function Navbar({
   onMenuToggle,
   onNavigateToBlog,
   onNavigateHome,
+  onNavigateToFeatures,
 }: NavbarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -51,6 +53,12 @@ export default function Navbar({
   };
 
   const scrollToSection = (sectionId: string) => {
+    if (sectionId === 'features') {
+      onNavigateToFeatures?.();
+      setIsMobileMenuOpen(false);
+      return;
+    }
+
     if (sectionId === 'blog') {
       onNavigateToBlog?.();
       setIsMobileMenuOpen(false);
@@ -70,6 +78,7 @@ export default function Navbar({
   };
 
   const navItems = [
+    { id: 'features', label: 'Özellikler', icon: Sparkles },
     { id: 'pricing', label: 'Paketler', icon: Package },
     { id: 'exam-topics', label: 'ÖSYM-MEB Çıkmış Konular', icon: Goal },
     { id: 'teacher', label: 'Öğretmenler', icon: GraduationCap },
