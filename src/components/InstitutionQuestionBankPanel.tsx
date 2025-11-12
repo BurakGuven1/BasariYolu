@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Plus, Search, Trash2, Edit3, CheckCircle2, Circle, FilePlus } from 'lucide-react';
+import { Plus, Search, Trash2, Edit3, CheckCircle2, Circle, FilePlus, Upload } from 'lucide-react';
 import type { InstitutionSession } from '../lib/institutionApi';
 import type {
   InstitutionExamBlueprint,
@@ -20,6 +20,7 @@ import {
   updateInstitutionExamBlueprint,
   updateInstitutionQuestion,
 } from '../lib/institutionQuestionApi';
+import InstitutionPDFQuestionUpload from './InstitutionPDFQuestionUpload';
 
 const SUBJECTS = ['Turkce', 'Matematik', 'Fen Bilimleri', 'Sosyal Bilgiler', 'Ingilizce', 'Din Kulturu'];
 const PAGE_SIZE = 20;
@@ -142,6 +143,8 @@ export default function InstitutionQuestionBankPanel({ session }: InstitutionQue
   const [blueprintModalOpen, setBlueprintModalOpen] = useState(false);
   const [blueprintForm, setBlueprintForm] = useState<BlueprintFormState>(emptyBlueprintForm());
   const [blueprintMode, setBlueprintMode] = useState<'create' | 'edit'>('create');
+
+  const [pdfUploadModalOpen, setPdfUploadModalOpen] = useState(false);
 
   const [feedback, setFeedback] = useState<Feedback>(null);
 
@@ -469,6 +472,14 @@ export default function InstitutionQuestionBankPanel({ session }: InstitutionQue
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setPdfUploadModalOpen(true)}
+            className="inline-flex items-center gap-2 rounded bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700"
+          >
+            <Upload className="h-4 w-4" />
+            PDF'den Yükle
+          </button>
           <button
             type="button"
             onClick={openCreateQuestion}
@@ -1062,6 +1073,26 @@ export default function InstitutionQuestionBankPanel({ session }: InstitutionQue
             </button>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        open={pdfUploadModalOpen}
+        title="PDF'den Soru Yükle"
+        onClose={() => setPdfUploadModalOpen(false)}
+      >
+        <InstitutionPDFQuestionUpload
+          institutionId={institution.id}
+          onSuccess={(insertedCount) => {
+            setFeedback({
+              type: 'success',
+              message: `${insertedCount} soru başarıyla eklendi!`,
+            });
+            setPdfUploadModalOpen(false);
+            // Trigger re-fetch by changing page or filter
+            setPage(1);
+          }}
+          onClose={() => setPdfUploadModalOpen(false)}
+        />
       </Modal>
     </section>
   );
