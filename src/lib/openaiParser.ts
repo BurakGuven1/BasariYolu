@@ -10,32 +10,39 @@ export interface OpenAIParseOptions {
 const SYSTEM_PROMPT = `Sen bir sınav soruları parse uzmanısın. Verilen PDF metninden soruları çıkarıp JSON formatında döndürüyorsun.
 
 Kurallар:
-1. Her soruyu ayrı ayrı parse et
+1. Her soruyu ayrı ayrı parse et - TÜM SORULARI parse et, hiçbirini atlama
 2. Soru numarasını, stem (soru metni), şıkları (A, B, C, D, E), doğru cevabı çıkar
-3. Mümkünse dersi ve konuyu tahmin et
-4. Zorluk seviyesini tahmin et (easy/medium/hard)
-5. Cevap anahtarını soruların sonunda ara ve eşleştir
+3. PARAGRAF SORULARI: Eğer soru bir paragraf veya metin üzerine kuruluysa, paragrafın TAMAMINI stem içine dahil et
+4. Mümkünse dersi ve konuyu tahmin et
+5. Zorluk seviyesini tahmin et (easy/medium/hard)
+6. CEVAP ANAHTARI: PDF'teki boyalı/vurgulu cevapları YOKSAY. Sadece belgenin SONUNDA yer alan "Cevap Anahtarı" bölümünü kullan
+
+ÖNEMLİ KURALLAR:
+- Soruların içinde veya şıklarda boyalı/renkli olan cevapları dikkate ALMA
+- Sadece PDF'in sonundaki "Cevap Anahtarı" veya "CEVAPLAR" bölümünü kullan
+- Paragraf sorularında metni tam olarak al (başlık, paragraf, soru kısmı)
+- Fotoğraf/grafik içeren soruları da dahil et, stem'de belirt (örn: "[Grafik var] Grafiğe göre...")
 
 JSON formatı:
 {
   "questions": [
     {
       "question_number": 1,
-      "subject": "Matematik",
-      "topic": "Fonksiyonlar",
-      "stem": "f(x) = 2x + 3 fonksiyonu için f(5) kaçtır?",
+      "subject": "Türkçe",
+      "topic": "Paragraf",
+      "stem": "Aşağıdaki paragrafı okuyunuz:\n\n[PARAGRAFIN TAMAMI BURAYA]\n\nBu parağrafa göre aşağıdakilerden hangisi söylenebilir?",
       "options": [
-        {"label": "A", "value": "10"},
-        {"label": "B", "value": "13"},
-        {"label": "C", "value": "15"},
-        {"label": "D", "value": "18"}
+        {"label": "A", "value": "..."},
+        {"label": "B", "value": "..."},
+        {"label": "C", "value": "..."},
+        {"label": "D", "value": "..."}
       ],
       "correct_answer": "B",
       "difficulty": "medium"
     }
   ],
   "metadata": {
-    "total_questions": 50,
+    "total_questions": 120,
     "subjects_detected": ["Matematik", "Türkçe"],
     "has_answer_key": true
   }
@@ -79,7 +86,7 @@ export async function parseQuestionsWithAI(
           },
           {
             role: 'user',
-            content: `PDF metnini parse et:\n\n${text.slice(0, 50000)}`, // Limit to ~50K chars
+            content: `PDF metnini parse et:\n\n${text.slice(0, 200000)}`, // Limit to ~200K chars for large PDFs
           },
         ],
       }),
