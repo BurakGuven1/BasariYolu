@@ -15,7 +15,7 @@ import { useAuth } from '../hooks/useAuth';
 import { InstitutionSession, refreshInstitutionSession } from '../lib/institutionApi';
 import { sanitizeHTML } from '../utils/security';
 
-const SUBJECTS = ['Matematik', 'Turkce', 'Fen', 'Sosyal', 'Ingilizce'];
+const SUBJECTS = ['Matematik', 'Türkçe', 'Fen Bilimleri', 'Sosyal Bilimler', 'İngilizce'];
 
 const DIFFICULTIES = [
   { label: 'Kolay', value: 'easy' },
@@ -46,12 +46,12 @@ const EXAM_PRESETS = {
     description: '20 Türkçe • 20 Matematik • 20 Fen • 10 Tarih • 10 Din • 10 İngilizce',
     level: '8sinif',
     slots: [
-      { subject: 'Turkce', count: 20 },
+      { subject: 'Türkçe', count: 20 },
       { subject: 'Matematik', count: 20 },
-      { subject: 'Fen', count: 20 },
-      { subject: 'Tarih', count: 10 },
-      { subject: 'Din', count: 10 },
-      { subject: 'Ingilizce', count: 10 },
+      { subject: 'Fen Bilimleri', count: 20 },
+      { subject: 'T.C. İnkılap Tarihi ve Atatürkçülük', count: 10 },
+      { subject: 'Din Kültürü ve Ahlak Bilgisi', count: 10 },
+      { subject: 'İngilizce', count: 10 },
     ],
   },
   tyt: {
@@ -59,10 +59,10 @@ const EXAM_PRESETS = {
     description: '40 Türkçe • 40 Matematik • 20 Fen • 20 Sosyal (120 soru)',
     level: 'tyt',
     slots: [
-      { subject: 'Turkce', count: 40 },
+      { subject: 'Türkçe', count: 40 },
       { subject: 'Matematik', count: 40 },
-      { subject: 'Fen', count: 20 },
-      { subject: 'Sosyal', count: 20 },
+      { subject: 'Fen Bilimleri', count: 20 },
+      { subject: 'Sosyal Bilimler', count: 20 },
     ],
   },
   aytSay: {
