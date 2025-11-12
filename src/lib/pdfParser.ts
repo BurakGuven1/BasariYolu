@@ -11,15 +11,25 @@ export interface ParsedQuestion {
   options: Array<{ label: string; value: string }>;
   correct_answer: string;
   difficulty?: 'easy' | 'medium' | 'hard';
+  page_number?: number;
+}
+
+export interface PDFPageImage {
+  pageNumber: number;
+  imageBlob: Blob;
+  width: number;
+  height: number;
 }
 
 export interface PDFParseResult {
   text: string;
   pageCount: number;
+  pageImages?: PDFPageImage[];
+  pageTexts?: string[]; // Individual page texts for mapping questions to pages
 }
 
 /**
- * Extract text from PDF file
+ * Extract text from PDF file (legacy - kept for compatibility)
  */
 export async function extractTextFromPDF(file: File): Promise<PDFParseResult> {
   try {
@@ -47,11 +57,144 @@ export async function extractTextFromPDF(file: File): Promise<PDFParseResult> {
     return {
       text,
       pageCount,
+      pageTexts,
     };
   } catch (error) {
     console.error('PDF text extraction error:', error);
     throw new Error('PDF dosyası okunamadı. Lütfen geçerli bir PDF yükleyin.');
   }
+}
+
+/**
+ * Extract both text and images from PDF file
+ * This is the recommended function to use for question parsing with visual support
+ */
+export async function extractTextAndImagesFromPDF(
+  file: File,
+  options: {
+    extractImages?: boolean;
+    imageScale?: number; // Scale for image rendering (1 = 72 DPI, 2 = 144 DPI, etc.)
+    imageFormat?: 'png' | 'jpeg';
+    imageQuality?: number; // 0-1 for JPEG quality
+  } = {}
+): Promise<PDFParseResult> {
+  const {
+    extractImages = true,
+    imageScale = 2, // 144 DPI for good quality
+    imageFormat = 'jpeg',
+    imageQuality = 0.92,
+  } = options;
+
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+    const pdf = await loadingTask.promise;
+
+    const pageCount = pdf.numPages;
+    const pageTexts: string[] = [];
+    const pageImages: PDFPageImage[] = [];
+
+    // Process each page
+    for (let pageNum = 1; pageNum <= pageCount; pageNum++) {
+      const page = await pdf.getPage(pageNum);
+
+      // Extract text
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items
+        .map((item: any) => item.str)
+        .join(' ');
+      pageTexts.push(pageText);
+
+      // Extract image if requested
+      if (extractImages) {
+        const viewport = page.getViewport({ scale: imageScale });
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+
+        if (!context) {
+          throw new Error('Could not get canvas context');
+        }
+
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+
+        // Render PDF page to canvas
+        await page.render({
+          canvasContext: context,
+          viewport: viewport,
+        }).promise;
+
+        // Convert canvas to blob
+        const blob = await new Promise<Blob>((resolve, reject) => {
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                resolve(blob);
+              } else {
+                reject(new Error('Failed to create blob from canvas'));
+              }
+            },
+            imageFormat === 'jpeg' ? 'image/jpeg' : 'image/png',
+            imageFormat === 'jpeg' ? imageQuality : undefined
+          );
+        });
+
+        pageImages.push({
+          pageNumber: pageNum,
+          imageBlob: blob,
+          width: viewport.width,
+          height: viewport.height,
+        });
+      }
+    }
+
+    const text = pageTexts.join('\n\n');
+
+    return {
+      text,
+      pageCount,
+      pageTexts,
+      pageImages: extractImages ? pageImages : undefined,
+    };
+  } catch (error) {
+    console.error('PDF extraction error:', error);
+    throw new Error('PDF dosyası okunamadı. Lütfen geçerli bir PDF yükleyin.');
+  }
+}
+
+/**
+ * Map questions to page numbers based on question number and page text content
+ */
+export function mapQuestionsToPages(
+  questions: ParsedQuestion[],
+  pageTexts: string[]
+): ParsedQuestion[] {
+  return questions.map(question => {
+    // Try to find which page contains this question number
+    const questionNumberPattern = new RegExp(
+      `(?:Soru\\s+)?${question.question_number}[.)]`,
+      'i'
+    );
+
+    for (let i = 0; i < pageTexts.length; i++) {
+      if (questionNumberPattern.test(pageTexts[i])) {
+        return {
+          ...question,
+          page_number: i + 1, // Pages are 1-indexed
+        };
+      }
+    }
+
+    // If not found, estimate based on question number distribution
+    // Assume questions are evenly distributed across pages
+    const questionsPerPage = Math.ceil(questions.length / pageTexts.length);
+    const estimatedPage = Math.ceil(question.question_number / questionsPerPage);
+
+    return {
+      ...question,
+      page_number: Math.min(estimatedPage, pageTexts.length),
+    };
+  });
 }
 
 /**

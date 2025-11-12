@@ -11,11 +11,11 @@ import {
   Edit2,
   Trash2,
 } from 'lucide-react';
-import { extractTextFromPDF, parseQuestionsWithPattern, ParsedQuestion } from '../lib/pdfParser';
+import { extractTextAndImagesFromPDF, parseQuestionsWithPattern, ParsedQuestion, PDFPageImage, mapQuestionsToPages } from '../lib/pdfParser';
 import { parseQuestionsWithAI, estimateParsingCost } from '../lib/openaiParser';
 import {
   convertParsedQuestionToDBFormat,
-  bulkInsertQuestions,
+  bulkInsertQuestionsWithImages,
   createQuestionPreviews,
   validateBulkInsert,
   QuestionPreview,
@@ -42,6 +42,7 @@ export default function InstitutionPDFQuestionUpload({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [extractedText, setExtractedText] = useState<string>('');
+  const [pageImages, setPageImages] = useState<PDFPageImage[]>([]);
   const [parsedQuestions, setParsedQuestions] = useState<QuestionPreview[]>([]);
   const [insertResult, setInsertResult] = useState<{
     inserted: number;
@@ -52,6 +53,7 @@ export default function InstitutionPDFQuestionUpload({
     costUSD: number;
     costTRY: number;
   } | null>(null);
+  const [progressMessage, setProgressMessage] = useState<string>('');
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -91,11 +93,23 @@ export default function InstitutionPDFQuestionUpload({
     setLoading(true);
     setError(null);
     setStep('parsing');
+    setProgressMessage('PDF okunuyor...');
 
     try {
-      // Step 1: Extract text from PDF
-      const { text, pageCount } = await extractTextFromPDF(file);
+      // Step 1: Extract text AND images from PDF
+      setProgressMessage('PDF sayfalari görsellere dönüştürülüyor...');
+      const { text, pageCount, pageImages: extractedImages, pageTexts } = await extractTextAndImagesFromPDF(file, {
+        extractImages: true,
+        imageScale: 2, // 144 DPI for quality
+        imageFormat: 'jpeg',
+        imageQuality: 0.92,
+      });
+
       setExtractedText(text);
+      if (extractedImages) {
+        setPageImages(extractedImages);
+        console.log(`Extracted ${extractedImages.length} page images`);
+      }
 
       // Estimate cost if using AI
       if (parseMethod === 'ai') {
@@ -107,6 +121,7 @@ export default function InstitutionPDFQuestionUpload({
       }
 
       // Step 2: Parse questions
+      setProgressMessage('Sorular parse ediliyor...');
       let questions: ParsedQuestion[] = [];
 
       if (parseMethod === 'pattern') {
@@ -124,9 +139,17 @@ export default function InstitutionPDFQuestionUpload({
         }
       }
 
-      // Step 3: Create previews
+      // Step 3: Map questions to pages
+      setProgressMessage('Sorular sayfalara eşleştiriliyor...');
+      if (pageTexts && pageTexts.length > 0) {
+        questions = mapQuestionsToPages(questions, pageTexts);
+        console.log(`Mapped ${questions.length} questions to pages`);
+      }
+
+      // Step 4: Create previews
       const previews = createQuestionPreviews(questions);
       setParsedQuestions(previews);
+      setProgressMessage('');
       setStep('preview');
     } catch (err) {
       console.error('Parse error:', err);
@@ -135,6 +158,7 @@ export default function InstitutionPDFQuestionUpload({
           ? err.message
           : 'PDF parse edilirken bir hata oluştu'
       );
+      setProgressMessage('');
       setStep('upload');
     } finally {
       setLoading(false);
@@ -152,6 +176,7 @@ export default function InstitutionPDFQuestionUpload({
     setLoading(true);
     setError(null);
     setStep('inserting');
+    setProgressMessage('Hazırlanıyor...');
 
     try {
       // Convert to DB format
@@ -166,9 +191,18 @@ export default function InstitutionPDFQuestionUpload({
         console.warn('Invalid questions:', invalid);
       }
 
-      // Insert valid questions
-      const result = await bulkInsertQuestions(valid);
+      // Insert valid questions WITH IMAGES
+      const result = await bulkInsertQuestionsWithImages(
+        valid,
+        pageImages,
+        institutionId,
+        (current, total, message) => {
+          setProgressMessage(message);
+        }
+      );
+
       setInsertResult(result);
+      setProgressMessage('');
       setStep('complete');
 
       if (result.inserted > 0 && onSuccess) {
@@ -181,6 +215,7 @@ export default function InstitutionPDFQuestionUpload({
           ? err.message
           : 'Sorular eklenirken bir hata oluştu'
       );
+      setProgressMessage('');
       setStep('preview');
     } finally {
       setLoading(false);
@@ -256,7 +291,7 @@ export default function InstitutionPDFQuestionUpload({
                 AI-Powered (GPT-4o-mini)
               </p>
               <p className="text-xs text-gray-600">
-                %90+ doğruluk • Tüm formatları destekler • ~₺0.08/PDF
+                %90+ doğruluk • Görseller desteklenir • Tüm formatlar • ~₺0.08/PDF
               </p>
             </div>
             {parseMethod === 'ai' && (
@@ -279,13 +314,27 @@ export default function InstitutionPDFQuestionUpload({
                 Pattern Matching (Ücretsiz)
               </p>
               <p className="text-xs text-gray-600">
-                %60-70 doğruluk • Klasik formatlar • Ücretsiz
+                %60-70 doğruluk • Görseller desteklenir • Klasik formatlar • Ücretsiz
               </p>
             </div>
             {parseMethod === 'pattern' && (
               <CheckCircle className="h-5 w-5 text-blue-600" />
             )}
           </button>
+        </div>
+
+        {/* Image Support Info */}
+        <div className="rounded-lg border border-green-200 bg-green-50 p-4 mt-4">
+          <div className="flex items-start gap-3">
+            <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+            <div className="text-sm text-green-800">
+              <p className="font-semibold">✨ Görsel Destek Aktif!</p>
+              <p className="mt-1">
+                PDF'deki tüm görseller, grafikler, şekiller ve matematiksel formüller
+                otomatik olarak kaydedilecek ve sorularla birlikte gösterilecek.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -514,6 +563,16 @@ export default function InstitutionPDFQuestionUpload({
           <p className="mt-4 text-lg font-semibold text-gray-900">
             {step === 'parsing' ? 'PDF İşleniyor...' : 'Sorular Kaydediliyor...'}
           </p>
+          {progressMessage && (
+            <p className="mt-2 text-sm text-gray-600">
+              {progressMessage}
+            </p>
+          )}
+          {step === 'inserting' && pageImages.length > 0 && (
+            <p className="mt-2 text-sm text-green-600">
+              ✓ {pageImages.length} sayfa görseli hazır
+            </p>
+          )}
         </div>
       )}
       {step === 'preview' && renderPreviewStep()}

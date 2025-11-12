@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
-import { ParsedQuestion } from './pdfParser';
+import { ParsedQuestion, PDFPageImage } from './pdfParser';
 import { QuestionDifficulty, QuestionFormat } from './questionBank';
+import { uploadImage, generateQuestionImagePath } from './imageStorage';
 
 export interface BulkInsertQuestion {
   subject: string;
@@ -21,6 +22,8 @@ export interface BulkInsertQuestion {
   owner_type: 'platform' | 'institution' | 'teacher';
   owner_id: string | null;
   visibility: 'private' | 'institution_only' | 'public';
+  page_number?: number;
+  page_image_url?: string;
 }
 
 /**
@@ -29,7 +32,8 @@ export interface BulkInsertQuestion {
 export function convertParsedQuestionToDBFormat(
   parsed: ParsedQuestion,
   institutionId: string,
-  tags: string[] = []
+  tags: string[] = [],
+  pageImageUrl?: string
 ): BulkInsertQuestion {
   return {
     subject: parsed.subject,
@@ -50,11 +54,119 @@ export function convertParsedQuestionToDBFormat(
     owner_type: 'institution',
     owner_id: institutionId,
     visibility: 'institution_only',
+    page_number: parsed.page_number,
+    page_image_url: pageImageUrl,
   };
 }
 
 /**
- * Bulk insert questions to database
+ * Bulk insert questions with image support
+ * Uploads page images to storage and links them to questions
+ */
+export async function bulkInsertQuestionsWithImages(
+  questions: BulkInsertQuestion[],
+  pageImages: PDFPageImage[],
+  institutionId: string,
+  progressCallback?: (current: number, total: number, message: string) => void
+): Promise<{
+  success: boolean;
+  inserted: number;
+  errors: Array<{ question: BulkInsertQuestion; error: string }>;
+}> {
+  if (questions.length === 0) {
+    return { success: true, inserted: 0, errors: [] };
+  }
+
+  const errors: Array<{ question: BulkInsertQuestion; error: string }> = [];
+  let inserted = 0;
+
+  // Step 1: Upload all unique page images to storage
+  progressCallback?.(0, questions.length, 'Görseller yükleniyor...');
+
+  const pageImageMap = new Map<number, string>(); // pageNumber -> imageUrl
+  const uniquePages = new Set(questions.map(q => q.page_number).filter(p => p !== undefined) as number[]);
+
+  for (const pageNumber of uniquePages) {
+    const pageImage = pageImages.find(img => img.pageNumber === pageNumber);
+    if (pageImage) {
+      const imagePath = generateQuestionImagePath(
+        institutionId,
+        0, // Use 0 for page images (not specific to a question)
+        pageNumber,
+        'jpeg'
+      );
+
+      const uploadResult = await uploadImage('question-images', pageImage.imageBlob, imagePath);
+
+      if (uploadResult.success && uploadResult.url) {
+        pageImageMap.set(pageNumber, uploadResult.url);
+      } else {
+        console.warn(`Failed to upload image for page ${pageNumber}:`, uploadResult.error);
+      }
+    }
+  }
+
+  // Step 2: Add image URLs to questions
+  const questionsWithImages = questions.map(q => ({
+    ...q,
+    page_image_url: q.page_number ? pageImageMap.get(q.page_number) : undefined,
+  }));
+
+  // Step 3: Insert questions in batches
+  const batchSize = 50;
+  for (let i = 0; i < questionsWithImages.length; i += batchSize) {
+    const batch = questionsWithImages.slice(i, i + batchSize);
+    progressCallback?.(
+      i,
+      questionsWithImages.length,
+      `Sorular kaydediliyor (${i + 1}-${Math.min(i + batchSize, questionsWithImages.length)}/${questionsWithImages.length})...`
+    );
+
+    try {
+      const { data, error } = await supabase
+        .from('questions')
+        .insert(batch)
+        .select('id');
+
+      if (error) {
+        // If batch fails, try inserting one by one
+        for (const question of batch) {
+          const { error: singleError } = await supabase
+            .from('questions')
+            .insert([question]);
+
+          if (singleError) {
+            errors.push({
+              question,
+              error: singleError.message,
+            });
+          } else {
+            inserted++;
+          }
+        }
+      } else {
+        inserted += data?.length || batch.length;
+      }
+    } catch (error) {
+      console.error('Batch insert error:', error);
+      errors.push({
+        question: batch[0],
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  progressCallback?.(questionsWithImages.length, questionsWithImages.length, 'Tamamlandı!');
+
+  return {
+    success: inserted > 0,
+    inserted,
+    errors,
+  };
+}
+
+/**
+ * Bulk insert questions to database (without image support - legacy)
  */
 export async function bulkInsertQuestions(
   questions: BulkInsertQuestion[]
