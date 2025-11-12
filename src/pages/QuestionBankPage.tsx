@@ -55,13 +55,13 @@ const EXAM_PRESETS = {
   },
   tyt: {
     label: 'TYT Denemesi',
-    description: '40 Türkçe • 20 Sosyal • 40 Matematik • 20 Fen',
+    description: '40 Türkçe • 40 Matematik • 20 Fen • 20 Sosyal (120 soru)',
     level: 'tyt',
     slots: [
       { subject: 'Turkce', count: 40 },
-      { subject: 'Sosyal', count: 20 },
       { subject: 'Matematik', count: 40 },
       { subject: 'Fen', count: 20 },
+      { subject: 'Sosyal', count: 20 },
     ],
   },
   aytSay: {
@@ -395,6 +395,8 @@ export default function QuestionBankPage() {
     try {
       const aggregated: QuestionRecord[] = [];
       const baseLevels = preset.level ? [preset.level] : filters.level ? [filters.level] : undefined;
+      const missingSubjects: string[] = [];
+      const insufficientSubjects: Array<{ subject: string; needed: number; found: number }> = [];
 
       for (const slot of preset.slots) {
         const slotQuestions = await fetchWeightedSubjectQuestions(
@@ -405,8 +407,43 @@ export default function QuestionBankPage() {
             levels: baseLevels,
           },
         );
+
+        // Yetersiz soru kontrolü
+        if (slotQuestions.length === 0) {
+          missingSubjects.push(`${slot.subject} (0/${slot.count} soru)`);
+        } else if (slotQuestions.length < slot.count) {
+          insufficientSubjects.push({
+            subject: slot.subject,
+            needed: slot.count,
+            found: slotQuestions.length,
+          });
+        }
+
         aggregated.push(...slotQuestions);
       }
+
+      // Hata mesajları
+      if (missingSubjects.length > 0 || insufficientSubjects.length > 0) {
+        let errorMsg = '⚠️ Deneme oluşturuldu ancak eksiklikler var:\n\n';
+
+        if (missingSubjects.length > 0) {
+          errorMsg += `❌ Hiç soru bulunamayan dersler: ${missingSubjects.join(', ')}\n\n`;
+        }
+
+        if (insufficientSubjects.length > 0) {
+          errorMsg += '⚠️ Yetersiz soru olan dersler:\n';
+          insufficientSubjects.forEach(({ subject, needed, found }) => {
+            errorMsg += `  • ${subject}: ${found}/${needed} soru bulundu\n`;
+          });
+          errorMsg += '\n';
+        }
+
+        errorMsg += `✅ Toplam ${aggregated.length}/${preset.slots.reduce((sum, s) => sum + s.count, 0)} soru oluşturuldu.\n\n`;
+        errorMsg += '💡 İpucu: Daha fazla soru eklemek için Kurum Dashboard\'dan soru yükleyin.';
+
+        setError(errorMsg);
+      }
+
       setQuestions(aggregated);
       setAnswers({});
       setResults(null);
@@ -801,7 +838,7 @@ export default function QuestionBankPage() {
             </button>
           </div>
           {error && (
-            <p className="mt-4 rounded-xl bg-red-50 px-4 py-2 text-sm text-red-600">
+            <p className="mt-4 rounded-xl bg-red-50 px-4 py-2 text-sm text-red-600 whitespace-pre-line">
               {error}
             </p>
           )}
