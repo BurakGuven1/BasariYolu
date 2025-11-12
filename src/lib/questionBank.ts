@@ -92,8 +92,12 @@ const normalizeRequest = (request: QuestionRequest) => {
     owner_scope: merged.ownerScope ?? 'all',
   };
 
-  if (merged.subjects?.length) payload.subjects = merged.subjects;
-  else if (merged.subject) payload.subject = merged.subject;
+  // Normalize subject names
+  if (merged.subjects?.length) {
+    payload.subjects = merged.subjects.map(s => canonicalSubject(s));
+  } else if (merged.subject) {
+    payload.subject = canonicalSubject(merged.subject);
+  }
 
   if (merged.topics?.length) payload.topics = merged.topics;
   else if (merged.topic) payload.topic = merged.topic;
@@ -187,25 +191,61 @@ const SUBJECT_ALIAS: Record<string, string> = {
   'Din Kultur ve Ahlak Bilgisi': 'Din',
   'Edebiyat': 'Edebiyat',
   'Türkçe': 'Turkce',
+  'Turkce': 'Turkce',
+  'turkce': 'Turkce',
+  'TURKCE': 'Turkce',
   'Ingilizce': 'Ingilizce',
   'İngilizce': 'Ingilizce',
   'Sosyal Bilgiler': 'Sosyal',
   'Sosyal Bilimler': 'Sosyal',
+  'sosyal': 'Sosyal',
+  'SOSYAL': 'Sosyal',
+  'Matematik': 'Matematik',
+  'matematik': 'Matematik',
+  'MATEMATIK': 'Matematik',
+  'Mat': 'Matematik',
+  'MAT': 'Matematik',
+  'Fen': 'Fen',
+  'fen': 'Fen',
+  'FEN': 'Fen',
 };
 
-const canonicalSubject = (subject: string) => {
+// Export for use in other files
+export const canonicalSubject = (subject: string) => {
+  if (!subject) return subject;
   let result = subject.trim();
+
+  // Remove common prefixes
   SUBJECT_PREFIXES.forEach((prefix) => {
     if (result.toUpperCase().startsWith(prefix.trim().toUpperCase())) {
       result = result.slice(prefix.length).trim();
     }
   });
-  result = result
+
+  // Try direct alias lookup first
+  if (SUBJECT_ALIAS[result]) {
+    return SUBJECT_ALIAS[result];
+  }
+
+  // Normalize Turkish characters
+  const normalized = result
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/ı/g, 'i')
-    .replace(/İ/g, 'I');
-  return SUBJECT_ALIAS[result] ?? result;
+    .replace(/İ/g, 'I')
+    .replace(/ğ/g, 'g')
+    .replace(/Ğ/g, 'G')
+    .replace(/ş/g, 's')
+    .replace(/Ş/g, 'S')
+    .replace(/ç/g, 'c')
+    .replace(/Ç/g, 'C')
+    .replace(/ö/g, 'o')
+    .replace(/Ö/g, 'O')
+    .replace(/ü/g, 'u')
+    .replace(/Ü/g, 'U');
+
+  // Try alias lookup with normalized version
+  return SUBJECT_ALIAS[normalized] ?? result;
 };
 
 const subjectTopicWeights: Record<string, Record<string, number>> = {};
