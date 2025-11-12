@@ -61,16 +61,26 @@ export async function extractTextFromPDF(file: File): Promise<PDFParseResult> {
 export function parseQuestionsWithPattern(text: string): ParsedQuestion[] {
   const questions: ParsedQuestion[] = [];
 
+  // First, find and extract the answer key section to avoid it interfering with question matching
+  const answerKeySectionPattern = /(?:Cevap(?:\s+Anahtarı)?|CEVAPLAR)[:\s]*/i;
+  const answerKeySectionMatch = text.search(answerKeySectionPattern);
+  const questionsText = answerKeySectionMatch > 0 ? text.substring(0, answerKeySectionMatch) : text;
+  const answerKeyText = answerKeySectionMatch > 0 ? text.substring(answerKeySectionMatch) : '';
+
   // Pattern: Soru 1) ... A) ... B) ... C) ... D) ... E) ...
-  const questionPattern = /(?:Soru\s+)?(\d+)[.)]\s*(.*?)(?=(?:Soru\s+)?\d+[.)]|Cevap|$)/gis;
+  // More flexible pattern to capture all questions including those with passages
+  const questionPattern = /(?:Soru\s+)?(\d+)[.)]\s*([\s\S]*?)(?=(?:Soru\s+)?\d+[.)]|$)/gi;
   const optionPattern = /([A-E])\)\s*([^A-E)]+)/gi;
 
   let match;
-  while ((match = questionPattern.exec(text)) !== null) {
+  while ((match = questionPattern.exec(questionsText)) !== null) {
     const questionNumber = parseInt(match[1]);
     const questionText = match[2].trim();
 
-    // Extract stem (before first option)
+    // Skip if question text is too short (likely not a real question)
+    if (questionText.length < 10) continue;
+
+    // Extract stem (everything before first option, including any passage text)
     const firstOptionIndex = questionText.search(/[A-E]\)/);
     const stem = firstOptionIndex > 0
       ? questionText.substring(0, firstOptionIndex).trim()
@@ -90,7 +100,8 @@ export function parseQuestionsWithPattern(text: string): ParsedQuestion[] {
       });
     }
 
-    if (stem && options.length >= 2) {
+    // Only add questions with valid stem and at least 2 options
+    if (stem && stem.length >= 10 && options.length >= 2) {
       questions.push({
         question_number: questionNumber,
         subject: 'Belirtilmemiş', // AI will determine
@@ -103,12 +114,8 @@ export function parseQuestionsWithPattern(text: string): ParsedQuestion[] {
     }
   }
 
-  // Try to find answer key
-  const answerKeyPattern = /(?:Cevap(?:\s+Anahtarı)?|CEVAPLAR)[:\s]*((?:\d+[-.:)]\s*[A-E]\s*[,;\s]*)+)/i;
-  const answerKeyMatch = text.match(answerKeyPattern);
-
-  if (answerKeyMatch) {
-    const answerKeyText = answerKeyMatch[1];
+  // Extract answers from answer key section only
+  if (answerKeyText) {
     const answerPattern = /(\d+)[-.:)]\s*([A-E])/gi;
 
     let answerMatch;
@@ -151,9 +158,8 @@ export function validateParsedQuestions(questions: ParsedQuestion[]): {
       errors.push('Doğru cevap belirtilmemiş');
     }
 
-    if (question.subject === 'Belirtilmemiş') {
-      errors.push('Ders belirtilmemiş');
-    }
+    // Note: Don't validate subject for pattern matching as it's determined later by the institution
+    // Subject validation is handled at bulk insert level
 
     if (errors.length > 0) {
       invalid.push({ question, errors });

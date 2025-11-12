@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Plus, Search, Trash2, Edit3, CheckCircle2, Circle, FilePlus, Upload } from 'lucide-react';
+import { Search, Trash2, Edit3, CheckCircle2, Circle, FilePlus, Upload } from 'lucide-react';
 import type { InstitutionSession } from '../lib/institutionApi';
 import type {
   InstitutionExamBlueprint,
@@ -227,14 +227,6 @@ export default function InstitutionQuestionBankPanel({ session }: InstitutionQue
     const timer = setTimeout(() => setFeedback(null), 4000);
     return () => clearTimeout(timer);
   }, [feedback]);
-
-  const openCreateQuestion = () => {
-    const subject = subjectFilter !== 'all' ? subjectFilter : SUBJECTS[0];
-    const topic = topicFilter !== 'all' ? topicFilter : '';
-    setQuestionForm(emptyQuestionForm(subject, topic));
-    setQuestionMode('create');
-    setQuestionModalOpen(true);
-  };
 
   const openEditQuestion = (question: InstitutionQuestion) => {
     setQuestionForm({
@@ -468,7 +460,7 @@ export default function InstitutionQuestionBankPanel({ session }: InstitutionQue
         <div>
           <h2 className="text-lg font-semibold text-gray-900">Soru bankasi</h2>
           <p className="text-sm text-gray-500">
-            Sorularinizi ders ve konulara gore kaydedip sinav taslaklarina donusturun.
+            PDF'den sorularinizi yukleyip ders ve konulara gore duzenleyin, sinav taslaklarina donusturun.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -479,14 +471,6 @@ export default function InstitutionQuestionBankPanel({ session }: InstitutionQue
           >
             <Upload className="h-4 w-4" />
             PDF'den Yükle
-          </button>
-          <button
-            type="button"
-            onClick={openCreateQuestion}
-            className="inline-flex items-center gap-2 rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-          >
-            <Plus className="h-4 w-4" />
-            Yeni soru
           </button>
           <button
             type="button"
@@ -617,7 +601,7 @@ export default function InstitutionQuestionBankPanel({ session }: InstitutionQue
             ) : questions.length === 0 ? (
               <tr>
                 <td colSpan={7} className="px-4 py-6 text-center text-gray-500">
-                  Kayit bulunamadi. Filtreleri degistirin veya yeni soru ekleyin.
+                  Kayit bulunamadi. Filtreleri degistirin veya PDF'den soru yukleyin.
                 </td>
               </tr>
             ) : (
