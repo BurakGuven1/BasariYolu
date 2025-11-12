@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Search, Trash2, Edit3, CheckCircle2, Circle, FilePlus, Upload } from 'lucide-react';
+import { Search, Trash2, Edit3, CheckCircle2, Circle, FilePlus, Upload, Image as ImageIcon } from 'lucide-react';
 import type { InstitutionSession } from '../lib/institutionApi';
 import type {
   InstitutionExamBlueprint,
@@ -39,6 +39,8 @@ interface QuestionFormState {
   explanation: string;
   tags: string;
   published: boolean;
+  page_number?: number;
+  page_image_url?: string;
 }
 
 interface BlueprintFormState {
@@ -243,6 +245,8 @@ export default function InstitutionQuestionBankPanel({ session }: InstitutionQue
       explanation: question.explanation ?? '',
       tags: (question.tags ?? []).join(', '),
       published: question.is_published,
+      page_number: question.page_number,
+      page_image_url: question.page_image_url,
     });
     setQuestionMode('edit');
     setQuestionModalOpen(true);
@@ -615,17 +619,40 @@ export default function InstitutionQuestionBankPanel({ session }: InstitutionQue
                     />
                   </td>
                   <td className="px-4 py-3">
-                    <p className="font-medium text-gray-900">
-                      {question.question_prompt || question.question_text}
-                    </p>
-                    {question.passage_text && (
-                      <p className="mt-1 text-xs text-gray-500 line-clamp-2">
-                        {question.passage_text}
-                      </p>
-                    )}
-                    {question.tags?.length ? (
-                      <p className="text-xs text-gray-500">#{question.tags.join(' #')}</p>
-                    ) : null}
+                    <div className="flex items-start gap-3">
+                      {question.page_image_url && (
+                        <div className="flex-shrink-0">
+                          <img
+                            src={question.page_image_url}
+                            alt={`Soru ${question.question_number || ''} görseli`}
+                            className="h-16 w-16 rounded border border-gray-200 object-cover cursor-pointer hover:ring-2 hover:ring-blue-400"
+                            onClick={() => window.open(question.page_image_url, '_blank')}
+                            title="Görseli büyüt"
+                          />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900">
+                          {question.question_prompt || question.question_text}
+                        </p>
+                        {question.passage_text && (
+                          <p className="mt-1 text-xs text-gray-500 line-clamp-2">
+                            {question.passage_text}
+                          </p>
+                        )}
+                        <div className="mt-1 flex items-center gap-2">
+                          {question.page_number && (
+                            <span className="inline-flex items-center gap-1 text-xs text-gray-500">
+                              <ImageIcon className="h-3 w-3" />
+                              Sayfa {question.page_number}
+                            </span>
+                          )}
+                          {question.tags?.length ? (
+                            <p className="text-xs text-gray-500">#{question.tags.join(' #')}</p>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <p className="font-medium">{question.subject}</p>
@@ -787,6 +814,29 @@ export default function InstitutionQuestionBankPanel({ session }: InstitutionQue
         onClose={() => setQuestionModalOpen(false)}
       >
         <form className="space-y-3" onSubmit={handleQuestionSubmit}>
+          {/* Soru Görseli Önizlemesi */}
+          {questionForm.page_image_url && (
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <div className="flex items-start gap-3">
+                <ImageIcon className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-gray-900 mb-2">
+                    Soru Görseli {questionForm.page_number && `(Sayfa ${questionForm.page_number})`}
+                  </p>
+                  <img
+                    src={questionForm.page_image_url}
+                    alt="Soru görseli"
+                    className="w-full rounded border border-gray-300 cursor-pointer hover:ring-2 hover:ring-blue-400"
+                    onClick={() => window.open(questionForm.page_image_url!, '_blank')}
+                  />
+                  <p className="text-xs text-gray-500 mt-2">
+                    Görseli büyütmek için tıklayın
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="flex flex-col gap-1 text-sm">
               Ders
