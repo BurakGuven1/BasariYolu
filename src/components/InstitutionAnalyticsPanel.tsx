@@ -136,7 +136,7 @@ export default function InstitutionAnalyticsPanel({ institutionId }: Institution
       <div className="flex items-center justify-center py-32">
         <div className="text-center">
           <RefreshCw className="mx-auto h-12 w-12 animate-spin text-blue-500" />
-          <p className="mt-4 text-gray-600 dark:text-gray-300">Analitikler yükleniyor...</p>
+          <p className="mt-4 text-gray-600">Analitikler yükleniyor...</p>
         </div>
       </div>
     );
@@ -153,15 +153,15 @@ export default function InstitutionAnalyticsPanel({ institutionId }: Institution
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Analitik Dashboard</h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <h2 className="text-2xl font-bold text-gray-900">Analitik Dashboard</h2>
+          <p className="text-sm text-gray-600">
             Kurum performans metrikleri ve öğrenci analizleri
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
           {/* Date Range Filter */}
-          <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-800">
+          <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2">
             <Calendar className="h-4 w-4 text-gray-500" />
             <select
               value={dateRange}
@@ -178,7 +178,7 @@ export default function InstitutionAnalyticsPanel({ institutionId }: Institution
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
           >
             <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
             Yenile
@@ -187,7 +187,7 @@ export default function InstitutionAnalyticsPanel({ institutionId }: Institution
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 dark:border-gray-700">
+      <div className="border-b border-gray-200">
         <nav className="-mb-px flex space-x-8">
           {[
             { id: 'overview', label: 'Genel Bakış', icon: BarChart3 },
@@ -199,8 +199,8 @@ export default function InstitutionAnalyticsPanel({ institutionId }: Institution
               onClick={() => setActiveTab(tab.id as any)}
               className={`group inline-flex items-center gap-2 border-b-2 px-1 py-4 text-sm font-medium ${
                 activeTab === tab.id
-                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
               }`}
             >
               <tab.icon className="h-5 w-5" />
@@ -215,12 +215,12 @@ export default function InstitutionAnalyticsPanel({ institutionId }: Institution
         <div className="space-y-6">
           {/* Summary Cards */}
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="rounded-xl border border-gray-200 bg-gradient-to-br from-blue-50 to-indigo-50 p-6 dark:border-gray-700 dark:from-blue-900/20 dark:to-indigo-900/20">
+            <div className="rounded-xl border border-gray-200 bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Toplam Öğrenci</p>
-                  <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">{summary.totalStudents}</p>
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  <p className="text-sm font-medium text-gray-600">Toplam Öğrenci</p>
+                  <p className="mt-2 text-3xl font-bold text-gray-900">{summary.totalStudents}</p>
+                  <p className="mt-1 text-xs text-gray-500">
                     {summary.activeStudentsThisWeek} aktif bu hafta
                   </p>
                 </div>
@@ -230,12 +230,12 @@ export default function InstitutionAnalyticsPanel({ institutionId }: Institution
               </div>
             </div>
 
-            <div className="rounded-xl border border-gray-200 bg-gradient-to-br from-green-50 to-emerald-50 p-6 dark:border-gray-700 dark:from-green-900/20 dark:to-emerald-900/20">
+            <div className="rounded-xl border border-gray-200 bg-gradient-to-br from-green-50 to-emerald-50 p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Ortalama Puan</p>
-                  <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">{summary.averageScore}</p>
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  <p className="text-sm font-medium text-gray-600">Ortalama Puan</p>
+                  <p className="mt-2 text-3xl font-bold text-gray-900">{summary.averageScore}</p>
+                  <p className="mt-1 text-xs text-gray-500">
                     {summary.totalExamsCompleted} sınav tamamlandı
                   </p>
                 </div>
@@ -245,12 +245,12 @@ export default function InstitutionAnalyticsPanel({ institutionId }: Institution
               </div>
             </div>
 
-            <div className="rounded-xl border border-gray-200 bg-gradient-to-br from-purple-50 to-pink-50 p-6 dark:border-gray-700 dark:from-purple-900/20 dark:to-pink-900/20">
+            <div className="rounded-xl border border-gray-200 bg-gradient-to-br from-purple-50 to-pink-50 p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Tamamlanma Oranı</p>
-                  <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">%{summary.completionRate}</p>
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  <p className="text-sm font-medium text-gray-600">Tamamlanma Oranı</p>
+                  <p className="mt-2 text-3xl font-bold text-gray-900">%{summary.completionRate}</p>
+                  <p className="mt-1 text-xs text-gray-500">
                     En az 1 sınav tamamlayan öğrenci
                   </p>
                 </div>
@@ -263,10 +263,10 @@ export default function InstitutionAnalyticsPanel({ institutionId }: Institution
 
           {/* Performance Trends Chart */}
           {trends.length > 0 && (
-            <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+            <div className="rounded-xl border border-gray-200 bg-white p-6">
               <div className="mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Performans Trendi</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <h3 className="text-lg font-semibold text-gray-900">Performans Trendi</h3>
+                <p className="text-sm text-gray-600">
                   Zaman içinde ortalama sınav puanları
                 </p>
               </div>
@@ -313,10 +313,10 @@ export default function InstitutionAnalyticsPanel({ institutionId }: Institution
           {/* Subject Performance */}
           {subjectPerf.length > 0 && (
             <div className="grid gap-6 lg:grid-cols-2">
-              <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+              <div className="rounded-xl border border-gray-200 bg-white p-6">
                 <div className="mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Ders Bazlı Performans</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Ortalama puanlar</p>
+                  <h3 className="text-lg font-semibold text-gray-900">Ders Bazlı Performans</h3>
+                  <p className="text-sm text-gray-600">Ortalama puanlar</p>
                 </div>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={subjectPerf}>
@@ -335,10 +335,10 @@ export default function InstitutionAnalyticsPanel({ institutionId }: Institution
                 </ResponsiveContainer>
               </div>
 
-              <div className="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
+              <div className="rounded-xl border border-gray-200 bg-white p-6">
                 <div className="mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Doğru Cevap Oranı</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Ders bazlı başarı</p>
+                  <h3 className="text-lg font-semibold text-gray-900">Doğru Cevap Oranı</h3>
+                  <p className="text-sm text-gray-600">Ders bazlı başarı</p>
                 </div>
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
@@ -368,70 +368,70 @@ export default function InstitutionAnalyticsPanel({ institutionId }: Institution
       {/* Students Tab */}
       {activeTab === 'students' && (
         <div className="space-y-6">
-          <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-            <div className="border-b border-gray-200 p-6 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Öğrenci Performans Sıralaması</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Top 50 öğrenci performansı</p>
+          <div className="rounded-xl border border-gray-200 bg-white">
+            <div className="border-b border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900">Öğrenci Performans Sıralaması</h3>
+              <p className="text-sm text-gray-600">Top 50 öğrenci performansı</p>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900/50">
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                  <tr className="border-b border-gray-200 bg-gray-50">
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
                       Sıra
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
                       Öğrenci
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
                       Sınav Sayısı
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
                       Ortalama Puan
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
                       Doğruluk %
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
                       Trend
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
                       Son Sınav
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                <tbody className="divide-y divide-gray-200">
                   {studentAnalytics.map((student, index) => (
-                    <tr key={student.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                    <tr key={student.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         #{index + 1}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
-                          <div className="text-sm font-medium text-gray-900 dark:text-white">{student.fullName}</div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">{student.email}</div>
+                          <div className="text-sm font-medium text-gray-900">{student.fullName}</div>
+                          <div className="text-xs text-gray-500">{student.email}</div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                         {student.totalExams}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                        <span className="text-sm font-semibold text-gray-900">
                           {student.averageScore}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                         %{student.correctRate}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-1">
                           {getTrendIcon(student.trend)}
-                          <span className="text-xs text-gray-600 dark:text-gray-400">
+                          <span className="text-xs text-gray-600">
                             {student.trend === 'improving' ? 'Yükseliyor' : student.trend === 'declining' ? 'Düşüyor' : 'Stabil'}
                           </span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
+                      <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500">
                         {student.lastExamDate ? new Date(student.lastExamDate).toLocaleDateString('tr-TR') : '-'}
                       </td>
                     </tr>
@@ -446,48 +446,48 @@ export default function InstitutionAnalyticsPanel({ institutionId }: Institution
       {/* Teachers Tab */}
       {activeTab === 'teachers' && (
         <div className="space-y-6">
-          <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-            <div className="border-b border-gray-200 p-6 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Öğretmen Aktivite Raporu</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Soru ve sınav oluşturma istatistikleri</p>
+          <div className="rounded-xl border border-gray-200 bg-white">
+            <div className="border-b border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900">Öğretmen Aktivite Raporu</h3>
+              <p className="text-sm text-gray-600">Soru ve sınav oluşturma istatistikleri</p>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900/50">
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                  <tr className="border-b border-gray-200 bg-gray-50">
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
                       Öğretmen
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
                       Oluşturulan Sınav
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
                       Oluşturulan Soru
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
                       Ortalama Zorluk
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                <tbody className="divide-y divide-gray-200">
                   {teacherActivity.map((teacher) => (
-                    <tr key={teacher.teacherId} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                    <tr key={teacher.teacherId} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">{teacher.teacherName}</div>
+                        <div className="text-sm font-medium text-gray-900">{teacher.teacherName}</div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                         {teacher.examsCreated}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                         {teacher.questionsCreated}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
                           teacher.averageExamDifficulty === 'Kolay'
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                            ? 'bg-green-100 text-green-800'
                             : teacher.averageExamDifficulty === 'Orta'
-                            ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
-                            : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-red-100 text-red-800'
                         }`}>
                           {teacher.averageExamDifficulty}
                         </span>
