@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BookOpenCheck, Download, Filter, Loader2, Printer, RefreshCw } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { BookOpenCheck, Download, Filter, Loader2, Printer, RefreshCw, ArrowLeft } from 'lucide-react';
 import {
   fetchQuestionSets,
   fetchQuestions,
@@ -141,6 +142,7 @@ const createAggregate = (): QuestionAggregate => ({
 
 export default function QuestionBankPage() {
   useAuth();
+  const navigate = useNavigate();
   const [institutionSession, setInstitutionSession] = useState<InstitutionSession | null>(null);
   const [filters, setFilters] = useState({
     subject: '',
@@ -610,6 +612,20 @@ export default function QuestionBankPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-10">
       <div className="mx-auto max-w-6xl px-4 space-y-8">
+        {/* Geri Dönüş Butonu */}
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => navigate(-1)}
+            className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 hover:border-gray-300"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Geri Dön
+          </button>
+          <div className="text-sm text-gray-500">
+            Dashboard'a veya bir önceki sayfaya dön
+          </div>
+        </div>
+
         <header className="rounded-3xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 p-8 text-white shadow-xl">
           <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
             <div>
