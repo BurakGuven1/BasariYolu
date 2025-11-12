@@ -21,12 +21,15 @@ export interface InstitutionQuestion {
   passage_text: string | null;
   question_prompt: string | null;
   question_text: string;
+  question_number?: number;
   choices: InstitutionQuestionChoice[];
   answer_key: string | null;
   explanation: string | null;
   tags: string[];
   is_published: boolean;
   metadata: Record<string, any>;
+  page_number?: number | null;
+  page_image_url?: string | null;
   created_at: string;
   updated_at: string;
 }
