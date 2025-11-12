@@ -92,11 +92,11 @@ const normalizeRequest = (request: QuestionRequest) => {
     owner_scope: merged.ownerScope ?? 'all',
   };
 
-  // Normalize subject names
+  // Don't normalize subject names - use them as-is from database
   if (merged.subjects?.length) {
-    payload.subjects = merged.subjects.map(s => canonicalSubject(s));
+    payload.subjects = merged.subjects;
   } else if (merged.subject) {
-    payload.subject = canonicalSubject(merged.subject);
+    payload.subject = merged.subject;
   }
 
   if (merged.topics?.length) payload.topics = merged.topics;
