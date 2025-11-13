@@ -11,11 +11,20 @@ import {
   Edit2,
   Trash2,
 } from 'lucide-react';
-import { extractTextAndImagesFromPDF, parseQuestionsWithPattern, ParsedQuestion, PDFPageImage, mapQuestionsToPages } from '../lib/pdfParser';
+import {
+  extractTextAndImagesFromPDF,
+  parseQuestionsWithPattern,
+  ParsedQuestion,
+  PDFPageImage,
+  QuestionImage,
+  mapQuestionsToPages,
+  extractQuestionImages,
+} from '../lib/pdfParser';
 import { parseQuestionsWithAI, estimateParsingCost } from '../lib/openaiParser';
 import {
   convertParsedQuestionToDBFormat,
   bulkInsertQuestionsWithImages,
+  bulkInsertQuestionsWithCroppedImages,
   createQuestionPreviews,
   validateBulkInsert,
   QuestionPreview,
@@ -43,6 +52,7 @@ export default function InstitutionPDFQuestionUpload({
   const [error, setError] = useState<string | null>(null);
   const [extractedText, setExtractedText] = useState<string>('');
   const [pageImages, setPageImages] = useState<PDFPageImage[]>([]);
+  const [questionImages, setQuestionImages] = useState<QuestionImage[]>([]);
   const [parsedQuestions, setParsedQuestions] = useState<QuestionPreview[]>([]);
   const [insertResult, setInsertResult] = useState<{
     inserted: number;
@@ -149,7 +159,23 @@ export default function InstitutionPDFQuestionUpload({
         console.log(`Mapped ${questions.length} questions to pages`);
       }
 
-      // Step 4: Create previews
+      // Step 4: Extract cropped images for each question
+      setProgressMessage('Soru görselleri crop ediliyor...');
+      try {
+        const croppedImages = await extractQuestionImages(file, questions, {
+          imageScale: 2,
+          imageFormat: 'jpeg',
+          imageQuality: 0.92,
+          padding: 20,
+        });
+        setQuestionImages(croppedImages);
+        console.log(`Extracted ${croppedImages.length} cropped question images`);
+      } catch (cropError) {
+        console.warn('Failed to extract cropped images, falling back to page images:', cropError);
+        // Keep using page images as fallback
+      }
+
+      // Step 5: Create previews
       const previews = createQuestionPreviews(questions);
       setParsedQuestions(previews);
       setProgressMessage('');
@@ -198,17 +224,30 @@ export default function InstitutionPDFQuestionUpload({
       }
 
       // Insert valid questions WITH IMAGES
-      const result = await bulkInsertQuestionsWithImages(
-        valid,
-        pageImages,
-        institutionId,
-        (current, total, message) => {
-          setProgressMessage(message);
-          setProgressCurrent(current);
-          setProgressTotal(total);
-          setProgressPercent(total > 0 ? Math.round((current / total) * 100) : 0);
-        }
-      );
+      // Use cropped images if available, otherwise fall back to page images
+      const result = questionImages.length > 0
+        ? await bulkInsertQuestionsWithCroppedImages(
+            valid,
+            questionImages,
+            institutionId,
+            (current, total, message) => {
+              setProgressMessage(message);
+              setProgressCurrent(current);
+              setProgressTotal(total);
+              setProgressPercent(total > 0 ? Math.round((current / total) * 100) : 0);
+            }
+          )
+        : await bulkInsertQuestionsWithImages(
+            valid,
+            pageImages,
+            institutionId,
+            (current, total, message) => {
+              setProgressMessage(message);
+              setProgressCurrent(current);
+              setProgressTotal(total);
+              setProgressPercent(total > 0 ? Math.round((current / total) * 100) : 0);
+            }
+          );
 
       setInsertResult(result);
       setProgressMessage('');

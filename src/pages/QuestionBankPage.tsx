@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BookOpenCheck, Download, Filter, Loader2, Printer, RefreshCw, ArrowLeft } from 'lucide-react';
+import { BookOpenCheck, Download, Filter, Loader2, Printer, RefreshCw, ArrowLeft, Image as ImageIcon, X } from 'lucide-react';
 import {
   fetchQuestionSets,
   fetchQuestions,
@@ -164,6 +164,7 @@ export default function QuestionBankPage() {
   const [availableTopics, setAvailableTopics] = useState<string[]>([]);
   const [topicsLoading, setTopicsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [imageModalUrl, setImageModalUrl] = useState<string | null>(null);
 
   useEffect(() => {
     refreshInstitutionSession()
@@ -929,6 +930,26 @@ export default function QuestionBankPage() {
                       className="prose prose-sm mt-4 max-w-none text-gray-900"
                       dangerouslySetInnerHTML={{ __html: sanitizeHTML(question.content?.stem ?? '') }}
                     />
+                    {question.page_image_url && (
+                      <div className="mt-3">
+                        <button
+                          onClick={() => setImageModalUrl(question.page_image_url!)}
+                          className="group relative overflow-hidden rounded-lg border-2 border-gray-200 transition hover:border-indigo-400 hover:shadow-lg"
+                        >
+                          <img
+                            src={question.page_image_url}
+                            alt={`Soru ${index + 1} görseli`}
+                            className="h-32 w-auto object-contain transition group-hover:scale-105"
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition group-hover:bg-black/10 group-hover:opacity-100">
+                            <ImageIcon className="h-8 w-8 text-white drop-shadow-lg" />
+                          </div>
+                        </button>
+                        <p className="mt-1 text-xs text-gray-500">
+                          Görseli büyütmek için tıklayın
+                        </p>
+                      </div>
+                    )}
                     {question.content?.options?.length ? (
                       <div className="mt-4 space-y-2">
                         {question.content.options.map((option) => {
@@ -1071,6 +1092,29 @@ export default function QuestionBankPage() {
           )}
         </section>
       </div>
+
+      {/* Image Modal */}
+      {imageModalUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setImageModalUrl(null)}
+        >
+          <div className="relative max-h-[90vh] max-w-[90vw]">
+            <button
+              onClick={() => setImageModalUrl(null)}
+              className="absolute -right-4 -top-4 rounded-full bg-white p-2 shadow-lg transition hover:bg-gray-100"
+            >
+              <X className="h-6 w-6 text-gray-700" />
+            </button>
+            <img
+              src={imageModalUrl}
+              alt="Soru görseli"
+              className="max-h-[90vh] max-w-full rounded-lg shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
