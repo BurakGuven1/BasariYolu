@@ -24,6 +24,7 @@ export interface BulkInsertQuestion {
   visibility: 'private' | 'institution_only' | 'public';
   page_number?: number;
   page_image_url?: string;
+  question_number?: number; // ADDED: For matching with cropped images
 }
 
 /**
@@ -56,6 +57,7 @@ export function convertParsedQuestionToDBFormat(
     visibility: 'institution_only',
     page_number: parsed.page_number,
     page_image_url: pageImageUrl,
+    question_number: parsed.question_number, // ADDED: Preserve question number
   };
 }
 
@@ -215,10 +217,17 @@ export async function bulkInsertQuestionsWithCroppedImages(
   }
 
   // Step 2: Find matching question numbers and add image URLs
-  const questionsWithImages = questions.map((q, idx) => {
-    // Try to find the question number from content or use index
-    const questionNumber = idx + 1; // Assuming questions are ordered
-    const imageUrl = questionImageMap.get(questionNumber);
+  const questionsWithImages = questions.map((q) => {
+    // FIXED: Use actual question_number from question, not index
+    // This is critical for multi-column layouts where questions may not be in numerical order
+    const questionNumber = q.question_number;
+    const imageUrl = questionNumber ? questionImageMap.get(questionNumber) : undefined;
+
+    if (questionNumber && imageUrl) {
+      console.log(`✅ Matched Question ${questionNumber} with image: ${imageUrl.slice(0, 50)}...`);
+    } else if (questionNumber) {
+      console.warn(`⚠️ No image found for Question ${questionNumber}`);
+    }
 
     return {
       ...q,

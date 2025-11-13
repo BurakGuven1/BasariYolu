@@ -29,11 +29,40 @@ app.add_middleware(
 )
 
 
+def fix_turkish_encoding(text: str) -> str:
+    """
+    Fix common Turkish character encoding issues in PDFs
+    Some PDFs encode Turkish characters incorrectly, this fixes the most common ones
+    """
+    replacements = {
+        '˙I': 'İ',  # Dotted I
+        '˙i': 'İ',
+        'ı': 'ı',   # Dotless i (usually correct)
+        'ˆı': 'ı',
+        'ˆI': 'İ',
+        '¸s': 'ş',  # s with cedilla
+        '¸S': 'Ş',
+        '˘g': 'ğ',  # g with breve
+        '˘G': 'Ğ',
+        'ü': 'ü',   # u with umlaut (usually correct)
+        'ö': 'ö',   # o with umlaut (usually correct)
+        'ç': 'ç',   # c with cedilla (usually correct)
+    }
+
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+
+    return text
+
+
 def parse_question_text(text: str, question_num: int) -> Dict[str, Any]:
     """
     Parse question text to extract stem, options, and answer
     Improved: Better UTF-8 handling, multiline options, deduplicate options
     """
+    # Fix Turkish encoding issues
+    text = fix_turkish_encoding(text)
+
     lines = text.split('\n')
     stem_lines = []
     options_dict = {}  # Use dict to prevent duplicates
@@ -160,7 +189,7 @@ async def parse_pdf_questions(file: UploadFile = File(...)):
             question_texts = {}  # Store full text for each question
 
             for block in text_blocks:
-                text = block[4].strip()
+                text = fix_turkish_encoding(block[4].strip())  # FIX: Apply Turkish encoding fix
                 # Match "Soru 1)" or "1)" or "1."
                 match = re.match(r'^(?:Soru\s+)?(\d+)[.)]', text)
                 if match:
@@ -205,7 +234,7 @@ async def parse_pdf_questions(file: UploadFile = File(...)):
                 # Collect all text blocks within this range
                 for block in text_blocks:
                     block_y0 = block[1]
-                    block_text = block[4].strip()
+                    block_text = fix_turkish_encoding(block[4].strip())  # FIX: Apply Turkish encoding fix
 
                     # If block is within question range, add to question text
                     if block_y0 >= start_y and block_y0 < end_y and block_text:
