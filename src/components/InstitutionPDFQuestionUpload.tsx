@@ -123,18 +123,30 @@ export default function InstitutionPDFQuestionUpload({
         const previews = backendImages.map((img, index) => {
           const textContent = (img as any).text_content; // Backend sends text_content
 
+          // Provide defaults if text parsing failed
+          const hasValidOptions = textContent?.options && textContent.options.length >= 2;
+          const defaultOptions = hasValidOptions
+            ? textContent.options
+            : [
+                { label: 'A', value: 'Şık A' },
+                { label: 'B', value: 'Şık B' },
+                { label: 'C', value: 'Şık C' },
+                { label: 'D', value: 'Şık D' },
+              ];
+
           return {
             id: `backend-${index}`,
             question_number: img.questionNumber,
             subject: 'Genel', // Default subject
             topic: 'Belirtilmemiş',
-            stem: textContent?.stem || `Soru ${img.questionNumber} (Metin okunamadı - görsel kullanın)`,
-            options: textContent?.options || [],
-            correct_answer: textContent?.answer || '',
+            stem: textContent?.stem || `Soru ${img.questionNumber}`,
+            options: defaultOptions,
+            correct_answer: textContent?.answer || 'A', // Default to A if no answer found
             difficulty: 'medium' as const,
             selected: true,
             edited: false,
             page_number: img.pageNumber,
+            imageBlob: img.imageBlob, // Include the image blob for preview
           };
         });
 
@@ -552,6 +564,18 @@ export default function InstitutionPDFQuestionUpload({
                       </button>
                     </div>
                   </div>
+
+                  {/* Display question image if available (from backend) */}
+                  {(question as any).imageBlob && (
+                    <div className="mt-3 rounded border border-gray-300 overflow-hidden">
+                      <img
+                        src={URL.createObjectURL((question as any).imageBlob)}
+                        alt={`Soru ${question.question_number}`}
+                        className="w-full"
+                      />
+                    </div>
+                  )}
+
                   <p className="mt-2 text-sm text-gray-900">
                     {question.stem.slice(0, 200)}
                     {question.stem.length > 200 && '...'}

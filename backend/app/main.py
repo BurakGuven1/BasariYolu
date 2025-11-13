@@ -27,11 +27,13 @@ app.add_middleware(
 def parse_question_text(text: str, question_num: int) -> Dict[str, Any]:
     """
     Parse question text to extract stem, options, and answer
+    Improved: Better UTF-8 handling, multiline options, deduplicate options
     """
     lines = text.split('\n')
     stem_lines = []
-    options = []
+    options_dict = {}  # Use dict to prevent duplicates
     answer = None
+    current_option_label = None  # Track multiline options
 
     # Remove question number from first line
     first_line = lines[0] if lines else ""
@@ -41,24 +43,50 @@ def parse_question_text(text: str, question_num: int) -> Dict[str, Any]:
 
     # Parse remaining lines
     i = 1
+    in_options_section = False
+
     while i < len(lines):
         line = lines[i].strip()
+
+        if not line:
+            i += 1
+            current_option_label = None  # Reset on empty line
+            continue
 
         # Check if this is an option (A), B), C), etc.)
         option_match = re.match(r'^([A-E])[.)]?\s*(.+)', line, re.IGNORECASE)
         if option_match:
+            in_options_section = True
             label = option_match.group(1).upper()
             value = option_match.group(2).strip()
-            options.append({'label': label, 'value': value})
+
+            # Only add if not duplicate and value is meaningful
+            if label not in options_dict and len(value) > 1:
+                options_dict[label] = value
+                current_option_label = label
+            elif label == current_option_label and label in options_dict:
+                # Continuation of current option - append
+                options_dict[label] += ' ' + value
+
         # Check for answer key (Cevap: A, Doğru Cevap: B, etc.)
-        elif re.search(r'(?:cevap|doğru|answer|key)[\s:]+([A-E])', line, re.IGNORECASE):
+        elif re.search(r'(?:cevap|doğru|yanıt|answer|key)[\s:]+([A-E])', line, re.IGNORECASE):
             answer_match = re.search(r'([A-E])', line, re.IGNORECASE)
-            if answer_match:
+            if answer_match and not answer:  # Only set first answer found
                 answer = answer_match.group(1).upper()
-        # Otherwise, add to stem
-        elif line and not any(keyword in line.lower() for keyword in ['sayfa', 'page', '©']):
-            # Don't add if it's already part of options
-            if not any(opt['value'] in line for opt in options):
+            current_option_label = None
+
+        # Check if continuation of previous option (no new option marker)
+        elif in_options_section and current_option_label and len(line) > 1:
+            # Skip if it looks like page number or noise
+            if not any(keyword in line.lower() for keyword in ['sayfa', 'page', '©', 'www.', 'http', 'cevap']):
+                # Check if line might be continuing the option text
+                if not re.match(r'^[A-E][.)]', line, re.IGNORECASE):
+                    options_dict[current_option_label] += ' ' + line
+
+        # Otherwise, add to stem if not in options section yet
+        elif not in_options_section and line:
+            # Skip page numbers, copyright, etc.
+            if not any(keyword in line.lower() for keyword in ['sayfa', 'page', '©', 'www.', 'http']):
                 stem_lines.append(line)
 
         i += 1
@@ -67,8 +95,16 @@ def parse_question_text(text: str, question_num: int) -> Dict[str, Any]:
     stem = ' '.join(stem_lines).strip()
 
     # If no stem found, use placeholder
-    if not stem:
-        stem = f"Soru {question_num} (Metin okunamadı - görsel kullanın)"
+    if not stem or len(stem) < 5:
+        stem = f"Soru {question_num}"
+
+    # Convert options dict to list and clean up
+    options = []
+    for label, value in sorted(options_dict.items()):
+        # Clean up extra whitespace
+        value = ' '.join(value.split())
+        if len(value) > 1:  # Only include non-empty options
+            options.append({'label': label, 'value': value})
 
     return {
         'stem': stem,
@@ -261,6 +297,12 @@ async def parse_pdf_questions(file: UploadFile = File(...)):
                     # Parse question text for stem, options, and answer
                     full_text = "\n".join(question_texts.get(q_num, []))
                     parsed_content = parse_question_text(full_text, q_num)
+
+                    # Debug logging
+                    print(f"📝 Question {q_num} text blocks: {len(question_texts.get(q_num, []))}")
+                    print(f"   Stem: {parsed_content['stem'][:80]}..." if len(parsed_content['stem']) > 80 else f"   Stem: {parsed_content['stem']}")
+                    print(f"   Options: {len(parsed_content['options'])} found")
+                    print(f"   Answer: {parsed_content['answer']}")
 
                     results.append({
                         'question_number': q_num,
