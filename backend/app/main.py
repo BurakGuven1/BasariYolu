@@ -82,85 +82,120 @@ async def parse_pdf_questions(file: UploadFile = File(...)):
 
             # Extract images for each question
             for i, (q_num, q_pos) in enumerate(sorted_questions):
-                # Determine question boundaries
-                start_y = q_pos['y0']
+                try:
+                    # Determine question boundaries
+                    start_y = q_pos['y0']
 
-                # End Y is either next question or page end
-                if i + 1 < len(sorted_questions):
-                    next_q_pos = sorted_questions[i + 1][1]
-                    end_y = next_q_pos['y0']
-                else:
-                    end_y = page_height
+                    # End Y is either next question or page end
+                    if i + 1 < len(sorted_questions):
+                        next_q_pos = sorted_questions[i + 1][1]
+                        end_y = next_q_pos['y0']
+                    else:
+                        end_y = page_height
 
-                # CRITICAL: Find all images within this question range
-                image_list = page.get_images()
-                images_in_question = []
+                    # CRITICAL: Find all images within this question range
+                    image_list = page.get_images()
+                    images_in_question = []
 
-                for img_index, img in enumerate(image_list):
+                    for img_index, img in enumerate(image_list):
+                        try:
+                            # Get image position using get_image_rects
+                            xref = img[0]
+                            rects = page.get_image_rects(xref)
+
+                            for rect in rects:
+                                img_y0 = rect.y0
+                                img_y1 = rect.y1
+
+                                # Check if image is within question boundaries
+                                if img_y0 >= start_y and img_y1 <= end_y:
+                                    images_in_question.append({
+                                        'rect': rect,
+                                        'y0': img_y0,
+                                        'y1': img_y1,
+                                    })
+                        except Exception as img_err:
+                            print(f"⚠️  Image extraction error: {img_err}")
+                            pass
+
+                    # Extend boundaries to include all images
+                    crop_y0 = start_y
+                    crop_y1 = end_y
+
+                    for img_info in images_in_question:
+                        crop_y0 = min(crop_y0, img_info['y0'])
+                        crop_y1 = max(crop_y1, img_info['y1'])
+
+                    # Add padding
+                    padding_top = 30
+                    padding_bottom = 50
+                    crop_y0 = max(0, crop_y0 - padding_top)
+                    crop_y1 = min(page_height, crop_y1 + padding_bottom)
+
+                    # Don't overlap with next question
+                    if i + 1 < len(sorted_questions):
+                        next_start_y = sorted_questions[i + 1][1]['y0']
+                        crop_y1 = min(crop_y1, next_start_y - 5)
+
+                    # VALIDATION: Ensure valid crop dimensions
+                    crop_height = crop_y1 - crop_y0
+
+                    if crop_height <= 10:
+                        print(f"⚠️  Question {q_num}: Invalid height {crop_height}px, skipping")
+                        continue
+
+                    if crop_y0 < 0 or crop_y1 > page_height or crop_y0 >= crop_y1:
+                        print(f"⚠️  Question {q_num}: Invalid Y bounds [{crop_y0}, {crop_y1}], page height={page_height}, skipping")
+                        continue
+
+                    # Create crop rectangle with validation
+                    crop_rect = fitz.Rect(0, crop_y0, page_width, crop_y1)
+
+                    # Validate rectangle
+                    if not crop_rect.is_valid or crop_rect.is_empty:
+                        print(f"⚠️  Question {q_num}: Invalid crop rectangle, skipping")
+                        continue
+
+                    # Render with reduced scale to avoid memory issues
+                    mat = fitz.Matrix(1.5, 1.5)  # 1.5x scaling (108 DPI) - reduced from 2x
+
+                    # Render to image with error handling
                     try:
-                        # Get image position using get_image_rects
-                        xref = img[0]
-                        rects = page.get_image_rects(xref)
+                        pix = page.get_pixmap(matrix=mat, clip=crop_rect)
+                    except Exception as render_err:
+                        print(f"❌ Question {q_num}: Pixmap render failed: {render_err}")
+                        # Try with even smaller scale
+                        try:
+                            mat = fitz.Matrix(1, 1)  # 1x scaling (72 DPI)
+                            pix = page.get_pixmap(matrix=mat, clip=crop_rect)
+                            print(f"✅ Question {q_num}: Rendered at 1x scale")
+                        except:
+                            print(f"❌ Question {q_num}: Failed even at 1x, skipping")
+                            continue
 
-                        for rect in rects:
-                            img_y0 = rect.y0
-                            img_y1 = rect.y1
+                    # Convert to PNG bytes
+                    img_bytes = pix.tobytes("png")
 
-                            # Check if image is within question boundaries
-                            if img_y0 >= start_y and img_y1 <= end_y:
-                                images_in_question.append({
-                                    'rect': rect,
-                                    'y0': img_y0,
-                                    'y1': img_y1,
-                                })
-                    except:
-                        pass
+                    # Convert to base64 for JSON response
+                    img_base64 = base64.b64encode(img_bytes).decode('utf-8')
 
-                # Extend boundaries to include all images
-                crop_y0 = start_y
-                crop_y1 = end_y
+                    results.append({
+                        'question_number': q_num,
+                        'page_number': page_num + 1,
+                        'image_base64': img_base64,
+                        'crop_info': {
+                            'y0': crop_y0,
+                            'y1': crop_y1,
+                            'height': crop_height,
+                            'images_count': len(images_in_question),
+                        }
+                    })
 
-                for img_info in images_in_question:
-                    crop_y0 = min(crop_y0, img_info['y0'])
-                    crop_y1 = max(crop_y1, img_info['y1'])
+                    print(f"✅ Question {q_num} (Page {page_num + 1}): Cropped {len(images_in_question)} images, Y={crop_y0:.0f}-{crop_y1:.0f}, H={crop_height:.0f}px")
 
-                # Add padding
-                padding_top = 30
-                padding_bottom = 50
-                crop_y0 = max(0, crop_y0 - padding_top)
-                crop_y1 = min(page_height, crop_y1 + padding_bottom)
-
-                # Don't overlap with next question
-                if i + 1 < len(sorted_questions):
-                    next_start_y = sorted_questions[i + 1][1]['y0']
-                    crop_y1 = min(crop_y1, next_start_y - 5)
-
-                # Create crop rectangle
-                crop_rect = fitz.Rect(0, crop_y0, page_width, crop_y1)
-
-                # Render to high-quality image
-                mat = fitz.Matrix(2, 2)  # 2x scaling for 144 DPI
-                pix = page.get_pixmap(matrix=mat, clip=crop_rect)
-
-                # Convert to PNG bytes
-                img_bytes = pix.tobytes("png")
-
-                # Convert to base64 for JSON response
-                img_base64 = base64.b64encode(img_bytes).decode('utf-8')
-
-                results.append({
-                    'question_number': q_num,
-                    'page_number': page_num + 1,
-                    'image_base64': img_base64,
-                    'crop_info': {
-                        'y0': crop_y0,
-                        'y1': crop_y1,
-                        'height': crop_y1 - crop_y0,
-                        'images_count': len(images_in_question),
-                    }
-                })
-
-                print(f"✅ Question {q_num} (Page {page_num + 1}): Cropped {len(images_in_question)} images, Y={crop_y0:.0f}-{crop_y1:.0f}")
+                except Exception as q_err:
+                    print(f"❌ Question {q_num} failed: {q_err}")
+                    continue
 
         pdf_document.close()
 
