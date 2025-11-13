@@ -3,7 +3,7 @@
  * Uses Python FastAPI + PyMuPDF for 100% accurate question extraction
  */
 
-import { ParsedQuestion, QuestionImage } from './pdfParser';
+import { QuestionImage } from './pdfParser';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
 

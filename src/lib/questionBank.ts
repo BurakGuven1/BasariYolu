@@ -106,7 +106,7 @@ const normalizeRequest = (request: QuestionRequest) => {
 
   if (merged.tags?.length) payload.tags = merged.tags;
   if (merged.levels?.length) {
-    payload.tags = [...(payload.tags ?? []), ...merged.levels];
+    payload.tags = [...(Array.isArray(payload.tags) ? payload.tags : []), ...merged.levels];
   }
 
   if (merged.difficulties?.length) payload.difficulties = merged.difficulties;
