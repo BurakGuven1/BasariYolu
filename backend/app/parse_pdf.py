@@ -13,6 +13,22 @@ from PIL import Image
 # Try to import pytesseract for OCR support
 try:
     import pytesseract
+    import platform
+
+    # Windows: Set Tesseract path explicitly
+    if platform.system() == 'Windows':
+        # Try common installation paths
+        tesseract_paths = [
+            r'C:\Program Files\Tesseract-OCR\tesseract.exe',
+            r'C:\Program Files (x86)\Tesseract-OCR\tesseract.exe',
+        ]
+        for path in tesseract_paths:
+            import os
+            if os.path.exists(path):
+                pytesseract.pytesseract.tesseract_cmd = path
+                print(f"✅ Tesseract found at: {path}")
+                break
+
     OCR_AVAILABLE = True
 except ImportError:
     OCR_AVAILABLE = False
