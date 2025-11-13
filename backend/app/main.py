@@ -151,7 +151,9 @@ async def parse_pdf_questions(file: UploadFile = File(...)):
             page = pdf_document[page_num]
 
             # Get all text blocks with positions
-            text_blocks = page.get_text("blocks")
+            # CRITICAL FIX: Sort blocks by Y (top to bottom), then X (left to right)
+            # This ensures correct reading order for multi-column layouts
+            text_blocks = sorted(page.get_text("blocks"), key=lambda b: (b[1], b[0]))
 
             # Find question numbers and their positions, AND extract full text
             question_positions = {}
@@ -166,7 +168,9 @@ async def parse_pdf_questions(file: UploadFile = File(...)):
                     # block format: (x0, y0, x1, y1, text, ...)
                     if question_num not in question_positions:
                         question_positions[question_num] = {
+                            'x0': block[0],  # Left X
                             'y0': block[1],  # Top Y
+                            'x1': block[2],  # Right X
                             'y1': block[3],  # Bottom Y
                         }
                         question_texts[question_num] = []
@@ -175,8 +179,12 @@ async def parse_pdf_questions(file: UploadFile = File(...)):
             if not question_positions:
                 continue
 
-            # Sort questions by position
-            sorted_questions = sorted(question_positions.items())
+            # CRITICAL FIX: Sort questions by POSITION (Y, then X), NOT by number
+            # This handles multi-column layouts where Q3 might be left of Q4
+            sorted_questions = sorted(
+                question_positions.items(),
+                key=lambda item: (item[1]['y0'], item[1]['x0'])
+            )
 
             # Get page dimensions
             page_rect = page.rect
@@ -209,27 +217,47 @@ async def parse_pdf_questions(file: UploadFile = File(...)):
                 try:
                     # Determine question boundaries
                     start_y = q_pos['y0']
+                    start_x = q_pos['x0']
 
-                    # End Y is either next question or page end
+                    # SMART MULTI-COLUMN DETECTION
+                    # Check if next question is on same Y level (side-by-side layout)
+                    is_multi_column = False
                     if i + 1 < len(sorted_questions):
                         next_q_pos = sorted_questions[i + 1][1]
-                        end_y = next_q_pos['y0']
+                        next_y = next_q_pos['y0']
+                        next_x = next_q_pos['x0']
+
+                        # If next question starts within 50px of current Y, it's multi-column
+                        if abs(next_y - start_y) < 50:
+                            is_multi_column = True
+                            # Use X coordinate to determine which column
+                            # Crop X range: from question start to next question's X
+                            crop_x0 = 0
+                            crop_x1 = next_x - 10  # Leave gap between columns
+                            end_y = page_height  # Go to bottom for this column
+                        else:
+                            # Normal single column: use full width
+                            crop_x0 = 0
+                            crop_x1 = page_width
+                            end_y = next_y
                     else:
+                        # Last question: use full width and height
+                        crop_x0 = 0
+                        crop_x1 = page_width
                         end_y = page_height
 
                     # FIXED CROP LOGIC: Crop the ENTIRE question area
-                    # Don't rely on image positions - just crop from question start to end
                     crop_y0 = start_y
                     crop_y1 = end_y
 
                     # Add small padding for better visual appearance
-                    padding_top = 10   # Small padding above question number
-                    padding_bottom = 10  # Small padding below question
+                    padding_top = 10
+                    padding_bottom = 10
                     crop_y0 = max(0, crop_y0 - padding_top)
                     crop_y1 = min(page_height, crop_y1 + padding_bottom)
 
-                    # Ensure we don't overlap with next question
-                    if i + 1 < len(sorted_questions):
+                    # Ensure we don't overlap with next question (single column only)
+                    if not is_multi_column and i + 1 < len(sorted_questions):
                         next_start_y = sorted_questions[i + 1][1]['y0']
                         crop_y1 = min(crop_y1, next_start_y - 5)
 
@@ -248,17 +276,26 @@ async def parse_pdf_questions(file: UploadFile = File(...)):
 
                     # VALIDATION: Ensure valid crop dimensions
                     crop_height = crop_y1 - crop_y0
+                    crop_width = crop_x1 - crop_x0
 
                     if crop_height <= 10:
                         print(f"⚠️  Question {q_num}: Invalid height {crop_height}px, skipping")
+                        continue
+
+                    if crop_width <= 10:
+                        print(f"⚠️  Question {q_num}: Invalid width {crop_width}px, skipping")
                         continue
 
                     if crop_y0 < 0 or crop_y1 > page_height or crop_y0 >= crop_y1:
                         print(f"⚠️  Question {q_num}: Invalid Y bounds [{crop_y0}, {crop_y1}], page height={page_height}, skipping")
                         continue
 
-                    # Create crop rectangle with validation
-                    crop_rect = fitz.Rect(0, crop_y0, page_width, crop_y1)
+                    if crop_x0 < 0 or crop_x1 > page_width or crop_x0 >= crop_x1:
+                        print(f"⚠️  Question {q_num}: Invalid X bounds [{crop_x0}, {crop_x1}], page width={page_width}, skipping")
+                        continue
+
+                    # Create crop rectangle with validation (X and Y bounds)
+                    crop_rect = fitz.Rect(crop_x0, crop_y0, crop_x1, crop_y1)
 
                     # Validate rectangle
                     if not crop_rect.is_valid or crop_rect.is_empty:
@@ -304,14 +341,19 @@ async def parse_pdf_questions(file: UploadFile = File(...)):
                         'image_base64': img_base64,
                         'text_content': parsed_content,
                         'crop_info': {
+                            'x0': crop_x0,
                             'y0': crop_y0,
+                            'x1': crop_x1,
                             'y1': crop_y1,
+                            'width': crop_width,
                             'height': crop_height,
                             'images_count': images_count,
+                            'is_multi_column': is_multi_column,
                         }
                     })
 
-                    print(f"✅ Question {q_num} (Page {page_num + 1}): Cropped Y={crop_y0:.0f}-{crop_y1:.0f}, H={crop_height:.0f}px, Images={images_count}")
+                    layout_info = " [MULTI-COLUMN]" if is_multi_column else ""
+                    print(f"✅ Question {q_num} (Page {page_num + 1}){layout_info}: X={crop_x0:.0f}-{crop_x1:.0f}, Y={crop_y0:.0f}-{crop_y1:.0f}, W={crop_width:.0f}px, H={crop_height:.0f}px, Images={images_count}")
 
                 except Exception as q_err:
                     print(f"❌ Question {q_num} failed: {q_err}")

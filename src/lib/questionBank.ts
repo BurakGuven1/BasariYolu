@@ -176,6 +176,8 @@ export async function fetchQuestionSets(filters: QuestionSetFilters = {}) {
     query = query.eq('visibility', 'public');
   }
 
+  const { data, error } = await query;
+
   if (error) {
     throw error;
   }
