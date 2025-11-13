@@ -11,6 +11,11 @@ import io
 import re
 from typing import List, Dict, Any
 import base64
+import sys
+
+# Ensure UTF-8 encoding for console output
+if sys.stdout.encoding != 'utf-8':
+    sys.stdout.reconfigure(encoding='utf-8')
 
 app = FastAPI(title="BasariYolu PDF Parser API")
 
@@ -68,12 +73,16 @@ def parse_question_text(text: str, question_num: int) -> Dict[str, Any]:
                 # Continuation of current option - append
                 options_dict[label] += ' ' + value
 
-        # Check for answer key (Cevap: A, Doğru Cevap: B, etc.)
-        elif re.search(r'(?:cevap|doğru|yanıt|answer|key)[\s:]+([A-E])', line, re.IGNORECASE):
-            answer_match = re.search(r'([A-E])', line, re.IGNORECASE)
-            if answer_match and not answer:  # Only set first answer found
+        # Check for answer key - multiple patterns
+        # Pattern 1: "Cevap: A", "Doğru Cevap: B", "Answer: C"
+        # Pattern 2: Just "Cevap" followed by letter (common in some exams)
+        elif not answer and re.search(r'(?:cevap|do[ğg]ru|yan[ıi]t|answer|key)', line, re.IGNORECASE):
+            # Look for A-E in this line
+            answer_match = re.search(r'\b([A-E])\b', line, re.IGNORECASE)
+            if answer_match:
                 answer = answer_match.group(1).upper()
-            current_option_label = None
+                current_option_label = None
+                continue  # Don't add this line to options or stem
 
         # Check if continuation of previous option (no new option marker)
         elif in_options_section and current_option_label and len(line) > 1:
@@ -208,49 +217,34 @@ async def parse_pdf_questions(file: UploadFile = File(...)):
                     else:
                         end_y = page_height
 
-                    # CRITICAL: Find all images within this question range
-                    image_list = page.get_images()
-                    images_in_question = []
-
-                    for img_index, img in enumerate(image_list):
-                        try:
-                            # Get image position using get_image_rects
-                            xref = img[0]
-                            rects = page.get_image_rects(xref)
-
-                            for rect in rects:
-                                img_y0 = rect.y0
-                                img_y1 = rect.y1
-
-                                # Check if image is within question boundaries
-                                if img_y0 >= start_y and img_y1 <= end_y:
-                                    images_in_question.append({
-                                        'rect': rect,
-                                        'y0': img_y0,
-                                        'y1': img_y1,
-                                    })
-                        except Exception as img_err:
-                            print(f"⚠️  Image extraction error: {img_err}")
-                            pass
-
-                    # Extend boundaries to include all images
+                    # FIXED CROP LOGIC: Crop the ENTIRE question area
+                    # Don't rely on image positions - just crop from question start to end
                     crop_y0 = start_y
                     crop_y1 = end_y
 
-                    for img_info in images_in_question:
-                        crop_y0 = min(crop_y0, img_info['y0'])
-                        crop_y1 = max(crop_y1, img_info['y1'])
-
-                    # Add padding
-                    padding_top = 30
-                    padding_bottom = 50
+                    # Add small padding for better visual appearance
+                    padding_top = 10   # Small padding above question number
+                    padding_bottom = 10  # Small padding below question
                     crop_y0 = max(0, crop_y0 - padding_top)
                     crop_y1 = min(page_height, crop_y1 + padding_bottom)
 
-                    # Don't overlap with next question
+                    # Ensure we don't overlap with next question
                     if i + 1 < len(sorted_questions):
                         next_start_y = sorted_questions[i + 1][1]['y0']
                         crop_y1 = min(crop_y1, next_start_y - 5)
+
+                    # Count images in this question (for logging only)
+                    images_count = 0
+                    try:
+                        image_list = page.get_images()
+                        for img in image_list:
+                            xref = img[0]
+                            rects = page.get_image_rects(xref)
+                            for rect in rects:
+                                if rect.y0 >= start_y and rect.y1 <= end_y:
+                                    images_count += 1
+                    except:
+                        pass
 
                     # VALIDATION: Ensure valid crop dimensions
                     crop_height = crop_y1 - crop_y0
@@ -308,16 +302,16 @@ async def parse_pdf_questions(file: UploadFile = File(...)):
                         'question_number': q_num,
                         'page_number': page_num + 1,
                         'image_base64': img_base64,
-                        'text_content': parsed_content,  # NEW: Add parsed text
+                        'text_content': parsed_content,
                         'crop_info': {
                             'y0': crop_y0,
                             'y1': crop_y1,
                             'height': crop_height,
-                            'images_count': len(images_in_question),
+                            'images_count': images_count,
                         }
                     })
 
-                    print(f"✅ Question {q_num} (Page {page_num + 1}): Cropped {len(images_in_question)} images, Y={crop_y0:.0f}-{crop_y1:.0f}, H={crop_height:.0f}px")
+                    print(f"✅ Question {q_num} (Page {page_num + 1}): Cropped Y={crop_y0:.0f}-{crop_y1:.0f}, H={crop_height:.0f}px, Images={images_count}")
 
                 except Exception as q_err:
                     print(f"❌ Question {q_num} failed: {q_err}")
