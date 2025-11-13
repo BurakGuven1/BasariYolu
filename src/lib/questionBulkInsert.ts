@@ -239,6 +239,10 @@ export async function bulkInsertQuestionsWithCroppedImages(
   const batchSize = 50;
   for (let i = 0; i < questionsWithImages.length; i += batchSize) {
     const batch = questionsWithImages.slice(i, i + batchSize);
+
+    // Remove question_number before inserting (not a database field, only used for matching)
+    const batchForDB = batch.map(({ question_number, ...q }) => q);
+
     const currentProgress = questionImages.length + i;
     progressCallback?.(
       currentProgress,
@@ -249,19 +253,22 @@ export async function bulkInsertQuestionsWithCroppedImages(
     try {
       const { data, error } = await supabase
         .from('questions')
-        .insert(batch)
+        .insert(batchForDB)
         .select('id');
 
       if (error) {
         // If batch fails, try inserting one by one
         for (const question of batch) {
+          // Remove question_number from individual question too
+          const { question_number, ...questionForDB } = question;
+
           const { error: singleError } = await supabase
             .from('questions')
-            .insert([question]);
+            .insert([questionForDB]);
 
           if (singleError) {
             errors.push({
-              question,
+              question: questionForDB,
               error: singleError.message,
             });
           } else {
