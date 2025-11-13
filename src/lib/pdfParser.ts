@@ -21,6 +21,18 @@ export interface PDFPageImage {
   height: number;
 }
 
+export interface QuestionImage {
+  questionNumber: number;
+  pageNumber: number;
+  imageBlob: Blob;
+  cropInfo: {
+    startY: number;
+    endY: number;
+    width: number;
+    height: number;
+  };
+}
+
 export interface PDFParseResult {
   text: string;
   pageCount: number;
@@ -159,6 +171,154 @@ export async function extractTextAndImagesFromPDF(
   } catch (error) {
     console.error('PDF extraction error:', error);
     throw new Error('PDF dosyası okunamadı. Lütfen geçerli bir PDF yükleyin.');
+  }
+}
+
+/**
+ * Extract individual question images by cropping based on question positions
+ */
+export async function extractQuestionImages(
+  file: File,
+  questions: ParsedQuestion[],
+  options: {
+    imageScale?: number;
+    imageFormat?: 'png' | 'jpeg';
+    imageQuality?: number;
+    padding?: number; // Extra padding around each question in pixels
+  } = {}
+): Promise<QuestionImage[]> {
+  const {
+    imageScale = 2, // 144 DPI
+    imageFormat = 'jpeg',
+    imageQuality = 0.92,
+    padding = 20,
+  } = options;
+
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+    const pdf = await loadingTask.promise;
+
+    const questionImages: QuestionImage[] = [];
+
+    // Group questions by page number
+    const questionsByPage = new Map<number, ParsedQuestion[]>();
+    questions.forEach(q => {
+      if (q.page_number) {
+        if (!questionsByPage.has(q.page_number)) {
+          questionsByPage.set(q.page_number, []);
+        }
+        questionsByPage.get(q.page_number)!.push(q);
+      }
+    });
+
+    // Process each page that has questions
+    for (const [pageNum, pageQuestions] of questionsByPage.entries()) {
+      const page = await pdf.getPage(pageNum);
+      const textContent = await page.getTextContent();
+      const viewport = page.getViewport({ scale: imageScale });
+
+      // Find Y positions of each question number
+      const questionPositions = new Map<number, number>();
+
+      textContent.items.forEach((item: any) => {
+        const text = item.str.trim();
+        // Match patterns like "Soru 1)", "1)", "1.", "Soru 1."
+        const questionNumMatch = text.match(/^(?:Soru\s+)?(\d+)[.)]/);
+        if (questionNumMatch) {
+          const qNum = parseInt(questionNumMatch[1]);
+          // Transform Y coordinate (PDF coordinates start from bottom)
+          const yPos = viewport.height - (item.transform[5] * imageScale);
+          if (!questionPositions.has(qNum) || yPos < questionPositions.get(qNum)!) {
+            questionPositions.set(qNum, yPos);
+          }
+        }
+      });
+
+      // Sort questions by their position on page
+      pageQuestions.sort((a, b) => a.question_number - b.question_number);
+
+      // Render full page to canvas
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      if (!context) {
+        throw new Error('Could not get canvas context');
+      }
+
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+
+      await page.render({
+        canvasContext: context,
+        viewport: viewport,
+      }).promise;
+
+      // Crop each question
+      for (let i = 0; i < pageQuestions.length; i++) {
+        const question = pageQuestions[i];
+        const startY = questionPositions.get(question.question_number) || 0;
+        const nextQuestion = pageQuestions[i + 1];
+        const endY = nextQuestion && questionPositions.has(nextQuestion.question_number)
+          ? questionPositions.get(nextQuestion.question_number)!
+          : viewport.height;
+
+        // Add padding
+        const cropStartY = Math.max(0, startY - padding);
+        const cropEndY = Math.min(viewport.height, endY + padding);
+        const cropHeight = cropEndY - cropStartY;
+
+        if (cropHeight <= 0) continue;
+
+        // Create cropped canvas
+        const cropCanvas = document.createElement('canvas');
+        const cropContext = cropCanvas.getContext('2d');
+        if (!cropContext) continue;
+
+        cropCanvas.width = viewport.width;
+        cropCanvas.height = cropHeight;
+
+        // Copy the cropped region
+        cropContext.drawImage(
+          canvas,
+          0, cropStartY,  // Source x, y
+          viewport.width, cropHeight,  // Source width, height
+          0, 0,  // Dest x, y
+          viewport.width, cropHeight  // Dest width, height
+        );
+
+        // Convert to blob
+        const blob = await new Promise<Blob>((resolve, reject) => {
+          cropCanvas.toBlob(
+            (blob) => {
+              if (blob) {
+                resolve(blob);
+              } else {
+                reject(new Error('Failed to create blob from canvas'));
+              }
+            },
+            imageFormat === 'jpeg' ? 'image/jpeg' : 'image/png',
+            imageFormat === 'jpeg' ? imageQuality : undefined
+          );
+        });
+
+        questionImages.push({
+          questionNumber: question.question_number,
+          pageNumber: pageNum,
+          imageBlob: blob,
+          cropInfo: {
+            startY: cropStartY,
+            endY: cropEndY,
+            width: viewport.width,
+            height: cropHeight,
+          },
+        });
+      }
+    }
+
+    return questionImages;
+  } catch (error) {
+    console.error('Question image extraction error:', error);
+    throw new Error('Soru görselleri oluşturulamadı.');
   }
 }
 

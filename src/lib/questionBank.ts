@@ -43,6 +43,8 @@ export interface QuestionRecord {
   owner_type: 'platform' | 'institution' | 'teacher';
   owner_id: string | null;
   visibility: 'private' | 'institution_only' | 'public';
+  page_number?: number | null;
+  page_image_url?: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { ParsedQuestion, PDFPageImage } from './pdfParser';
+import { ParsedQuestion, PDFPageImage, QuestionImage } from './pdfParser';
 import { QuestionDifficulty, QuestionFormat } from './questionBank';
 import { uploadImage, generateQuestionImagePath } from './imageStorage';
 
@@ -157,6 +157,125 @@ export async function bulkInsertQuestionsWithImages(
   }
 
   progressCallback?.(questionsWithImages.length, questionsWithImages.length, 'Tamamlandı!');
+
+  return {
+    success: inserted > 0,
+    inserted,
+    errors,
+  };
+}
+
+/**
+ * Bulk insert questions with cropped question images
+ * Uses individual cropped images for each question instead of full page images
+ */
+export async function bulkInsertQuestionsWithCroppedImages(
+  questions: BulkInsertQuestion[],
+  questionImages: QuestionImage[],
+  institutionId: string,
+  progressCallback?: (current: number, total: number, message: string) => void
+): Promise<{
+  success: boolean;
+  inserted: number;
+  errors: Array<{ question: BulkInsertQuestion; error: string }>;
+}> {
+  if (questions.length === 0) {
+    return { success: true, inserted: 0, errors: [] };
+  }
+
+  const errors: Array<{ question: BulkInsertQuestion; error: string }> = [];
+  let inserted = 0;
+
+  // Step 1: Upload all cropped question images to storage
+  progressCallback?.(0, questions.length + questionImages.length, 'Soru görselleri yükleniyor...');
+
+  const questionImageMap = new Map<number, string>(); // questionNumber -> imageUrl
+
+  for (let i = 0; i < questionImages.length; i++) {
+    const qImage = questionImages[i];
+    const imagePath = generateQuestionImagePath(
+      institutionId,
+      qImage.questionNumber,
+      qImage.pageNumber,
+      'jpeg'
+    );
+
+    const uploadResult = await uploadImage('question-images', qImage.imageBlob, imagePath);
+
+    if (uploadResult.success && uploadResult.url) {
+      questionImageMap.set(qImage.questionNumber, uploadResult.url);
+      progressCallback?.(
+        i + 1,
+        questions.length + questionImages.length,
+        `Görsel ${i + 1}/${questionImages.length} yüklendi`
+      );
+    } else {
+      console.warn(`Failed to upload image for question ${qImage.questionNumber}:`, uploadResult.error);
+    }
+  }
+
+  // Step 2: Find matching question numbers and add image URLs
+  const questionsWithImages = questions.map((q, idx) => {
+    // Try to find the question number from content or use index
+    const questionNumber = idx + 1; // Assuming questions are ordered
+    const imageUrl = questionImageMap.get(questionNumber);
+
+    return {
+      ...q,
+      page_image_url: imageUrl,
+    };
+  });
+
+  // Step 3: Insert questions in batches
+  const batchSize = 50;
+  for (let i = 0; i < questionsWithImages.length; i += batchSize) {
+    const batch = questionsWithImages.slice(i, i + batchSize);
+    const currentProgress = questionImages.length + i;
+    progressCallback?.(
+      currentProgress,
+      questions.length + questionImages.length,
+      `Sorular kaydediliyor (${i + 1}-${Math.min(i + batchSize, questionsWithImages.length)}/${questionsWithImages.length})...`
+    );
+
+    try {
+      const { data, error } = await supabase
+        .from('questions')
+        .insert(batch)
+        .select('id');
+
+      if (error) {
+        // If batch fails, try inserting one by one
+        for (const question of batch) {
+          const { error: singleError } = await supabase
+            .from('questions')
+            .insert([question]);
+
+          if (singleError) {
+            errors.push({
+              question,
+              error: singleError.message,
+            });
+          } else {
+            inserted++;
+          }
+        }
+      } else {
+        inserted += data?.length || batch.length;
+      }
+    } catch (error) {
+      console.error('Batch insert error:', error);
+      errors.push({
+        question: batch[0],
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  progressCallback?.(
+    questions.length + questionImages.length,
+    questions.length + questionImages.length,
+    'Tamamlandı!'
+  );
 
   return {
     success: inserted > 0,
