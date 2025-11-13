@@ -10,6 +10,7 @@ import {
   X,
   Edit2,
   Trash2,
+  Server,
 } from 'lucide-react';
 import {
   extractTextAndImagesFromPDF,
@@ -21,6 +22,7 @@ import {
   extractQuestionImages,
 } from '../lib/pdfParser';
 import { parseQuestionsWithAI, estimateParsingCost } from '../lib/openaiParser';
+import { parsePDFWithBackend, checkBackendHealth } from '../lib/pdfParserBackend';
 import {
   convertParsedQuestionToDBFormat,
   bulkInsertQuestionsWithImages,
@@ -36,7 +38,7 @@ interface InstitutionPDFQuestionUploadProps {
   onClose?: () => void;
 }
 
-type ParseMethod = 'pattern' | 'ai';
+type ParseMethod = 'pattern' | 'ai' | 'backend';
 type UploadStep = 'upload' | 'parsing' | 'preview' | 'inserting' | 'complete';
 
 export default function InstitutionPDFQuestionUpload({
@@ -47,7 +49,8 @@ export default function InstitutionPDFQuestionUpload({
   const [step, setStep] = useState<UploadStep>('upload');
   const [file, setFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
-  const [parseMethod, setParseMethod] = useState<ParseMethod>('ai');
+  const [parseMethod, setParseMethod] = useState<ParseMethod>('backend');
+  const [backendAvailable, setBackendAvailable] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [extractedText, setExtractedText] = useState<string>('');

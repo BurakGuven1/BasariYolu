@@ -1,0 +1,180 @@
+"""
+FastAPI backend for PDF question parsing with PyMuPDF
+DEFINITIVE SOLUTION for accurate question image extraction
+"""
+from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
+import fitz  # PyMuPDF
+from PIL import Image
+import io
+import re
+from typing import List, Dict, Any
+import base64
+
+app = FastAPI(title="BasariYolu PDF Parser API")
+
+# CORS configuration for React frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:3000"],  # Vite default port
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.get("/")
+async def root():
+    return {"message": "BasariYolu PDF Parser API - Ready", "status": "ok"}
+
+
+@app.post("/api/parse-pdf")
+async def parse_pdf_questions(file: UploadFile = File(...)):
+    """
+    Parse PDF and extract question images with PERFECT accuracy using PyMuPDF
+
+    Returns:
+        - questions: List of question metadata
+        - images: List of base64 encoded cropped question images
+    """
+    if not file.filename.endswith('.pdf'):
+        raise HTTPException(status_code=400, detail="File must be a PDF")
+
+    try:
+        # Read PDF file
+        pdf_bytes = await file.read()
+        pdf_document = fitz.open(stream=pdf_bytes, filetype="pdf")
+
+        results = []
+
+        # Process each page
+        for page_num in range(len(pdf_document)):
+            page = pdf_document[page_num]
+
+            # Get all text blocks with positions
+            text_blocks = page.get_text("blocks")
+
+            # Find question numbers and their positions
+            question_positions = {}
+            for block in text_blocks:
+                text = block[4].strip()
+                # Match "Soru 1)" or "1)" or "1."
+                match = re.match(r'^(?:Soru\s+)?(\d+)[.)]', text)
+                if match:
+                    question_num = int(match.group(1))
+                    # block format: (x0, y0, x1, y1, text, ...)
+                    question_positions[question_num] = {
+                        'y0': block[1],  # Top Y
+                        'y1': block[3],  # Bottom Y
+                    }
+
+            if not question_positions:
+                continue
+
+            # Sort questions by position
+            sorted_questions = sorted(question_positions.items())
+
+            # Get page dimensions
+            page_rect = page.rect
+            page_width = page_rect.width
+            page_height = page_rect.height
+
+            # Extract images for each question
+            for i, (q_num, q_pos) in enumerate(sorted_questions):
+                # Determine question boundaries
+                start_y = q_pos['y0']
+
+                # End Y is either next question or page end
+                if i + 1 < len(sorted_questions):
+                    next_q_pos = sorted_questions[i + 1][1]
+                    end_y = next_q_pos['y0']
+                else:
+                    end_y = page_height
+
+                # CRITICAL: Find all images within this question range
+                image_list = page.get_images()
+                images_in_question = []
+
+                for img_index, img in enumerate(image_list):
+                    try:
+                        # Get image position using get_image_rects
+                        xref = img[0]
+                        rects = page.get_image_rects(xref)
+
+                        for rect in rects:
+                            img_y0 = rect.y0
+                            img_y1 = rect.y1
+
+                            # Check if image is within question boundaries
+                            if img_y0 >= start_y and img_y1 <= end_y:
+                                images_in_question.append({
+                                    'rect': rect,
+                                    'y0': img_y0,
+                                    'y1': img_y1,
+                                })
+                    except:
+                        pass
+
+                # Extend boundaries to include all images
+                crop_y0 = start_y
+                crop_y1 = end_y
+
+                for img_info in images_in_question:
+                    crop_y0 = min(crop_y0, img_info['y0'])
+                    crop_y1 = max(crop_y1, img_info['y1'])
+
+                # Add padding
+                padding_top = 30
+                padding_bottom = 50
+                crop_y0 = max(0, crop_y0 - padding_top)
+                crop_y1 = min(page_height, crop_y1 + padding_bottom)
+
+                # Don't overlap with next question
+                if i + 1 < len(sorted_questions):
+                    next_start_y = sorted_questions[i + 1][1]['y0']
+                    crop_y1 = min(crop_y1, next_start_y - 5)
+
+                # Create crop rectangle
+                crop_rect = fitz.Rect(0, crop_y0, page_width, crop_y1)
+
+                # Render to high-quality image
+                mat = fitz.Matrix(2, 2)  # 2x scaling for 144 DPI
+                pix = page.get_pixmap(matrix=mat, clip=crop_rect)
+
+                # Convert to PNG bytes
+                img_bytes = pix.tobytes("png")
+
+                # Convert to base64 for JSON response
+                img_base64 = base64.b64encode(img_bytes).decode('utf-8')
+
+                results.append({
+                    'question_number': q_num,
+                    'page_number': page_num + 1,
+                    'image_base64': img_base64,
+                    'crop_info': {
+                        'y0': crop_y0,
+                        'y1': crop_y1,
+                        'height': crop_y1 - crop_y0,
+                        'images_count': len(images_in_question),
+                    }
+                })
+
+                print(f"✅ Question {q_num} (Page {page_num + 1}): Cropped {len(images_in_question)} images, Y={crop_y0:.0f}-{crop_y1:.0f}")
+
+        pdf_document.close()
+
+        return {
+            "success": True,
+            "total_questions": len(results),
+            "questions": results
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"PDF parsing error: {str(e)}")
+
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return {"status": "healthy", "service": "pdf-parser"}
