@@ -166,8 +166,8 @@ export default function InstitutionPDFQuestionUpload({
           imageScale: 2,
           imageFormat: 'jpeg',
           imageQuality: 0.92,
-          paddingTop: 120,    // INCREASED: Extra space above question for titles, graphics, and any preceding content
-          paddingBottom: 200, // INCREASED: Much more space below for all options, explanations, and graphics
+          paddingTop: 80,     // OPTIMIZED: Balanced padding for titles and graphics above
+          paddingBottom: 150, // OPTIMIZED: Balanced padding for all options and content below
         });
         setQuestionImages(croppedImages);
         console.log(`Extracted ${croppedImages.length} cropped question images`);

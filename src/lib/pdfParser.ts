@@ -194,8 +194,8 @@ export async function extractQuestionImages(
     imageScale = 2, // 144 DPI
     imageFormat = 'jpeg',
     imageQuality = 0.92,
-    paddingTop = 120, // INCREASED: More padding at top for titles, graphics, and preceding content
-    paddingBottom = 200, // INCREASED: Much more padding at bottom for all options, explanations, and graphics
+    paddingTop = 80, // OPTIMIZED: Balanced padding for titles and graphics above question
+    paddingBottom = 150, // OPTIMIZED: Balanced padding for all options and content below question
   } = options;
 
   try {
@@ -222,11 +222,9 @@ export async function extractQuestionImages(
       const textContent = await page.getTextContent();
       const viewport = page.getViewport({ scale: imageScale });
 
-      // Find Y positions and content boundaries for each question
-      const questionBoundaries = new Map<number, { minY: number; maxY: number; items: any[] }>();
-
-      // First pass: identify which text items belong to which question
-      let currentQuestion: number | null = null;
+      // IMPROVED: Find question number positions directly (not text boundaries)
+      // This is more reliable than tracking all text items
+      const questionPositions = new Map<number, number>(); // questionNumber -> Y position in PDF coords
 
       textContent.items.forEach((item: any) => {
         const text = item.str.trim();
@@ -234,29 +232,13 @@ export async function extractQuestionImages(
         // Check if this is a question number
         const questionNumMatch = text.match(/^(?:Soru\s+)?(\d+)[.)]/);
         if (questionNumMatch) {
-          currentQuestion = parseInt(questionNumMatch[1]);
-          if (!questionBoundaries.has(currentQuestion)) {
-            questionBoundaries.set(currentQuestion, {
-              minY: Infinity,
-              maxY: -Infinity,
-              items: []
-            });
+          const questionNum = parseInt(questionNumMatch[1]);
+          const itemY = item.transform[5]; // Y position in PDF coordinates (bottom-up)
+
+          // Store the Y position of this question number
+          if (!questionPositions.has(questionNum) || itemY > questionPositions.get(questionNum)!) {
+            questionPositions.set(questionNum, itemY);
           }
-        }
-
-        // If we're tracking a question, add this item and update boundaries
-        if (currentQuestion !== null && questionBoundaries.has(currentQuestion)) {
-          const boundary = questionBoundaries.get(currentQuestion)!;
-
-          // PDF coordinates: Y starts from bottom, we need to convert
-          // item.transform[5] is the Y position in PDF coordinates
-          const itemY = item.transform[5];
-          const itemHeight = item.height || 12; // Approximate text height
-
-          // Track the actual content boundaries
-          boundary.minY = Math.min(boundary.minY, itemY);
-          boundary.maxY = Math.max(boundary.maxY, itemY + itemHeight);
-          boundary.items.push(item);
         }
       });
 
@@ -278,59 +260,52 @@ export async function extractQuestionImages(
         viewport: viewport,
       }).promise;
 
-      // Crop each question based on content boundaries
+      // IMPROVED: Crop based on question number positions (not text boundaries)
       for (let i = 0; i < pageQuestions.length; i++) {
         const question = pageQuestions[i];
-        const boundary = questionBoundaries.get(question.question_number);
+        const questionY = questionPositions.get(question.question_number);
 
-        if (!boundary || boundary.minY === Infinity) {
-          console.warn(`Could not find boundaries for question ${question.question_number}`);
+        if (questionY === undefined) {
+          console.warn(`Could not find position for question ${question.question_number}`);
           continue;
         }
 
         // Convert PDF coordinates (bottom-up) to canvas coordinates (top-down)
         // PDF: Y=0 is at bottom, Canvas: Y=0 is at top
-        let startY = viewport.height - boundary.maxY;
-        let endY = viewport.height - boundary.minY;
+        let startY = viewport.height - questionY;
 
-        // Check if there's a next question to avoid overlap
+        // Find the end position: either next question or page end
+        let endY: number;
         const nextQuestion = pageQuestions[i + 1];
+
         if (nextQuestion) {
-          const nextBoundary = questionBoundaries.get(nextQuestion.question_number);
-          if (nextBoundary && nextBoundary.maxY !== -Infinity) {
-            const nextStartY = viewport.height - nextBoundary.maxY;
-            // Crop right before the next question starts with smaller gap
-            endY = Math.min(endY, nextStartY - 5); // 5px gap to avoid overlap (reduced from 10)
+          const nextQuestionY = questionPositions.get(nextQuestion.question_number);
+          if (nextQuestionY !== undefined) {
+            // End right before the next question
+            endY = viewport.height - nextQuestionY;
+          } else {
+            // If next question position not found, use remaining page height
+            endY = viewport.height;
           }
+        } else {
+          // Last question on page: go to page end
+          endY = viewport.height;
         }
 
-        // Add generous padding to capture graphics and all content
+        // Add padding (but keep within page bounds)
         let cropStartY = Math.max(0, startY - paddingTop);
         let cropEndY = Math.min(viewport.height, endY + paddingBottom);
-        let cropHeight = cropEndY - cropStartY;
 
-        // IMPROVED: Ensure minimum height for questions with graphics
-        const minHeight = 300; // INCREASED: Minimum 300px height (was 150px) for questions with options and graphics
-        if (cropHeight < minHeight && cropHeight > 0) {
-          console.log(`Question ${question.question_number} height (${cropHeight}px) is below minimum, expanding...`);
-
-          // Try to expand downwards first
-          const expandDown = Math.min(minHeight - cropHeight, viewport.height - cropEndY);
-          cropEndY += expandDown;
-          cropHeight = cropEndY - cropStartY;
-
-          // If still too small, expand upwards
-          if (cropHeight < minHeight) {
-            const expandUp = Math.min(minHeight - cropHeight, cropStartY);
-            cropStartY -= expandUp;
-            cropHeight = cropEndY - cropStartY;
-          }
-
-          console.log(`Question ${question.question_number} expanded to ${cropHeight}px`);
+        // If there's a next question, don't let padding overlap into it
+        if (nextQuestion && questionPositions.has(nextQuestion.question_number)) {
+          const nextY = viewport.height - questionPositions.get(nextQuestion.question_number)!;
+          cropEndY = Math.min(cropEndY, nextY - 10); // 10px gap before next question
         }
 
+        let cropHeight = cropEndY - cropStartY;
+
         if (cropHeight <= 0) {
-          console.warn(`Invalid crop height for question ${question.question_number}`);
+          console.warn(`Invalid crop height for question ${question.question_number}: ${cropHeight}px`);
           continue;
         }
 
