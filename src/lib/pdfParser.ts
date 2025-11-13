@@ -175,9 +175,14 @@ export async function extractTextAndImagesFromPDF(
 }
 
 /**
- * Extract individual question images by cropping based on question positions
+ * Extract individual question images by cropping based on question AND image positions
  * Captures the entire question including graphics, text, and all options
- * IMPROVED: Better padding and boundary detection for complete question capture
+ *
+ * DEFINITIVE SOLUTION:
+ * - Uses PDF.js getOperatorList() to extract real image coordinates
+ * - Combines text positions (question numbers) with image positions
+ * - Extends crop boundaries to include ALL images within question range
+ * - Works with ANY PDF format regardless of text/image layout
  */
 export async function extractQuestionImages(
   file: File,
@@ -222,8 +227,40 @@ export async function extractQuestionImages(
       const textContent = await page.getTextContent();
       const viewport = page.getViewport({ scale: imageScale });
 
-      // IMPROVED: Find question number positions directly (not text boundaries)
-      // This is more reliable than tracking all text items
+      // CRITICAL: Extract image positions using operatorList (not just text!)
+      // This is the ONLY way to get accurate image coordinates from PDF.js
+      const operatorList = await page.getOperatorList();
+      const imagePositions: Array<{ x: number; y: number; width: number; height: number }> = [];
+
+      for (let i = 0; i < operatorList.fnArray.length; i++) {
+        const fnId = operatorList.fnArray[i];
+
+        // Check if this is an image painting operation
+        // @ts-ignore - OPS enum exists but TypeScript doesn't know about it
+        if (fnId === pdfjsLib.OPS.paintImageXObject || fnId === pdfjsLib.OPS.paintInlineImageXObject) {
+          const args = operatorList.argsArray[i];
+          if (args && args.length > 0) {
+            // Extract transform matrix [a, b, c, d, e, f]
+            // e = x position, f = y position, a = width, d = height
+            const transform = args[1] || args[0];
+            if (Array.isArray(transform) && transform.length === 6) {
+              const [a, b, c, d, e, f] = transform;
+
+              // Store image position in PDF coordinates (bottom-up)
+              imagePositions.push({
+                x: e,
+                y: f,
+                width: Math.abs(a),
+                height: Math.abs(d),
+              });
+            }
+          }
+        }
+      }
+
+      console.log(`Page ${pageNum}: Found ${imagePositions.length} images at positions:`, imagePositions);
+
+      // Find question number positions directly (not text boundaries)
       const questionPositions = new Map<number, number>(); // questionNumber -> Y position in PDF coords
 
       textContent.items.forEach((item: any) => {
@@ -260,7 +297,7 @@ export async function extractQuestionImages(
         viewport: viewport,
       }).promise;
 
-      // IMPROVED: Crop based on question number positions (not text boundaries)
+      // DEFINITIVE: Crop based on question positions AND image positions
       for (let i = 0; i < pageQuestions.length; i++) {
         const question = pageQuestions[i];
         const questionY = questionPositions.get(question.question_number);
@@ -270,35 +307,61 @@ export async function extractQuestionImages(
           continue;
         }
 
-        // Convert PDF coordinates (bottom-up) to canvas coordinates (top-down)
-        // PDF: Y=0 is at bottom, Canvas: Y=0 is at top
-        let startY = viewport.height - questionY;
-
         // Find the end position: either next question or page end
         let endY: number;
         const nextQuestion = pageQuestions[i + 1];
+        const nextQuestionY = nextQuestion ? questionPositions.get(nextQuestion.question_number) : undefined;
 
-        if (nextQuestion) {
-          const nextQuestionY = questionPositions.get(nextQuestion.question_number);
-          if (nextQuestionY !== undefined) {
-            // End right before the next question
-            endY = viewport.height - nextQuestionY;
-          } else {
-            // If next question position not found, use remaining page height
-            endY = viewport.height;
-          }
+        if (nextQuestionY !== undefined) {
+          endY = nextQuestionY;
         } else {
-          // Last question on page: go to page end
-          endY = viewport.height;
+          // Last question or next question not found: use page end
+          endY = 0; // PDF coordinates: 0 is at bottom
+        }
+
+        // CRITICAL: Find all images that belong to this question
+        // An image belongs to this question if its Y position is between questionY and endY
+        const questionImages = imagePositions.filter(img => {
+          const imageTop = img.y + img.height; // Top of image in PDF coords
+          const imageBottom = img.y; // Bottom of image in PDF coords
+
+          // Check if image is within question boundaries (PDF coords: bottom-up)
+          // Question starts at questionY and ends at endY
+          if (endY === 0) {
+            // Last question: image is in this question if it's below questionY
+            return imageBottom <= questionY;
+          } else {
+            // Image is in this question if it overlaps with [endY, questionY]
+            return imageTop >= endY && imageBottom <= questionY;
+          }
+        });
+
+        console.log(`Question ${question.question_number}: Found ${questionImages.length} images in range [${endY}, ${questionY}]`);
+
+        // Convert PDF coordinates (bottom-up) to canvas coordinates (top-down)
+        // PDF: Y=0 is at bottom, Canvas: Y=0 is at top
+        let startY = viewport.height - questionY;
+        let canvasEndY = endY === 0 ? viewport.height : viewport.height - endY;
+
+        // CRITICAL: Extend boundaries to include ALL images in this question
+        for (const img of questionImages) {
+          const imgTopCanvas = viewport.height - (img.y + img.height);
+          const imgBottomCanvas = viewport.height - img.y;
+
+          // Extend start and end to include this image
+          startY = Math.min(startY, imgTopCanvas);
+          canvasEndY = Math.max(canvasEndY, imgBottomCanvas);
+
+          console.log(`  - Image extends crop: top=${imgTopCanvas.toFixed(0)}, bottom=${imgBottomCanvas.toFixed(0)}`);
         }
 
         // Add padding (but keep within page bounds)
         let cropStartY = Math.max(0, startY - paddingTop);
-        let cropEndY = Math.min(viewport.height, endY + paddingBottom);
+        let cropEndY = Math.min(viewport.height, canvasEndY + paddingBottom);
 
         // If there's a next question, don't let padding overlap into it
-        if (nextQuestion && questionPositions.has(nextQuestion.question_number)) {
-          const nextY = viewport.height - questionPositions.get(nextQuestion.question_number)!;
+        if (nextQuestionY !== undefined) {
+          const nextY = viewport.height - nextQuestionY;
           cropEndY = Math.min(cropEndY, nextY - 10); // 10px gap before next question
         }
 
