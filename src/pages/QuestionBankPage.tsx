@@ -931,22 +931,24 @@ export default function QuestionBankPage() {
                       dangerouslySetInnerHTML={{ __html: sanitizeHTML(question.content?.stem ?? '') }}
                     />
                     {question.page_image_url && (
-                      <div className="mt-3">
+                      <div className="mt-4">
                         <button
                           onClick={() => setImageModalUrl(question.page_image_url!)}
-                          className="group relative overflow-hidden rounded-lg border-2 border-gray-200 transition hover:border-indigo-400 hover:shadow-lg"
+                          className="group relative overflow-hidden rounded-xl border-2 border-gray-200 bg-white p-2 transition hover:border-indigo-400 hover:shadow-xl"
                         >
                           <img
                             src={question.page_image_url}
                             alt={`Soru ${index + 1} görseli`}
-                            className="h-32 w-auto object-contain transition group-hover:scale-105"
+                            className="max-h-64 w-full object-contain transition group-hover:scale-[1.02]"
                           />
                           <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition group-hover:bg-black/10 group-hover:opacity-100">
-                            <ImageIcon className="h-8 w-8 text-white drop-shadow-lg" />
+                            <div className="rounded-full bg-white/90 p-3 shadow-lg">
+                              <ImageIcon className="h-6 w-6 text-indigo-600" />
+                            </div>
                           </div>
                         </button>
-                        <p className="mt-1 text-xs text-gray-500">
-                          Görseli büyütmek için tıklayın
+                        <p className="mt-2 text-xs text-center text-gray-600 font-medium">
+                          📸 Tam soru görseli • Tıklayarak büyütün
                         </p>
                       </div>
                     )}

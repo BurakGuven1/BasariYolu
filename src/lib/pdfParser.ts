@@ -177,6 +177,7 @@ export async function extractTextAndImagesFromPDF(
 /**
  * Extract individual question images by cropping based on question positions
  * Captures the entire question including graphics, text, and all options
+ * IMPROVED: Better padding and boundary detection for complete question capture
  */
 export async function extractQuestionImages(
   file: File,
@@ -193,8 +194,8 @@ export async function extractQuestionImages(
     imageScale = 2, // 144 DPI
     imageFormat = 'jpeg',
     imageQuality = 0.92,
-    paddingTop = 50, // More padding at top for any preceding content
-    paddingBottom = 80, // More padding at bottom for options and graphics
+    paddingTop = 120, // INCREASED: More padding at top for titles, graphics, and preceding content
+    paddingBottom = 200, // INCREASED: Much more padding at bottom for all options, explanations, and graphics
   } = options;
 
   try {
@@ -298,20 +299,34 @@ export async function extractQuestionImages(
           const nextBoundary = questionBoundaries.get(nextQuestion.question_number);
           if (nextBoundary && nextBoundary.maxY !== -Infinity) {
             const nextStartY = viewport.height - nextBoundary.maxY;
-            // Crop right before the next question starts
-            endY = Math.min(endY, nextStartY - 10); // 10px gap to avoid overlap
+            // Crop right before the next question starts with smaller gap
+            endY = Math.min(endY, nextStartY - 5); // 5px gap to avoid overlap (reduced from 10)
           }
         }
 
         // Add generous padding to capture graphics and all content
-        const cropStartY = Math.max(0, startY - paddingTop);
-        const cropEndY = Math.min(viewport.height, endY + paddingBottom);
-        const cropHeight = cropEndY - cropStartY;
+        let cropStartY = Math.max(0, startY - paddingTop);
+        let cropEndY = Math.min(viewport.height, endY + paddingBottom);
+        let cropHeight = cropEndY - cropStartY;
 
-        // Ensure minimum height for questions with graphics
-        const minHeight = 150; // Minimum 150px height
+        // IMPROVED: Ensure minimum height for questions with graphics
+        const minHeight = 300; // INCREASED: Minimum 300px height (was 150px) for questions with options and graphics
         if (cropHeight < minHeight && cropHeight > 0) {
-          console.log(`Question ${question.question_number} is too small (${cropHeight}px), using full content`);
+          console.log(`Question ${question.question_number} height (${cropHeight}px) is below minimum, expanding...`);
+
+          // Try to expand downwards first
+          const expandDown = Math.min(minHeight - cropHeight, viewport.height - cropEndY);
+          cropEndY += expandDown;
+          cropHeight = cropEndY - cropStartY;
+
+          // If still too small, expand upwards
+          if (cropHeight < minHeight) {
+            const expandUp = Math.min(minHeight - cropHeight, cropStartY);
+            cropStartY -= expandUp;
+            cropHeight = cropEndY - cropStartY;
+          }
+
+          console.log(`Question ${question.question_number} expanded to ${cropHeight}px`);
         }
 
         if (cropHeight <= 0) {
