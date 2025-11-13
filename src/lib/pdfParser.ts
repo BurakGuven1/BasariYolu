@@ -244,7 +244,7 @@ export async function extractQuestionImages(
             // e = x position, f = y position, a = width, d = height
             const transform = args[1] || args[0];
             if (Array.isArray(transform) && transform.length === 6) {
-              const [a, b, c, d, e, f] = transform;
+              const [a, _b, _c, d, e, f] = transform;
 
               // Store image position in PDF coordinates (bottom-up)
               imagePositions.push({
@@ -321,7 +321,7 @@ export async function extractQuestionImages(
 
         // CRITICAL: Find all images that belong to this question
         // An image belongs to this question if its Y position is between questionY and endY
-        const questionImages = imagePositions.filter(img => {
+        const imagesInQuestion = imagePositions.filter(img => {
           const imageTop = img.y + img.height; // Top of image in PDF coords
           const imageBottom = img.y; // Bottom of image in PDF coords
 
@@ -336,7 +336,7 @@ export async function extractQuestionImages(
           }
         });
 
-        console.log(`Question ${question.question_number}: Found ${questionImages.length} images in range [${endY}, ${questionY}]`);
+        console.log(`Question ${question.question_number}: Found ${imagesInQuestion.length} images in range [${endY}, ${questionY}]`);
 
         // Convert PDF coordinates (bottom-up) to canvas coordinates (top-down)
         // PDF: Y=0 is at bottom, Canvas: Y=0 is at top
@@ -344,7 +344,7 @@ export async function extractQuestionImages(
         let canvasEndY = endY === 0 ? viewport.height : viewport.height - endY;
 
         // CRITICAL: Extend boundaries to include ALL images in this question
-        for (const img of questionImages) {
+        for (const img of imagesInQuestion) {
           const imgTopCanvas = viewport.height - (img.y + img.height);
           const imgBottomCanvas = viewport.height - img.y;
 
