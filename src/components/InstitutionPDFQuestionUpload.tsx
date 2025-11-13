@@ -120,19 +120,23 @@ export default function InstitutionPDFQuestionUpload({
         setQuestionImages(backendImages);
 
         // Create question previews from backend results
-        const previews = backendImages.map((img, index) => ({
-          id: `backend-${index}`,
-          question_number: img.questionNumber,
-          subject: 'Backend Parse', // Will be filled by AI or manually
-          topic: 'Belirtilmemiş',
-          stem: `Soru ${img.questionNumber}`,
-          options: [],
-          correct_answer: '',
-          difficulty: 'medium' as const,
-          selected: true,
-          edited: false,
-          page_number: img.pageNumber,
-        }));
+        const previews = backendImages.map((img, index) => {
+          const textContent = (img as any).text_content; // Backend sends text_content
+
+          return {
+            id: `backend-${index}`,
+            question_number: img.questionNumber,
+            subject: 'Genel', // Default subject
+            topic: 'Belirtilmemiş',
+            stem: textContent?.stem || `Soru ${img.questionNumber} (Metin okunamadı - görsel kullanın)`,
+            options: textContent?.options || [],
+            correct_answer: textContent?.answer || '',
+            difficulty: 'medium' as const,
+            selected: true,
+            edited: false,
+            page_number: img.pageNumber,
+          };
+        });
 
         setParsedQuestions(previews);
         setProgressMessage('');
