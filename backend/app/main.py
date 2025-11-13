@@ -24,6 +24,59 @@ app.add_middleware(
 )
 
 
+def parse_question_text(text: str, question_num: int) -> Dict[str, Any]:
+    """
+    Parse question text to extract stem, options, and answer
+    """
+    lines = text.split('\n')
+    stem_lines = []
+    options = []
+    answer = None
+
+    # Remove question number from first line
+    first_line = lines[0] if lines else ""
+    first_line = re.sub(r'^(?:Soru\s+)?\d+[.)]?\s*', '', first_line).strip()
+    if first_line:
+        stem_lines.append(first_line)
+
+    # Parse remaining lines
+    i = 1
+    while i < len(lines):
+        line = lines[i].strip()
+
+        # Check if this is an option (A), B), C), etc.)
+        option_match = re.match(r'^([A-E])[.)]?\s*(.+)', line, re.IGNORECASE)
+        if option_match:
+            label = option_match.group(1).upper()
+            value = option_match.group(2).strip()
+            options.append({'label': label, 'value': value})
+        # Check for answer key (Cevap: A, Doğru Cevap: B, etc.)
+        elif re.search(r'(?:cevap|doğru|answer|key)[\s:]+([A-E])', line, re.IGNORECASE):
+            answer_match = re.search(r'([A-E])', line, re.IGNORECASE)
+            if answer_match:
+                answer = answer_match.group(1).upper()
+        # Otherwise, add to stem
+        elif line and not any(keyword in line.lower() for keyword in ['sayfa', 'page', '©']):
+            # Don't add if it's already part of options
+            if not any(opt['value'] in line for opt in options):
+                stem_lines.append(line)
+
+        i += 1
+
+    # Join stem lines
+    stem = ' '.join(stem_lines).strip()
+
+    # If no stem found, use placeholder
+    if not stem:
+        stem = f"Soru {question_num} (Metin okunamadı - görsel kullanın)"
+
+    return {
+        'stem': stem,
+        'options': options,
+        'answer': answer,
+    }
+
+
 @app.get("/")
 async def root():
     return {"message": "BasariYolu PDF Parser API - Ready", "status": "ok"}
@@ -55,8 +108,10 @@ async def parse_pdf_questions(file: UploadFile = File(...)):
             # Get all text blocks with positions
             text_blocks = page.get_text("blocks")
 
-            # Find question numbers and their positions
+            # Find question numbers and their positions, AND extract full text
             question_positions = {}
+            question_texts = {}  # Store full text for each question
+
             for block in text_blocks:
                 text = block[4].strip()
                 # Match "Soru 1)" or "1)" or "1."
@@ -64,10 +119,13 @@ async def parse_pdf_questions(file: UploadFile = File(...)):
                 if match:
                     question_num = int(match.group(1))
                     # block format: (x0, y0, x1, y1, text, ...)
-                    question_positions[question_num] = {
-                        'y0': block[1],  # Top Y
-                        'y1': block[3],  # Bottom Y
-                    }
+                    if question_num not in question_positions:
+                        question_positions[question_num] = {
+                            'y0': block[1],  # Top Y
+                            'y1': block[3],  # Bottom Y
+                        }
+                        question_texts[question_num] = []
+                    question_texts[question_num].append(text)
 
             if not question_positions:
                 continue
@@ -79,6 +137,27 @@ async def parse_pdf_questions(file: UploadFile = File(...)):
             page_rect = page.rect
             page_width = page_rect.width
             page_height = page_rect.height
+
+            # Collect all text blocks within each question's Y range
+            for i, (q_num, q_pos) in enumerate(sorted_questions):
+                start_y = q_pos['y0']
+
+                # End Y is either next question or page end
+                if i + 1 < len(sorted_questions):
+                    next_q_pos = sorted_questions[i + 1][1]
+                    end_y = next_q_pos['y0']
+                else:
+                    end_y = page_height
+
+                # Collect all text blocks within this range
+                for block in text_blocks:
+                    block_y0 = block[1]
+                    block_text = block[4].strip()
+
+                    # If block is within question range, add to question text
+                    if block_y0 >= start_y and block_y0 < end_y and block_text:
+                        if block_text not in question_texts[q_num]:  # Avoid duplicates
+                            question_texts[q_num].append(block_text)
 
             # Extract images for each question
             for i, (q_num, q_pos) in enumerate(sorted_questions):
@@ -179,10 +258,15 @@ async def parse_pdf_questions(file: UploadFile = File(...)):
                     # Convert to base64 for JSON response
                     img_base64 = base64.b64encode(img_bytes).decode('utf-8')
 
+                    # Parse question text for stem, options, and answer
+                    full_text = "\n".join(question_texts.get(q_num, []))
+                    parsed_content = parse_question_text(full_text, q_num)
+
                     results.append({
                         'question_number': q_num,
                         'page_number': page_num + 1,
                         'image_base64': img_base64,
+                        'text_content': parsed_content,  # NEW: Add parsed text
                         'crop_info': {
                             'y0': crop_y0,
                             'y1': crop_y1,

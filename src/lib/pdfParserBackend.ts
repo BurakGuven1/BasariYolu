@@ -11,6 +11,11 @@ export interface BackendQuestionImage {
   question_number: number;
   page_number: number;
   image_base64: string;
+  text_content?: {
+    stem: string;
+    options: Array<{ label: string; value: string }>;
+    answer: string | null;
+  };
   crop_info: {
     y0: number;
     y1: number;
@@ -52,7 +57,7 @@ export async function parsePDFWithBackend(
     const result: BackendParseResult = await response.json();
 
     // Convert backend format to frontend QuestionImage format
-    const questionImages: QuestionImage[] = await Promise.all(
+    const questionImages: (QuestionImage & { text_content?: any })[] = await Promise.all(
       result.questions.map(async (q) => {
         // Convert base64 to Blob
         const imageBytes = atob(q.image_base64);
@@ -66,6 +71,7 @@ export async function parsePDFWithBackend(
           questionNumber: q.question_number,
           pageNumber: q.page_number,
           imageBlob: blob,
+          text_content: q.text_content, // NEW: Include text content
           cropInfo: {
             startY: q.crop_info.y0,
             endY: q.crop_info.y1,
