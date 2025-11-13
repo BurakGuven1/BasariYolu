@@ -8,31 +8,36 @@ import base64
 from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass
 import io
+import os
+import platform
+from pathlib import Path
 from PIL import Image
 
 # Try to import pytesseract for OCR support
 try:
     import pytesseract
-    import platform
 
     # Windows: Set Tesseract path explicitly
     if platform.system() == 'Windows':
-        # Try common installation paths
+        # Try common installation paths using pathlib for clean path handling
         tesseract_paths = [
-            r'C:\Program Files\Tesseract-OCR\tesseract.exe',
-            r'C:\Program Files (x86)\Tesseract-OCR\tesseract.exe',
+            Path(r'C:\Program Files\Tesseract-OCR\tesseract.exe'),
+            Path(r'C:\Program Files (x86)\Tesseract-OCR\tesseract.exe'),
         ]
+
         for path in tesseract_paths:
-            import os
-            if os.path.exists(path):
-                pytesseract.pytesseract.tesseract_cmd = path
+            if path.exists():
+                pytesseract.pytesseract.tesseract_cmd = str(path)
                 print(f"✅ Tesseract found at: {path}")
                 break
+        else:
+            print("⚠️  Tesseract executable not found in standard paths")
 
     OCR_AVAILABLE = True
-except ImportError:
+    print("✅ pytesseract imported successfully")
+except ImportError as e:
     OCR_AVAILABLE = False
-    print("⚠️  pytesseract not available - OCR disabled")
+    print(f"⚠️  pytesseract not available - OCR disabled: {e}")
 
 
 @dataclass
