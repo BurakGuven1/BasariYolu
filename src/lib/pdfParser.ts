@@ -176,6 +176,7 @@ export async function extractTextAndImagesFromPDF(
 
 /**
  * Extract individual question images by cropping based on question positions
+ * Captures the entire question including graphics, text, and all options
  */
 export async function extractQuestionImages(
   file: File,
@@ -184,14 +185,16 @@ export async function extractQuestionImages(
     imageScale?: number;
     imageFormat?: 'png' | 'jpeg';
     imageQuality?: number;
-    padding?: number; // Extra padding around each question in pixels
+    paddingTop?: number; // Extra padding above question
+    paddingBottom?: number; // Extra padding below question (for options)
   } = {}
 ): Promise<QuestionImage[]> {
   const {
     imageScale = 2, // 144 DPI
     imageFormat = 'jpeg',
     imageQuality = 0.92,
-    padding = 20,
+    paddingTop = 50, // More padding at top for any preceding content
+    paddingBottom = 80, // More padding at bottom for options and graphics
   } = options;
 
   try {
@@ -218,20 +221,41 @@ export async function extractQuestionImages(
       const textContent = await page.getTextContent();
       const viewport = page.getViewport({ scale: imageScale });
 
-      // Find Y positions of each question number
-      const questionPositions = new Map<number, number>();
+      // Find Y positions and content boundaries for each question
+      const questionBoundaries = new Map<number, { minY: number; maxY: number; items: any[] }>();
+
+      // First pass: identify which text items belong to which question
+      let currentQuestion: number | null = null;
 
       textContent.items.forEach((item: any) => {
         const text = item.str.trim();
-        // Match patterns like "Soru 1)", "1)", "1.", "Soru 1."
+
+        // Check if this is a question number
         const questionNumMatch = text.match(/^(?:Soru\s+)?(\d+)[.)]/);
         if (questionNumMatch) {
-          const qNum = parseInt(questionNumMatch[1]);
-          // Transform Y coordinate (PDF coordinates start from bottom)
-          const yPos = viewport.height - (item.transform[5] * imageScale);
-          if (!questionPositions.has(qNum) || yPos < questionPositions.get(qNum)!) {
-            questionPositions.set(qNum, yPos);
+          currentQuestion = parseInt(questionNumMatch[1]);
+          if (!questionBoundaries.has(currentQuestion)) {
+            questionBoundaries.set(currentQuestion, {
+              minY: Infinity,
+              maxY: -Infinity,
+              items: []
+            });
           }
+        }
+
+        // If we're tracking a question, add this item and update boundaries
+        if (currentQuestion !== null && questionBoundaries.has(currentQuestion)) {
+          const boundary = questionBoundaries.get(currentQuestion)!;
+
+          // PDF coordinates: Y starts from bottom, we need to convert
+          // item.transform[5] is the Y position in PDF coordinates
+          const itemY = item.transform[5];
+          const itemHeight = item.height || 12; // Approximate text height
+
+          // Track the actual content boundaries
+          boundary.minY = Math.min(boundary.minY, itemY);
+          boundary.maxY = Math.max(boundary.maxY, itemY + itemHeight);
+          boundary.items.push(item);
         }
       });
 
@@ -253,21 +277,47 @@ export async function extractQuestionImages(
         viewport: viewport,
       }).promise;
 
-      // Crop each question
+      // Crop each question based on content boundaries
       for (let i = 0; i < pageQuestions.length; i++) {
         const question = pageQuestions[i];
-        const startY = questionPositions.get(question.question_number) || 0;
-        const nextQuestion = pageQuestions[i + 1];
-        const endY = nextQuestion && questionPositions.has(nextQuestion.question_number)
-          ? questionPositions.get(nextQuestion.question_number)!
-          : viewport.height;
+        const boundary = questionBoundaries.get(question.question_number);
 
-        // Add padding
-        const cropStartY = Math.max(0, startY - padding);
-        const cropEndY = Math.min(viewport.height, endY + padding);
+        if (!boundary || boundary.minY === Infinity) {
+          console.warn(`Could not find boundaries for question ${question.question_number}`);
+          continue;
+        }
+
+        // Convert PDF coordinates (bottom-up) to canvas coordinates (top-down)
+        // PDF: Y=0 is at bottom, Canvas: Y=0 is at top
+        let startY = viewport.height - boundary.maxY;
+        let endY = viewport.height - boundary.minY;
+
+        // Check if there's a next question to avoid overlap
+        const nextQuestion = pageQuestions[i + 1];
+        if (nextQuestion) {
+          const nextBoundary = questionBoundaries.get(nextQuestion.question_number);
+          if (nextBoundary && nextBoundary.maxY !== -Infinity) {
+            const nextStartY = viewport.height - nextBoundary.maxY;
+            // Crop right before the next question starts
+            endY = Math.min(endY, nextStartY - 10); // 10px gap to avoid overlap
+          }
+        }
+
+        // Add generous padding to capture graphics and all content
+        const cropStartY = Math.max(0, startY - paddingTop);
+        const cropEndY = Math.min(viewport.height, endY + paddingBottom);
         const cropHeight = cropEndY - cropStartY;
 
-        if (cropHeight <= 0) continue;
+        // Ensure minimum height for questions with graphics
+        const minHeight = 150; // Minimum 150px height
+        if (cropHeight < minHeight && cropHeight > 0) {
+          console.log(`Question ${question.question_number} is too small (${cropHeight}px), using full content`);
+        }
+
+        if (cropHeight <= 0) {
+          console.warn(`Invalid crop height for question ${question.question_number}`);
+          continue;
+        }
 
         // Create cropped canvas
         const cropCanvas = document.createElement('canvas');
@@ -312,6 +362,8 @@ export async function extractQuestionImages(
             height: cropHeight,
           },
         });
+
+        console.log(`Cropped question ${question.question_number}: Y=${cropStartY.toFixed(0)}-${cropEndY.toFixed(0)}, H=${cropHeight.toFixed(0)}px`);
       }
     }
 
