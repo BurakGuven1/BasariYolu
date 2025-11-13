@@ -54,6 +54,9 @@ export default function InstitutionPDFQuestionUpload({
     costTRY: number;
   } | null>(null);
   const [progressMessage, setProgressMessage] = useState<string>('');
+  const [progressPercent, setProgressPercent] = useState<number>(0);
+  const [progressCurrent, setProgressCurrent] = useState<number>(0);
+  const [progressTotal, setProgressTotal] = useState<number>(0);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -177,6 +180,9 @@ export default function InstitutionPDFQuestionUpload({
     setError(null);
     setStep('inserting');
     setProgressMessage('Hazırlanıyor...');
+    setProgressPercent(0);
+    setProgressCurrent(0);
+    setProgressTotal(0);
 
     try {
       // Convert to DB format
@@ -198,6 +204,9 @@ export default function InstitutionPDFQuestionUpload({
         institutionId,
         (current, total, message) => {
           setProgressMessage(message);
+          setProgressCurrent(current);
+          setProgressTotal(total);
+          setProgressPercent(total > 0 ? Math.round((current / total) * 100) : 0);
         }
       );
 
@@ -558,20 +567,38 @@ export default function InstitutionPDFQuestionUpload({
 
       {step === 'upload' && renderUploadStep()}
       {(step === 'parsing' || step === 'inserting') && (
-        <div className="py-12 text-center">
-          <Loader2 className="mx-auto h-12 w-12 animate-spin text-blue-600" />
-          <p className="mt-4 text-lg font-semibold text-gray-900">
-            {step === 'parsing' ? 'PDF İşleniyor...' : 'Sorular Kaydediliyor...'}
-          </p>
-          {progressMessage && (
-            <p className="mt-2 text-sm text-gray-600">
-              {progressMessage}
+        <div className="py-12">
+          <div className="text-center mb-6">
+            <Loader2 className="mx-auto h-12 w-12 animate-spin text-blue-600" />
+            <p className="mt-4 text-lg font-semibold text-gray-900">
+              {step === 'parsing' ? 'PDF İşleniyor...' : 'Sorular Kaydediliyor...'}
             </p>
-          )}
-          {step === 'inserting' && pageImages.length > 0 && (
-            <p className="mt-2 text-sm text-green-600">
-              ✓ {pageImages.length} sayfa görseli hazır
-            </p>
+            {progressMessage && (
+              <p className="mt-2 text-sm text-gray-600">
+                {progressMessage}
+              </p>
+            )}
+          </div>
+
+          {/* Progress Bar */}
+          {step === 'inserting' && progressTotal > 0 && (
+            <div className="mx-auto max-w-md space-y-2">
+              <div className="flex justify-between text-xs text-gray-600">
+                <span>{progressCurrent} / {progressTotal} işlem</span>
+                <span className="font-semibold text-blue-600">{progressPercent}%</span>
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
+                <div
+                  className="h-full bg-blue-600 transition-all duration-300 ease-out"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+              {pageImages.length > 0 && (
+                <p className="text-xs text-green-600 text-center">
+                  ✓ {pageImages.length} sayfa görseli yükleniyor
+                </p>
+              )}
+            </div>
           )}
         </div>
       )}

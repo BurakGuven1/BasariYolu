@@ -163,9 +163,10 @@ export async function listInstitutionQuestions({
   const to = from + pageSize - 1;
 
   let query = supabase
-    .from('institution_questions')
+    .from('questions')
     .select('*', { count: 'exact' })
-    .eq('institution_id', institutionId)
+    .eq('owner_type', 'institution')
+    .eq('owner_id', institutionId)
     .order('created_at', { ascending: false })
     .range(from, to);
 
@@ -178,13 +179,14 @@ export async function listInstitutionQuestions({
   }
 
   if (typeof isPublished === 'boolean') {
-    query = query.eq('is_published', isPublished);
+    query = query.eq('visibility', isPublished ? 'institution_only' : 'private');
   }
 
   if (search && search.trim()) {
-    const term = `%${search.trim()}%`;
+    const searchTerm = `%${search.trim()}%`;
+    // Search in content->stem and other fields
     query = query.or(
-      `question_text.ilike.${term},question_prompt.ilike.${term},topic.ilike.${term},subject.ilike.${term},answer_key.ilike.${term}`,
+      `topic.ilike.${searchTerm},subject.ilike.${searchTerm},tags.cs.{${search.trim()}}`,
     );
   }
 
@@ -195,8 +197,38 @@ export async function listInstitutionQuestions({
     throw error;
   }
 
+  // Map questions table format to InstitutionQuestion format
+  const mappedData: InstitutionQuestion[] = (data ?? []).map((q: any) => ({
+    id: q.id,
+    institution_id: q.owner_id,
+    created_by: q.created_by || '',
+    question_type: q.format === 'multiple_choice' ? 'multiple_choice' : 'written',
+    subject: q.subject,
+    topic: q.topic,
+    difficulty: q.difficulty,
+    passage_text: q.content?.passage || null,
+    question_prompt: q.content?.stem || '',
+    question_text: q.content?.stem || '',
+    question_number: q.question_number,
+    choices: q.content?.options?.map((opt: any) => ({
+      id: opt.label,
+      label: opt.label,
+      text: opt.value,
+      isCorrect: opt.label === q.answer_key?.value,
+    })) || [],
+    answer_key: q.answer_key?.value || null,
+    explanation: q.answer_key?.explanation || null,
+    tags: q.tags || [],
+    is_published: q.visibility !== 'private',
+    metadata: q.metadata || {},
+    page_number: q.page_number || null,
+    page_image_url: q.page_image_url || null,
+    created_at: q.created_at,
+    updated_at: q.updated_at,
+  }));
+
   return {
-    data: (data as InstitutionQuestion[]) ?? [],
+    data: mappedData,
     count: count ?? 0,
   };
 }
