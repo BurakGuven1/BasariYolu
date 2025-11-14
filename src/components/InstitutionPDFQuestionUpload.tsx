@@ -134,15 +134,21 @@ export default function InstitutionPDFQuestionUpload({
                 { label: 'D', value: 'Şık D' },
               ];
 
+          // Get answer from backend response
+          const answerKey = (img as any).answer_key;
+          const correctAnswer = answerKey?.correct || null;
+          const answerSource = answerKey?.source || null;
+
           return {
             id: `backend-${index}`,
-            question_number: img.questionNumber,
-            subject: 'Genel', // Default subject
-            topic: 'Belirtilmemiş',
+            question_number: (img as any).pdf_question_number || img.questionNumber,
+            subject: textContent?.subject || 'Genel',
+            topic: textContent?.topic || 'Belirtilmemiş',
             stem: textContent?.stem || `Soru ${img.questionNumber}`,
             options: defaultOptions,
-            correct_answer: textContent?.answer || 'A', // Default to A if no answer found
-            difficulty: 'medium' as const,
+            correct_answer: correctAnswer, // From backend (may be null)
+            answer_source: answerSource, // Track where answer came from
+            difficulty: textContent?.difficulty || ('medium' as const),
             selected: true,
             edited: false,
             page_number: img.pageNumber,
@@ -495,6 +501,8 @@ export default function InstitutionPDFQuestionUpload({
 
   const renderPreviewStep = () => {
     const selectedCount = parsedQuestions.filter(q => q.selected).length;
+    const answeredCount = parsedQuestions.filter(q => q.correct_answer).length;
+    const unansweredCount = parsedQuestions.length - answeredCount;
 
     return (
       <div className="space-y-6">
@@ -504,7 +512,7 @@ export default function InstitutionPDFQuestionUpload({
               {parsedQuestions.length} Soru Bulundu
             </h3>
             <p className="text-sm text-gray-600">
-              {selectedCount} soru seçildi • Düzenleyin veya kaydedin
+              {selectedCount} soru seçildi • {answeredCount} cevaplı • {unansweredCount > 0 && <span className="text-red-600">{unansweredCount} cevapsız</span>}
             </p>
           </div>
           <button
@@ -522,6 +530,24 @@ export default function InstitutionPDFQuestionUpload({
               : 'Tümünü Seç'}
           </button>
         </div>
+
+        {/* Answer Key Warning */}
+        {unansweredCount > 0 && (
+          <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
+              <div className="flex-1">
+                <p className="font-semibold text-yellow-900">
+                  ⚠️ {unansweredCount} sorunun cevabı yok
+                </p>
+                <p className="mt-1 text-sm text-yellow-800">
+                  PDF'de cevap anahtarı bulunamadı. Lütfen her soru için doğru cevabı manuel olarak seçin.
+                  Cevapsız sorular soru bankasına eklenecek ama kullanıcılar cevap göremeyecek.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="max-h-[500px] space-y-3 overflow-y-auto">
           {parsedQuestions.map(question => (
@@ -583,6 +609,8 @@ export default function InstitutionPDFQuestionUpload({
                     {question.stem.slice(0, 200)}
                     {question.stem.length > 200 && '...'}
                   </p>
+
+                  {/* Options */}
                   <div className="mt-2 flex flex-wrap gap-2 text-xs">
                     {question.options.map(opt => (
                       <span
@@ -597,6 +625,47 @@ export default function InstitutionPDFQuestionUpload({
                         {opt.value.length > 30 && '...'}
                       </span>
                     ))}
+                  </div>
+
+                  {/* Answer Selection */}
+                  <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-gray-700">
+                          Doğru Cevap:
+                        </span>
+                        <select
+                          value={question.correct_answer || ''}
+                          onChange={(e) => {
+                            setParsedQuestions(prev =>
+                              prev.map(q =>
+                                q.id === question.id
+                                  ? { ...q, correct_answer: e.target.value || null, edited: true }
+                                  : q
+                              )
+                            );
+                          }}
+                          className="rounded border border-gray-300 px-2 py-1 text-xs"
+                        >
+                          <option value="">Seçiniz</option>
+                          {question.options.map(opt => (
+                            <option key={opt.label} value={opt.label}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      {(question as any).answer_source && (
+                        <span className="text-xs text-gray-600">
+                          📝 {(question as any).answer_source}
+                        </span>
+                      )}
+                      {!question.correct_answer && (
+                        <span className="text-xs font-semibold text-red-600">
+                          ⚠️ Cevap yok
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
