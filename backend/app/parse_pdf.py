@@ -1,6 +1,7 @@
 """
-OCR-enabled PDF question parser with PyMuPDF and Tesseract
-STABLE VERSION - Handles duplicate question numbers, precise question detection
+STABLE PDF Question Parser v2.0
+Uses PyMuPDF geometric analysis + OCR hybrid system
+Handles multi-column, complex layouts, multi-line options
 """
 import fitz  # PyMuPDF
 import re
@@ -11,58 +12,86 @@ import io
 import platform
 from pathlib import Path
 from PIL import Image
+from collections import defaultdict
 
-# Try to import pytesseract for OCR support
+# Tesseract OCR setup
 try:
     import pytesseract
 
-    # Windows: Set Tesseract path explicitly
     if platform.system() == 'Windows':
         tesseract_paths = [
             Path(r'C:\Program Files\Tesseract-OCR\tesseract.exe'),
             Path(r'C:\Program Files (x86)\Tesseract-OCR\tesseract.exe'),
         ]
-
         for path in tesseract_paths:
             if path.exists():
                 pytesseract.pytesseract.tesseract_cmd = str(path)
                 print(f"✅ Tesseract found at: {path}")
                 break
-        else:
-            print("⚠️  Tesseract executable not found in standard paths")
 
     OCR_AVAILABLE = True
-    print("✅ pytesseract imported successfully")
+    print("✅ pytesseract available")
 except ImportError as e:
     OCR_AVAILABLE = False
-    print(f"⚠️  pytesseract not available - OCR disabled: {e}")
+    print(f"⚠️  OCR disabled: {e}")
+
+
+@dataclass
+class TextBlock:
+    """Enhanced text block with geometric properties"""
+    x0: float
+    y0: float
+    x1: float
+    y1: float
+    text: str
+    font_size: float
+    font_name: str
+    is_bold: bool
+    page_num: int
+
+    @property
+    def width(self) -> float:
+        return self.x1 - self.x0
+
+    @property
+    def height(self) -> float:
+        return self.y1 - self.y0
+
+    @property
+    def center_x(self) -> float:
+        return (self.x0 + self.x1) / 2
+
+    @property
+    def center_y(self) -> float:
+        return (self.y0 + self.y1) / 2
 
 
 @dataclass
 class QuestionBlock:
-    """Raw question block detected in PDF"""
-    pdf_number: int  # Original number from PDF (can repeat)
-    unique_id: int   # Globally unique ID
+    """Question boundary with all text blocks"""
+    unique_id: int
+    pdf_number: Optional[int]
     page_num: int
-    y0: float
-    y1: float
     x0: float
+    y0: float
     x1: float
-    text_content: str
+    y1: float
+    text_blocks: List[TextBlock]
+    column_index: int = 0
 
 
 @dataclass
 class Question:
-    """Final question data structure"""
+    """Final question structure"""
     id: int
     text: str
-    options: List[Dict[str, str]]  # [{"label": "A", "value": "..."}, ...]
+    options: List[Dict[str, str]]
     answer: Optional[str]
     image_base64: Optional[str]
 
 
 def fix_turkish_encoding(text: str) -> str:
-    """Fix common Turkish character encoding issues"""
+    """Fix Turkish character encoding issues"""
     replacements = {
         '˙I': 'İ', '˙i': 'İ', 'ˆI': 'İ',
         '¸s': 'ş', '¸S': 'Ş',
@@ -74,236 +103,406 @@ def fix_turkish_encoding(text: str) -> str:
     return text
 
 
-def extract_text_with_ocr(pix: fitz.Pixmap) -> str:
-    """Extract text from pixmap using Tesseract OCR"""
-    if not OCR_AVAILABLE:
-        return ""
-
-    try:
-        img_data = pix.tobytes("png")
-        img = Image.open(io.BytesIO(img_data))
-        text = pytesseract.image_to_string(img, lang='tur+eng')
-        return fix_turkish_encoding(text)
-    except Exception as e:
-        print(f"⚠️  OCR failed: {e}")
-        return ""
-
-
-def is_valid_question_start(line: str) -> Optional[int]:
+def extract_text_blocks_with_fonts(page: fitz.Page) -> List[TextBlock]:
     """
-    Detect ONLY valid question starts - filters out tables, formulas, etc.
-
-    Valid formats:
-    - "Soru 1", "SORU 1.", "Soru 1)"
-    - "1. Soru", "1) Soru"
-    - "1)" followed by uppercase or question text
-    - "1." followed by uppercase or question text
-
-    Invalid (will be rejected):
-    - "1. enerji", "1) birim", "1. grafik"
-    - Table cells, formula numbers, list items
-
-    Returns: question number if valid, None otherwise
+    Extract text blocks with font information using PyMuPDF's dict mode
+    This gives us accurate font size, style, and positioning
     """
-    line = line.strip()
+    blocks = []
+    text_dict = page.get_text("dict")
+    page_num = page.number + 1
 
-    # Pattern 1: "Soru 12" or "SORU 12)" or "Soru 12."
-    match = re.match(r'^(?:Soru|SORU)\s+(\d+)[.)]*\s*$', line, re.IGNORECASE)
+    for block in text_dict.get("blocks", []):
+        if block.get("type") != 0:  # Skip image blocks
+            continue
+
+        for line in block.get("lines", []):
+            line_text = ""
+            line_bbox = line.get("bbox", (0, 0, 0, 0))
+
+            # Aggregate spans (font segments) in this line
+            font_sizes = []
+            font_names = []
+
+            for span in line.get("spans", []):
+                span_text = span.get("text", "")
+                line_text += span_text
+
+                font_size = span.get("size", 12)
+                font_name = span.get("font", "")
+
+                font_sizes.append(font_size)
+                font_names.append(font_name)
+
+            line_text = fix_turkish_encoding(line_text.strip())
+
+            if not line_text:
+                continue
+
+            # Use average font size
+            avg_font_size = sum(font_sizes) / len(font_sizes) if font_sizes else 12
+            primary_font = font_names[0] if font_names else ""
+            is_bold = "bold" in primary_font.lower() or "black" in primary_font.lower()
+
+            text_block = TextBlock(
+                x0=line_bbox[0],
+                y0=line_bbox[1],
+                x1=line_bbox[2],
+                y1=line_bbox[3],
+                text=line_text,
+                font_size=avg_font_size,
+                font_name=primary_font,
+                is_bold=is_bold,
+                page_num=page_num,
+            )
+
+            blocks.append(text_block)
+
+    return blocks
+
+
+def detect_columns(blocks: List[TextBlock], page_width: float) -> List[Tuple[float, float]]:
+    """
+    Detect columns in page using X-axis clustering
+    Returns: list of (x_start, x_end) for each column
+    """
+    if not blocks:
+        return [(0, page_width)]
+
+    # Cluster blocks by X position
+    x_positions = [b.center_x for b in blocks]
+    x_positions.sort()
+
+    # Find gaps larger than 50 points (column separator)
+    columns = []
+    col_start = 0
+
+    for i in range(1, len(x_positions)):
+        gap = x_positions[i] - x_positions[i-1]
+        if gap > 50:  # Column separator detected
+            col_end = (x_positions[i-1] + x_positions[i]) / 2
+            columns.append((col_start, col_end))
+            col_start = col_end
+
+    # Last column
+    columns.append((col_start, page_width))
+
+    # If no columns detected, return full width
+    if len(columns) == 0:
+        columns = [(0, page_width)]
+
+    print(f"   🔲 Detected {len(columns)} column(s)")
+    return columns
+
+
+def is_question_start_block(block: TextBlock) -> Optional[int]:
+    """
+    Detect if block is a question start using multiple signals:
+    1. Regex pattern
+    2. Font size (usually larger)
+    3. Bold style
+    4. Position (usually left-aligned)
+    """
+    text = block.text.strip()
+
+    # Pattern 1: "Soru 12" or "SORU 12"
+    match = re.match(r'^(?:Soru|SORU)\s+(\d+)', text, re.IGNORECASE)
     if match:
         return int(match.group(1))
 
-    # Pattern 2: "12. Soru" or "12) Soru"
-    match = re.match(r'^(\d+)[.)]\s+(?:Soru|SORU)\s*$', line, re.IGNORECASE)
+    # Pattern 2: "12. Soru"
+    match = re.match(r'^(\d+)[.)]\s+(?:Soru|SORU)', text, re.IGNORECASE)
     if match:
         return int(match.group(1))
 
-    # Pattern 3: "12)" or "12." ONLY if followed by uppercase letter or long text
-    # This prevents "1. enerji" or "1) birim" from being detected
-    match = re.match(r'^(\d+)[.)]\s*([A-ZİĞÜŞÖÇ].*)?$', line)
+    # Pattern 3: "12)" or "12." at line start
+    # MUST be followed by uppercase or question keywords
+    match = re.match(r'^(\d+)[.)]\s*(.*)$', text)
     if match:
         num = int(match.group(1))
-        after_text = match.group(2) or ""
+        after = match.group(2).strip()
 
         # Accept if:
-        # - Line is just "12)" or "12."
-        # - Or followed by uppercase letter
-        # - Or followed by question-like words
-        if not after_text or \
-           after_text[0].isupper() or \
-           any(word in after_text.lower() for word in ['hangi', 'nasıl', 'kaç', 'ne ', 'neden', 'niçin', 'kim', 'nerede']):
+        # - Just number (e.g., "12)")
+        # - Followed by uppercase
+        # - Followed by question words
+        # - Block is bold (question numbers are often bold)
+        if not after or \
+           (after and after[0].isupper()) or \
+           any(word in after.lower() for word in ['hangi', 'nasıl', 'kaç', 'ne ', 'neden', 'kim', 'nerede']) or \
+           block.is_bold:
             return num
 
     return None
 
 
-def find_all_question_blocks(pdf_document: fitz.Document) -> List[QuestionBlock]:
+def group_blocks_by_column(blocks: List[TextBlock], columns: List[Tuple[float, float]]) -> Dict[int, List[TextBlock]]:
+    """Group text blocks by column"""
+    column_blocks = defaultdict(list)
+
+    for block in blocks:
+        # Find which column this block belongs to
+        for col_idx, (col_start, col_end) in enumerate(columns):
+            if col_start <= block.center_x < col_end:
+                column_blocks[col_idx].append(block)
+                break
+
+    return column_blocks
+
+
+def find_question_blocks(page: fitz.Page, page_num: int, unique_id_start: int) -> List[QuestionBlock]:
     """
-    Find all question blocks across ALL pages
-    Automatically handles duplicate question numbers by assigning unique IDs
+    Find all question blocks on a page using:
+    - Column detection
+    - Font-based segmentation
+    - Geometric clustering
     """
-    all_blocks = []
-    unique_id = 1  # Global unique ID counter
+    blocks = extract_text_blocks_with_fonts(page)
 
-    for page_num in range(len(pdf_document)):
-        page = pdf_document[page_num]
-        text_blocks = sorted(page.get_text("blocks"), key=lambda b: (b[1], b[0]))
+    if not blocks:
+        return []
 
-        page_rect = page.rect
-        page_height = page_rect.height
-        page_width = page_rect.width
+    page_rect = page.rect
+    page_width = page_rect.width
+    page_height = page_rect.height
 
-        # Find question starts on this page
-        question_markers = []
+    # Detect columns
+    columns = detect_columns(blocks, page_width)
 
-        for block in text_blocks:
-            x0, y0, x1, y1, text, *_ = block
-            text = fix_turkish_encoding(text.strip())
+    # Group blocks by column
+    column_groups = group_blocks_by_column(blocks, columns)
 
-            # Check each line separately
-            lines = text.split('\n')
-            for line in lines:
-                q_num = is_valid_question_start(line)
-                if q_num:
-                    question_markers.append({
-                        'pdf_num': q_num,
-                        'y0': y0,
-                        'x0': x0,
-                    })
-                    break  # Only check first line of block
+    question_blocks = []
+    unique_id = unique_id_start
 
-        # Sort by position (not number!)
-        question_markers.sort(key=lambda q: (q['y0'], q['x0']))
+    # Process each column separately
+    for col_idx, col_blocks in sorted(column_groups.items()):
+        # Sort by Y position within column
+        col_blocks.sort(key=lambda b: b.y0)
 
-        # Create question blocks with boundaries
-        for i, marker in enumerate(question_markers):
-            start_y = marker['y0']
-            start_x = marker['x0']
+        # Find question starts in this column
+        question_starts = []
+        for block in col_blocks:
+            q_num = is_question_start_block(block)
+            if q_num is not None:
+                question_starts.append({
+                    'block': block,
+                    'pdf_num': q_num,
+                    'y0': block.y0,
+                })
 
-            # Determine end Y (next question or page end)
-            if i + 1 < len(question_markers):
-                next_marker = question_markers[i + 1]
-                end_y = next_marker['y0'] - 10  # Leave gap
-
-                # Multi-column detection: if next question is at similar Y but different X
-                if abs(next_marker['y0'] - start_y) < 100 and abs(next_marker['x0'] - start_x) > 100:
-                    # Side-by-side: limit X to column
-                    crop_x0 = 0
-                    crop_x1 = (start_x + next_marker['x0']) / 2
-                    end_y = page_height
-                else:
-                    # Single column
-                    crop_x0 = 0
-                    crop_x1 = page_width
-            else:
-                # Last question on page
-                crop_x0 = 0
-                crop_x1 = page_width
-                end_y = page_height
-
-            # Add padding
-            crop_y0 = max(0, start_y - 5)
-            crop_y1 = min(page_height, end_y)
-
-            # Ensure minimum size
-            if crop_y1 - crop_y0 < 50:
-                crop_y1 = min(page_height, crop_y0 + 100)
-
-            # Extract text content for this block
-            text_content = extract_block_text(text_blocks, crop_y0, crop_y1)
-
-            block = QuestionBlock(
-                pdf_number=marker['pdf_num'],
-                unique_id=unique_id,
-                page_num=page_num + 1,
-                y0=crop_y0,
-                y1=crop_y1,
-                x0=crop_x0,
-                x1=crop_x1,
-                text_content=text_content,
-            )
-
-            all_blocks.append(block)
-            unique_id += 1  # Increment for next question
-
-            print(f"📍 Detected Q{marker['pdf_num']} → ID={unique_id-1} "
-                  f"(Page {page_num + 1}, Y={crop_y0:.0f}-{crop_y1:.0f})")
-
-    return all_blocks
-
-
-def extract_block_text(text_blocks: List[Tuple], y0: float, y1: float) -> str:
-    """Extract text within Y boundaries"""
-    text_parts = []
-
-    for block in text_blocks:
-        bx0, by0, bx1, by1, text, *_ = block
-
-        # Include if block center is within range
-        block_center_y = (by0 + by1) / 2
-        if y0 <= block_center_y <= y1:
-            text = fix_turkish_encoding(text.strip())
-
-            # Skip headers/footers
-            if text and not any(skip in text.lower() for skip in
-                              ['sayfa', 'page', '©', 'www.', 'http', 'telif']):
-                text_parts.append(text)
-
-    return '\n'.join(text_parts)
-
-
-def parse_options_from_text(text: str) -> Tuple[List[Dict[str, str]], Optional[str]]:
-    """
-    Extract options (A-E) and answer from text
-    IMPORTANT: Filters out answer key lines to prevent them from appearing in options
-
-    Returns: (options_list, answer_letter)
-    """
-    options = []
-    answer = None
-
-    lines = text.split('\n')
-
-    for line in lines:
-        line = line.strip()
-        if not line:
+        if not question_starts:
             continue
 
-        # First, check if this is an answer key line (skip it for options)
-        if re.search(r'(?:cevap|doğru|yanıt|answer|key|anahtar)', line, re.IGNORECASE):
-            # Extract answer but don't add to options
-            answer_match = re.search(r'\b([A-E])\b', line, re.IGNORECASE)
-            if answer_match and not answer:
-                answer = answer_match.group(1).upper()
-            continue  # Skip this line for options
+        print(f"   📍 Column {col_idx}: Found {len(question_starts)} questions")
 
-        # Parse option: "A) text" or "A. text" or "A text"
-        option_match = re.match(r'^([A-E])[.):\s]\s*(.+)', line, re.IGNORECASE)
-        if option_match:
-            label = option_match.group(1).upper()
-            value = option_match.group(2).strip()
+        # Create question blocks with boundaries
+        col_x_start, col_x_end = columns[col_idx]
 
-            if value and len(value) > 2:  # Avoid junk
-                # Check if option already exists (prevent duplicates)
-                if not any(opt['label'] == label for opt in options):
-                    options.append({
-                        "label": label,
-                        "value": value
-                    })
+        for i, q_start in enumerate(question_starts):
+            start_y = q_start['y0']
 
-    # Ensure options are in A-E order
+            # End Y is next question or page bottom
+            if i + 1 < len(question_starts):
+                end_y = question_starts[i + 1]['y0'] - 5
+            else:
+                end_y = page_height
+
+            # Collect all blocks in this Y range and column
+            q_text_blocks = [
+                b for b in col_blocks
+                if start_y <= b.y0 < end_y
+            ]
+
+            if not q_text_blocks:
+                continue
+
+            # Calculate tight bounding box
+            min_x = min(b.x0 for b in q_text_blocks)
+            max_x = max(b.x1 for b in q_text_blocks)
+            min_y = min(b.y0 for b in q_text_blocks)
+            max_y = max(b.y1 for b in q_text_blocks)
+
+            # Add padding
+            crop_x0 = max(0, min_x - 5)
+            crop_x1 = min(page_width, max_x + 5)
+            crop_y0 = max(0, min_y - 5)
+            crop_y1 = min(page_height, max_y + 5)
+
+            question_block = QuestionBlock(
+                unique_id=unique_id,
+                pdf_number=q_start['pdf_num'],
+                page_num=page_num,
+                x0=crop_x0,
+                y0=crop_y0,
+                x1=crop_x1,
+                y1=crop_y1,
+                text_blocks=q_text_blocks,
+                column_index=col_idx,
+            )
+
+            question_blocks.append(question_block)
+            unique_id += 1
+
+            print(f"      ✅ Q{q_start['pdf_num']} → ID={question_block.unique_id} "
+                  f"(Y={crop_y0:.0f}-{crop_y1:.0f}, blocks={len(q_text_blocks)})")
+
+    return question_blocks
+
+
+def extract_options_with_clustering(text_blocks: List[TextBlock]) -> List[Dict[str, str]]:
+    """
+    Extract options using X-axis alignment clustering
+    This handles multi-line options correctly
+    """
+    # Find option-like blocks (starting with A-E)
+    option_blocks = []
+
+    for block in text_blocks:
+        text = block.text.strip()
+
+        # Check for option pattern: A) or A. or A- or A: or just A
+        match = re.match(r'^([A-E])[.):\-\s]', text, re.IGNORECASE)
+        if match:
+            option_blocks.append({
+                'label': match.group(1).upper(),
+                'block': block,
+                'x0': block.x0,
+            })
+
+    if not option_blocks:
+        return []
+
+    # Cluster by X position (options usually aligned)
+    option_x_positions = [ob['x0'] for ob in option_blocks]
+    avg_option_x = sum(option_x_positions) / len(option_x_positions)
+
+    # Now collect all blocks that are part of options
+    # (same X alignment, between option labels)
+    options = []
+
+    option_blocks.sort(key=lambda ob: ob['block'].y0)
+
+    for i, opt_block in enumerate(option_blocks):
+        label = opt_block['label']
+        start_y = opt_block['block'].y0
+
+        # End Y is next option or end of blocks
+        if i + 1 < len(option_blocks):
+            end_y = option_blocks[i + 1]['block'].y0
+        else:
+            end_y = max(b.y1 for b in text_blocks)
+
+        # Collect all text blocks in this Y range with similar X alignment
+        option_text_parts = []
+
+        for block in text_blocks:
+            # Block is in Y range and X-aligned
+            if start_y <= block.y0 < end_y and abs(block.x0 - avg_option_x) < 50:
+                option_text_parts.append(block.text)
+
+        # Join and clean
+        full_text = ' '.join(option_text_parts)
+
+        # Remove the label prefix (A), A.) etc.)
+        full_text = re.sub(r'^[A-E][.):\-\s]+', '', full_text, flags=re.IGNORECASE).strip()
+
+        if full_text and len(full_text) > 1:
+            options.append({
+                'label': label,
+                'value': full_text,
+            })
+
+    # Ensure A-E order
     options.sort(key=lambda x: x['label'])
 
-    # Only keep valid option sets (should be 4-5 options)
-    if len(options) < 2 or len(options) > 5:
-        print(f"⚠️  Unusual option count: {len(options)}")
-
-    return options, answer
+    return options
 
 
-def crop_question_image(page: fitz.Page, block: QuestionBlock) -> Optional[str]:
-    """Crop question area and return base64 PNG"""
+def extract_question_text(text_blocks: List[TextBlock], options: List[Dict[str, str]]) -> str:
+    """
+    Extract clean question text (before options start)
+    IMPORTANT: Don't cut off at first "A)" if it's part of question
+    """
+    # Find where options actually start (first valid option block)
+    option_start_y = None
+
+    for block in text_blocks:
+        text = block.text.strip()
+        # Check if this is genuinely an option start
+        match = re.match(r'^([A-E])[.):\-]\s+(.{3,})', text, re.IGNORECASE)
+        if match and len(match.group(2)) > 3:  # Real option has content
+            option_start_y = block.y0
+            break
+
+    # Collect text blocks before options
+    question_parts = []
+
+    for block in text_blocks:
+        if option_start_y and block.y0 >= option_start_y:
+            break
+
+        text = block.text.strip()
+
+        # Skip answer key lines
+        if re.search(r'(?:cevap|doğru|yanıt|answer)', text, re.IGNORECASE):
+            continue
+
+        # Skip lone numbers
+        if re.match(r'^\d+[.)]?\s*$', text):
+            continue
+
+        question_parts.append(text)
+
+    return ' '.join(question_parts).strip()
+
+
+def extract_with_ocr_hybrid(page: fitz.Page, crop_rect: fitz.Rect, text_blocks: List[TextBlock]) -> str:
+    """
+    Hybrid text extraction: PyMuPDF + OCR merge
+    Only use OCR when PyMuPDF text is insufficient
+    """
+    # First: Use PyMuPDF text
+    pymupdf_text = ' '.join(b.text for b in text_blocks)
+
+    # Check if text is good enough
+    if len(pymupdf_text.strip()) > 20:
+        return pymupdf_text
+
+    # Text is too short/empty - try OCR
+    if not OCR_AVAILABLE:
+        return pymupdf_text
+
     try:
-        crop_rect = fitz.Rect(block.x0, block.y0, block.x1, block.y1)
+        mat = fitz.Matrix(2.0, 2.0)
+        pix = page.get_pixmap(matrix=mat, clip=crop_rect)
+
+        img_data = pix.tobytes("png")
+        img = Image.open(io.BytesIO(img_data))
+
+        ocr_text = pytesseract.image_to_string(img, lang='tur+eng')
+        ocr_text = fix_turkish_encoding(ocr_text)
+
+        # Merge: if OCR gives more text, use it
+        if len(ocr_text.strip()) > len(pymupdf_text.strip()):
+            print(f"      🔍 OCR extracted {len(ocr_text)} chars (PyMuPDF: {len(pymupdf_text)})")
+            return ocr_text
+
+    except Exception as e:
+        print(f"      ⚠️  OCR failed: {e}")
+
+    return pymupdf_text
+
+
+def crop_question_image(page: fitz.Page, question_block: QuestionBlock) -> Optional[str]:
+    """Crop question area with high quality"""
+    try:
+        crop_rect = fitz.Rect(
+            question_block.x0,
+            question_block.y0,
+            question_block.x1,
+            question_block.y1,
+        )
 
         if not crop_rect.is_valid or crop_rect.is_empty:
             return None
@@ -312,111 +511,85 @@ def crop_question_image(page: fitz.Page, block: QuestionBlock) -> Optional[str]:
         mat = fitz.Matrix(2.0, 2.0)
         pix = page.get_pixmap(matrix=mat, clip=crop_rect)
 
-        # Convert to base64
         img_bytes = pix.tobytes("png")
         img_base64 = base64.b64encode(img_bytes).decode('utf-8')
 
         return f"data:image/png;base64,{img_base64}"
 
     except Exception as e:
-        print(f"❌ Crop failed for ID={block.unique_id}: {e}")
+        print(f"      ❌ Crop failed: {e}")
         return None
-
-
-def extract_clean_question_text(text_content: str) -> str:
-    """
-    Extract just the question text (remove choices, answer key, etc.)
-    """
-    lines = text_content.split('\n')
-    question_lines = []
-
-    for line in lines:
-        line = line.strip()
-
-        # Stop if we hit choices
-        if re.match(r'^[A-E][.):]', line, re.IGNORECASE):
-            break
-
-        # Stop if we hit answer key
-        if re.search(r'(?:cevap|doğru|yanıt|answer)', line, re.IGNORECASE):
-            break
-
-        # Add to question text
-        if line and not re.match(r'^\d+[.)]?\s*$', line):  # Skip lone numbers
-            question_lines.append(line)
-
-    return ' '.join(question_lines)
 
 
 def parse_pdf_with_ocr(pdf_bytes: bytes) -> List[Question]:
     """
-    Main PDF parser - extracts questions with unique IDs
-    Handles duplicate question numbers automatically
+    Main parser with advanced segmentation
     """
     pdf_document = fitz.open(stream=pdf_bytes, filetype="pdf")
+    all_question_blocks = []
+    unique_id = 1
 
-    # Step 1: Find all question blocks (with unique IDs)
-    question_blocks = find_all_question_blocks(pdf_document)
+    print(f"\n📄 Processing {len(pdf_document)} pages...")
 
-    print(f"\n📊 Found {len(question_blocks)} total questions across {len(pdf_document)} pages")
+    # Step 1: Find all question blocks across pages
+    for page_num in range(len(pdf_document)):
+        page = pdf_document[page_num]
+        print(f"\n📄 Page {page_num + 1}:")
 
-    # Step 2: Process each block
+        page_question_blocks = find_question_blocks(page, page_num + 1, unique_id)
+        all_question_blocks.extend(page_question_blocks)
+        unique_id += len(page_question_blocks)
+
+    print(f"\n📊 Total questions found: {len(all_question_blocks)}")
+
+    # Step 2: Process each question block
     questions = []
 
-    for block in question_blocks:
+    for q_block in all_question_blocks:
         try:
-            page = pdf_document[block.page_num - 1]
+            page = pdf_document[q_block.page_num - 1]
 
-            # Get text (use OCR if empty)
-            text_content = block.text_content
+            # Extract options using clustering
+            options = extract_options_with_clustering(q_block.text_blocks)
 
-            if not text_content.strip() and OCR_AVAILABLE:
-                print(f"🔍 No text for ID={block.unique_id}, trying OCR...")
-                crop_rect = fitz.Rect(block.x0, block.y0, block.x1, block.y1)
-                mat = fitz.Matrix(2.0, 2.0)
-                pix = page.get_pixmap(matrix=mat, clip=crop_rect)
-                text_content = extract_text_with_ocr(pix)
+            # Extract question text
+            question_text = extract_question_text(q_block.text_blocks, options)
 
-                if text_content:
-                    print(f"✅ OCR extracted {len(text_content)} chars")
-
-            # Parse options and answer
-            options, answer = parse_options_from_text(text_content)
-
-            # Extract clean question text (without options)
-            question_text = extract_clean_question_text(text_content)
+            # If text still empty, use hybrid OCR
+            if not question_text.strip():
+                crop_rect = fitz.Rect(q_block.x0, q_block.y0, q_block.x1, q_block.y1)
+                question_text = extract_with_ocr_hybrid(page, crop_rect, q_block.text_blocks)
 
             # Crop image
-            image_base64 = crop_question_image(page, block)
+            image_base64 = crop_question_image(page, q_block)
 
-            # Create question object
+            # Create question
             question = Question(
-                id=block.unique_id,
+                id=q_block.unique_id,
                 text=question_text,
                 options=options,
-                answer=answer,
+                answer=None,  # Answer detection can be added later
                 image_base64=image_base64,
             )
 
             questions.append(question)
 
-            print(f"✅ ID={block.unique_id} (PDF Q{block.pdf_number}): "
-                  f"Text={len(question_text)} chars, "
-                  f"Options={len(options)}, "
-                  f"Answer={answer or 'None'}")
+            print(f"   ✅ ID={q_block.unique_id}: "
+                  f"text={len(question_text)} chars, "
+                  f"options={len(options)}")
 
         except Exception as e:
-            print(f"❌ Failed to process ID={block.unique_id}: {e}")
+            print(f"   ❌ ID={q_block.unique_id} failed: {e}")
             continue
 
     pdf_document.close()
 
-    print(f"\n✅ Successfully parsed {len(questions)}/{len(question_blocks)} questions")
+    print(f"\n✅ Successfully parsed {len(questions)} questions")
     return questions
 
 
 def questions_to_json(questions: List[Question]) -> Dict[str, Any]:
-    """Convert questions to JSON format for API response"""
+    """Convert to API response format"""
     return {
         "success": True,
         "total_questions": len(questions),
