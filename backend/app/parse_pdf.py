@@ -6,6 +6,8 @@ Handles multi-column, complex layouts, multi-line options
 import fitz  # PyMuPDF
 import re
 import base64
+import json
+import os
 from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass
 import io
@@ -13,6 +15,20 @@ import platform
 from pathlib import Path
 from PIL import Image
 from collections import defaultdict
+
+# OpenAI import (optional - only if API key is set)
+try:
+    import openai
+    OPENAI_AVAILABLE = True
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+    if OPENAI_API_KEY:
+        print("✅ OpenAI API key found")
+    else:
+        print("⚠️  OpenAI API key not set - metadata analysis will be skipped")
+        OPENAI_AVAILABLE = False
+except ImportError:
+    OPENAI_AVAILABLE = False
+    print("⚠️  OpenAI not installed - metadata analysis disabled")
 
 # Tesseract OCR setup
 try:
@@ -525,13 +541,16 @@ def extract_options_with_clustering(text_blocks: List[TextBlock]) -> List[Dict[s
     return options
 
 
-def extract_answer_key_from_pdf(pdf_document: fitz.Document) -> Dict[str, Dict[int, str]]:
+def extract_answer_key_from_pdf(pdf_document: fitz.Document) -> Tuple[Dict[str, Dict[int, str]], List[int]]:
     """
     Extract answer key from last pages of PDF
     Format: CEVAP ANAHTARI or answer key sections
-    Returns: {"TÜRKÇE": {1: "B", 2: "A", ...}, "MATEMATİK": {...}}
+    Returns: (answer_keys, pages_with_answer_key)
+    - answer_keys: {"TÜRKÇE": {1: "B", 2: "A", ...}, "MATEMATİK": {...}}
+    - pages_with_answer_key: [7, 8] (page numbers to skip during question parsing)
     """
     answer_keys = {}
+    pages_with_answer_key = []
     current_subject = None
 
     # Check last 3 pages for answer key
@@ -544,9 +563,13 @@ def extract_answer_key_from_pdf(pdf_document: fitz.Document) -> Dict[str, Dict[i
         text = fix_turkish_encoding(text)
 
         # Check if this page contains answer key
-        if not re.search(r'(?:CEVAP|ANAHTAR|ANSWER|KEY)', text, re.IGNORECASE):
+        has_answer_key = re.search(r'(?:CEVAP|ANAHTAR|ANSWER|KEY)', text, re.IGNORECASE)
+
+        if not has_answer_key:
             continue
 
+        # This page has answer key - mark it
+        pages_with_answer_key.append(page_num)
         print(f"   📝 Found answer key on page {page_num + 1}")
 
         # Split into lines
@@ -579,7 +602,63 @@ def extract_answer_key_from_pdf(pdf_document: fitz.Document) -> Dict[str, Dict[i
     for subject, answers in answer_keys.items():
         print(f"      ✅ {subject}: {len(answers)} answers")
 
-    return answer_keys
+    if pages_with_answer_key:
+        print(f"   🚫 Pages {[p+1 for p in pages_with_answer_key]} will be excluded from question parsing")
+
+    return answer_keys, pages_with_answer_key
+
+
+def analyze_question_with_openai(question_text: str, stem: str, options: List[Dict], subject: str) -> Dict[str, Optional[str]]:
+    """
+    Use OpenAI GPT-4 to analyze question and extract metadata
+    Returns: {"topic": "...", "subtopic": "...", "difficulty": "easy|medium|hard"}
+    """
+    if not OPENAI_AVAILABLE or not OPENAI_API_KEY:
+        return {"topic": None, "subtopic": None, "difficulty": None}
+
+    try:
+        client = openai.OpenAI(api_key=OPENAI_API_KEY)
+
+        # Construct options text
+        options_text = "\n".join([f"{opt['label']}) {opt['value']}" for opt in options])
+
+        prompt = f"""Sen bir Türk eğitim sistemi uzmanısın. Aşağıdaki {subject} dersinden bir soruyu analiz et.
+
+Soru metni:
+{question_text}
+
+Şıklar:
+{options_text}
+
+Bu soruyu analiz edip şu bilgileri JSON formatında döndür:
+{{
+  "topic": "sorunun ana konusu (örn: Matematik için 'Geometri', 'Cebir'; Türkçe için 'Sözcük Bilgisi', 'Anlam Bilgisi')",
+  "subtopic": "daha spesifik alt konu (örn: 'Üçgenler', 'Eşitsizlikler', 'Eş Anlamlı Kelimeler')",
+  "difficulty": "easy, medium veya hard (sorunun zorluğu)"
+}}
+
+Sadece JSON döndür, başka açıklama yapma."""
+
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",  # Daha ucuz ve hızlı model
+            messages=[
+                {"role": "system", "content": "Sen bir eğitim uzmanısın. Soruları analiz edip konu ve zorluk seviyesi belirlersin."},
+                {"role": "user", "content": prompt}
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.3,  # Düşük temperature = daha tutarlı sonuçlar
+        )
+
+        result = json.loads(response.choices[0].message.content)
+        return {
+            "topic": result.get("topic"),
+            "subtopic": result.get("subtopic"),
+            "difficulty": result.get("difficulty"),
+        }
+
+    except Exception as e:
+        print(f"      ⚠️  OpenAI analysis failed: {e}")
+        return {"topic": None, "subtopic": None, "difficulty": None}
 
 
 def extract_question_stem(text_blocks: List[TextBlock]) -> Tuple[str, str]:
@@ -782,14 +861,16 @@ def parse_pdf_with_ocr(pdf_bytes: bytes) -> List[Question]:
 
     # Step 0: Extract answer key from last pages
     print(f"\n🔑 Extracting answer key...")
-    answer_keys = extract_answer_key_from_pdf(pdf_document)
+    answer_keys, answer_key_pages = extract_answer_key_from_pdf(pdf_document)
 
     # Step 1: Find all question blocks across pages (excluding answer key pages)
     total_pages = len(pdf_document)
-    # Don't process last 2 pages if they contain answer keys
-    end_page = total_pages - 2 if answer_keys else total_pages
 
-    for page_num in range(end_page):
+    for page_num in range(total_pages):
+        # Skip pages that contain answer keys
+        if page_num in answer_key_pages:
+            print(f"\n📄 Page {page_num + 1}: Skipping (contains answer key)")
+            continue
         page = pdf_document[page_num]
         print(f"\n📄 Page {page_num + 1}:")
 
@@ -853,6 +934,17 @@ def parse_pdf_with_ocr(pdf_bytes: bytes) -> List[Question]:
             if current_subject and answer_keys.get(current_subject):
                 answer = answer_keys[current_subject].get(q_block.pdf_number)
 
+            # Analyze with OpenAI (if available and subject is known)
+            metadata = {"topic": None, "subtopic": None, "difficulty": None}
+            if current_subject and OPENAI_AVAILABLE and OPENAI_API_KEY:
+                print(f"      🤖 Analyzing with OpenAI...")
+                metadata = analyze_question_with_openai(
+                    question_text=question_text,
+                    stem=question_stem,
+                    options=options,
+                    subject=current_subject
+                )
+
             # Create question
             question = Question(
                 id=q_block.unique_id,
@@ -862,16 +954,21 @@ def parse_pdf_with_ocr(pdf_bytes: bytes) -> List[Question]:
                 answer=answer,
                 image_base64=image_base64,
                 subject=current_subject,
+                topic=metadata.get("topic"),
+                subtopic=metadata.get("subtopic"),
+                difficulty=metadata.get("difficulty"),
             )
 
             questions.append(question)
 
             print(f"   ✅ ID={q_block.unique_id} (PDF#{q_block.pdf_number}): "
                   f"subject={current_subject}, "
+                  f"topic={metadata.get('topic')}, "
                   f"text={len(question_text)} chars, "
                   f"stem={len(question_stem)} chars, "
                   f"options={len(options)}, "
-                  f"answer={answer}")
+                  f"answer={answer}, "
+                  f"difficulty={metadata.get('difficulty')}")
 
         except Exception as e:
             print(f"   ❌ ID={q_block.unique_id} failed: {e}")
