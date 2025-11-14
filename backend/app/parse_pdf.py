@@ -104,6 +104,8 @@ class Question:
     topic: Optional[str] = None  # From OpenAI
     subtopic: Optional[str] = None  # From OpenAI
     difficulty: Optional[str] = None  # From OpenAI
+    answer_source: Optional[str] = None  # Where answer came from
+    pdf_question_number: Optional[int] = None  # Original PDF question number
 
 
 def fix_turkish_encoding(text: str) -> str:
@@ -932,15 +934,21 @@ def parse_pdf_with_ocr(pdf_bytes: bytes) -> List[Question]:
 
     print(f"\n📊 Total questions found: {len(all_question_blocks)}")
 
-    # Step 2: Extract answer keys
-    # Initialize these variables FIRST to avoid "not defined" errors
-    answer_keys = answer_keys if 'answer_keys' in locals() else {}
+    # Step 2: Extract answer keys from PDF (last 3 pages)
+    print(f"\n🔑 Extracting answer key from last pages...")
+    answer_keys = extract_answer_key_from_pdf(pdf_document)
+
+    if answer_keys:
+        print(f"   ✅ Answer keys found for {len(answer_keys)} subject(s)")
+        for subj, answers in answer_keys.items():
+            print(f"      📚 {subj}: {len(answers)} answers")
+    else:
+        print(f"   ⚠️  No answer key found in PDF - answers will be None")
+
     subject_list = list(answer_keys.keys()) if answer_keys else []
     subject_index = 0
     subject_question_count = 0
     current_subject = None
-
-    print(f"   📚 Subjects found: {subject_list if subject_list else 'None'}")
 
     # Step 3: Process each question block
     questions = []
@@ -1009,12 +1017,33 @@ def parse_pdf_with_ocr(pdf_bytes: bytes) -> List[Question]:
 
             # Match answer from PDF answer key (has priority over OpenAI)
             answer = None
+            answer_source = None  # Track where answer came from
+
+            # Try matching with current subject
             if current_subject and answer_keys.get(current_subject):
                 answer = answer_keys[current_subject].get(q_block.pdf_number)
+                if answer:
+                    answer_source = f"PDF Answer Key ({current_subject})"
+
+            # If no match, try all subjects (maybe subject detection failed)
+            if not answer and answer_keys:
+                for subj, answers in answer_keys.items():
+                    if q_block.pdf_number in answers:
+                        answer = answers[q_block.pdf_number]
+                        answer_source = f"PDF Answer Key ({subj})"
+                        # Update current_subject to matched subject
+                        if not current_subject:
+                            current_subject = subj
+                        break
 
             # If no answer key in PDF, use OpenAI's answer (if available)
             if not answer and openai_answer:
                 answer = openai_answer
+                answer_source = "OpenAI Vision"
+
+            # Log answer source
+            if answer_source:
+                print(f"      📝 Answer: {answer} (from {answer_source})")
 
             # Create question
             question = Question(
@@ -1028,6 +1057,8 @@ def parse_pdf_with_ocr(pdf_bytes: bytes) -> List[Question]:
                 topic=topic,
                 subtopic=subtopic,
                 difficulty=difficulty,
+                answer_source=answer_source,
+                pdf_question_number=q_block.pdf_number,
             )
 
             questions.append(question)
@@ -1062,6 +1093,8 @@ def questions_to_json(questions: List[Question]) -> Dict[str, Any]:
         "questions": [
             {
                 "id": q.id,
+                "pdf_question_number": q.pdf_question_number,  # Original PDF number
+
                 # Metadata fields (from answer key + OpenAI)
                 "subject": q.subject,  # From answer key: TÜRKÇE, MATEMATİK, etc.
                 "topic": q.topic,  # From OpenAI
@@ -1082,6 +1115,7 @@ def questions_to_json(questions: List[Question]) -> Dict[str, Any]:
                 "answer_key": {
                     "correct": q.answer,  # "A", "B", etc.
                     "explanation": None,
+                    "source": q.answer_source,  # Where answer came from
                 } if q.answer else None,
 
                 "solution": None,  # Can add step-by-step solution later
