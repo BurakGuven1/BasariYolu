@@ -16,7 +16,8 @@ export interface BackendQuestionImage {
   format: string;
   tags: string[];
   content: {
-    stem: string;
+    text: string;  // Full question text
+    stem: string;  // Bold question root/core
     options: Array<{ label: string; value: string }>;
     image: string;  // data:image/png;base64,...
   };
