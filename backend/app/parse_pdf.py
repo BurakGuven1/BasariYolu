@@ -1,6 +1,7 @@
 import fitz  # PyMuPDF
 import re
 import base64
+import json
 from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass
 import io
@@ -29,6 +30,21 @@ try:
 except ImportError as e:
     OCR_AVAILABLE = False
     print(f"⚠️  OCR disabled: {e}")
+
+# OpenAI Vision setup
+try:
+    import openai
+    import os
+    OPENAI_AVAILABLE = True
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+    if OPENAI_API_KEY:
+        print("✅ OpenAI API key found - Vision analysis enabled")
+    else:
+        print("⚠️  OpenAI API key not set - Will use PyMuPDF text extraction only")
+        OPENAI_AVAILABLE = False
+except ImportError:
+    OPENAI_AVAILABLE = False
+    print("⚠️  OpenAI not available - Install with: pip install openai")
 
 
 @dataclass
@@ -496,6 +512,185 @@ def extract_options_with_clustering(text_blocks: List[TextBlock]) -> List[Dict[s
     return options
 
 
+def analyze_question_with_openai_vision(image_base64: str, subject: Optional[str] = None, question_number: Optional[int] = None) -> Dict[str, Any]:
+    """
+    Analyze question image using OpenAI Vision API (GPT-4o-mini)
+
+    Returns: {
+        "text": str,  # Full question text
+        "stem": str,  # Bold/core question part
+        "options": [{"label": "A", "value": "..."}, ...],
+        "topic": str,
+        "subtopic": str,
+        "difficulty": str,  # "easy", "medium", "hard"
+        "answer": str or None,  # If visible in image
+    }
+    """
+    if not OPENAI_AVAILABLE or not OPENAI_API_KEY:
+        return {
+            "text": "",
+            "stem": "",
+            "options": [],
+            "topic": None,
+            "subtopic": None,
+            "difficulty": None,
+            "answer": None,
+        }
+
+    try:
+        client = openai.OpenAI(api_key=OPENAI_API_KEY)
+
+        # Construct prompt for Turkish exam questions
+        prompt = f"""Bu Türkçe sınav sorusunu analiz et ve JSON formatında çıktı ver.
+
+Soru numarası: {question_number or 'Bilinmiyor'}
+Konu: {subject or 'Bilinmiyor'}
+
+Lütfen şunları çıkar:
+1. **text**: Sorunun tam metni (soru numarası hariç)
+2. **stem**: Sorunun ana kısmı (genelde kalın yazılmış core soru)
+3. **options**: Tüm şıklar (A-E), format: [{{"label": "A", "value": "şık metni"}}, ...]
+4. **topic**: Ana konu (örn: "Cümle Bilgisi", "Geometri", "Hücre")
+5. **subtopic**: Alt konu (örn: "Fiilimsiler", "Alan Hesaplama", "Hücre Zarı")
+6. **difficulty**: Zorluk ("easy", "medium", "hard")
+7. **answer**: Eğer görselde cevap anahtarı varsa doğru şık (A-E), yoksa null
+
+ÖNEMLİ:
+- Şıkları EKSIKSIZ al (A, B, C, D, E)
+- "ŞIK A", "ŞIK B" gibi placeholder metinler ATLA
+- Türkçe karakterleri doğru yaz (İ, ı, ş, ğ, ç, ö, ü)
+- Multi-line şıkları birleştir"""
+
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": image_base64,
+                                "detail": "high"  # High quality for better text extraction
+                            }
+                        }
+                    ]
+                }
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.2,  # Low temperature for consistent extraction
+            max_tokens=1500,
+        )
+
+        result = response.choices[0].message.content
+        parsed = json.loads(result) if isinstance(result, str) else result
+
+        # Ensure all keys exist
+        return {
+            "text": parsed.get("text", ""),
+            "stem": parsed.get("stem", ""),
+            "options": parsed.get("options", []),
+            "topic": parsed.get("topic"),
+            "subtopic": parsed.get("subtopic"),
+            "difficulty": parsed.get("difficulty"),
+            "answer": parsed.get("answer"),
+        }
+
+    except Exception as e:
+        print(f"      ⚠️  OpenAI Vision analysis failed: {e}")
+        return {
+            "text": "",
+            "stem": "",
+            "options": [],
+            "topic": None,
+            "subtopic": None,
+            "difficulty": None,
+            "answer": None,
+        }
+
+
+def extract_answer_key_from_pdf(pdf_document: fitz.Document) -> Dict[str, Dict[int, str]]:
+    """
+    Extract answer key from last pages of PDF
+    Format: CEVAP ANAHTARI or answer key sections
+    Returns: {"TÜRKÇE": {1: "B", 2: "A", ...}, "MATEMATİK": {...}}
+    """
+    answer_keys = {}
+    current_subject = None
+
+    # Check last 3 pages for answer key
+    total_pages = len(pdf_document)
+    start_page = max(0, total_pages - 3)
+
+    for page_num in range(start_page, total_pages):
+        page = pdf_document[page_num]
+        text = page.get_text("text")
+        text = fix_turkish_encoding(text)
+
+        # Check if this page contains answer key
+        if not re.search(r'(?:CEVAP|ANAHTAR|ANSWER|KEY)', text, re.IGNORECASE):
+            continue
+
+        print(f"   📝 Found answer key on page {page_num + 1}")
+
+        # Split into lines
+        lines = text.split('\n')
+
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+
+            # Check if this is a subject header
+            # Common subjects: TÜRKÇE, MATEMATİK, FEN, SOSYAL, İNGİLİZCE
+            if re.match(r'^(TÜRKÇE|MATEMATİK|FEN|SOSYAL|İNGİLİZCE|TURKISH|MATH|SCIENCE)', line, re.IGNORECASE):
+                current_subject = line.upper()
+                if current_subject not in answer_keys:
+                    answer_keys[current_subject] = {}
+                print(f"      📚 Subject: {current_subject}")
+                continue
+
+            # Parse answer lines: "1. B  2. A  3. C  4. D  5. E"
+            # Pattern: number dot/paren followed by letter
+            matches = re.findall(r'(\d+)\s*[.)]\s*([A-E])', line, re.IGNORECASE)
+
+            if matches and current_subject:
+                for q_num_str, answer_letter in matches:
+                    q_num = int(q_num_str)
+                    answer_keys[current_subject][q_num] = answer_letter.upper()
+
+    # Log what we found
+    for subject, answers in answer_keys.items():
+        print(f"      ✅ {subject}: {len(answers)} answers")
+
+    return answer_keys
+
+
+def extract_question_stem(text_blocks: List[TextBlock]) -> Tuple[str, str]:
+    """
+    Extract question text and separate the bold "stem" (question root)
+    Returns: (full_text, bold_stem)
+    Bold text is typically the core question being asked
+    """
+    regular_parts = []
+    bold_parts = []
+
+    for block in text_blocks:
+        if block.is_bold:
+            bold_parts.append(block.text)
+        else:
+            regular_parts.append(block.text)
+
+    full_text = ' '.join(regular_parts + bold_parts)
+    bold_stem = ' '.join(bold_parts)
+
+    full_text = fix_turkish_encoding(full_text)
+    bold_stem = fix_turkish_encoding(bold_stem)
+
+    return full_text.strip(), bold_stem.strip()
+
+
 def extract_question_text(text_blocks: List[TextBlock], options: List[Dict[str, str]]) -> str:
     """
     Extract clean question text (before options start) - IMPROVED
@@ -688,19 +883,65 @@ def parse_pdf_with_ocr(pdf_bytes: bytes) -> List[Question]:
         try:
             page = pdf_document[q_block.page_num - 1]
 
-            # Extract options using clustering
-            options = extract_options_with_clustering(q_block.text_blocks)
+            # Determine subject (simple heuristic: reset counter when PDF number repeats)
+            if q_block.pdf_number == 1 and subject_question_count > 0:
+                # New subject started
+                subject_index = min(subject_index + 1, len(subject_list) - 1)
 
-            # Extract question text
-            question_text = extract_question_text(q_block.text_blocks, options)
+            if subject_list and subject_index < len(subject_list):
+                current_subject = subject_list[subject_index]
+            subject_question_count += 1
 
-            # If text still empty, use hybrid OCR
-            if not question_text.strip():
-                crop_rect = fitz.Rect(q_block.x0, q_block.y0, q_block.x1, q_block.y1)
-                question_text = extract_with_ocr_hybrid(page, crop_rect, q_block.text_blocks)
-
-            # Crop image
+            # STEP 1: Crop image with PyMuPDF (HIGH QUALITY - Don't touch!)
             image_base64 = crop_question_image(page, q_block)
+
+            # STEP 2: HYBRID MODE - Try OpenAI Vision first, fallback to PyMuPDF
+            if OPENAI_AVAILABLE and OPENAI_API_KEY and image_base64:
+                print(f"      🤖 Using OpenAI Vision for text extraction...")
+                openai_result = analyze_question_with_openai_vision(
+                    image_base64=image_base64,
+                    subject=current_subject,
+                    question_number=q_block.pdf_number
+                )
+
+                question_text = openai_result.get("text", "")
+                question_stem = openai_result.get("stem", "")
+                options = openai_result.get("options", [])
+                topic = openai_result.get("topic")
+                subtopic = openai_result.get("subtopic")
+                difficulty = openai_result.get("difficulty")
+
+                # OpenAI might detect answer in image (rare)
+                openai_answer = openai_result.get("answer")
+
+            else:
+                # FALLBACK: PyMuPDF text extraction
+                print(f"      📄 Using PyMuPDF for text extraction...")
+                options = extract_options_with_clustering(q_block.text_blocks)
+                question_text, question_stem = extract_question_stem(q_block.text_blocks)
+
+                # Fallback to old method if stem extraction didn't work
+                if not question_text.strip():
+                    question_text = extract_question_text(q_block.text_blocks, options)
+
+                # If text still empty, use hybrid OCR
+                if not question_text.strip():
+                    crop_rect = fitz.Rect(q_block.x0, q_block.y0, q_block.x1, q_block.y1)
+                    question_text = extract_with_ocr_hybrid(page, crop_rect, q_block.text_blocks)
+
+                topic = None
+                subtopic = None
+                difficulty = None
+                openai_answer = None
+
+            # Match answer from PDF answer key (has priority over OpenAI)
+            answer = None
+            if current_subject and answer_keys.get(current_subject):
+                answer = answer_keys[current_subject].get(q_block.pdf_number)
+
+            # If no answer key in PDF, use OpenAI's answer (if available)
+            if not answer and openai_answer:
+                answer = openai_answer
 
             # Create question
             question = Question(
@@ -709,13 +950,21 @@ def parse_pdf_with_ocr(pdf_bytes: bytes) -> List[Question]:
                 options=options,
                 answer=None,  # Answer detection can be added later
                 image_base64=image_base64,
+                subject=current_subject,
+                topic=topic,
+                subtopic=subtopic,
+                difficulty=difficulty,
             )
 
             questions.append(question)
 
             print(f"   ✅ ID={q_block.unique_id}: "
                   f"text={len(question_text)} chars, "
-                  f"options={len(options)}")
+                  f"stem={len(question_stem)} chars, "
+                  f"options={len(options)}, "
+                  f"topic={topic}, "
+                  f"difficulty={difficulty}, "
+                  f"answer={answer}")
 
         except Exception as e:
             print(f"   ❌ ID={q_block.unique_id} failed: {e}")
