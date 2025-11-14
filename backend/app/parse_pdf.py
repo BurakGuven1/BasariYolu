@@ -96,9 +96,14 @@ class Question:
     """Final question structure"""
     id: int
     text: str
+    stem: str  # Bold question root/core
     options: List[Dict[str, str]]
     answer: Optional[str]
     image_base64: Optional[str]
+    subject: Optional[str] = None  # TÜRKÇE, MATEMATİK, etc.
+    topic: Optional[str] = None  # From OpenAI
+    subtopic: Optional[str] = None  # From OpenAI
+    difficulty: Optional[str] = None  # From OpenAI
 
 
 def fix_turkish_encoding(text: str) -> str:
@@ -538,7 +543,12 @@ def analyze_question_with_openai_vision(image_base64: str, subject: Optional[str
         }
 
     try:
-        client = openai.OpenAI(api_key=OPENAI_API_KEY)
+        # Initialize OpenAI client (compatible with openai >= 1.0.0)
+        client = openai.OpenAI(
+            api_key=OPENAI_API_KEY,
+            timeout=30.0,
+            max_retries=2,
+        )
 
         # Construct prompt for Turkish exam questions
         prompt = f"""Bu Türkçe sınav sorusunu analiz et ve JSON formatında çıktı ver.
@@ -957,8 +967,9 @@ def parse_pdf_with_ocr(pdf_bytes: bytes) -> List[Question]:
             question = Question(
                 id=q_block.unique_id,
                 text=question_text,
+                stem=question_stem,
                 options=options,
-                answer=None,  # Answer detection can be added later
+                answer=answer,  # From answer key or OpenAI
                 image_base64=image_base64,
                 subject=current_subject,
                 topic=topic,
@@ -997,22 +1008,23 @@ def questions_to_json(questions: List[Question]) -> Dict[str, Any]:
         "questions": [
             {
                 "id": q.id,
-                # Metadata fields (currently null, can be populated later)
-                "subject": None,
-                "topic": None,
-                "subtopic": None,
-                "difficulty": None,  # Can be: "easy", "medium", "hard"
+                # Metadata fields (from answer key + OpenAI)
+                "subject": q.subject,  # From answer key: TÜRKÇE, MATEMATİK, etc.
+                "topic": q.topic,  # From OpenAI
+                "subtopic": q.subtopic,  # From OpenAI
+                "difficulty": q.difficulty,  # From OpenAI: "easy", "medium", "hard"
                 "format": "multiple_choice",
                 "tags": [],
 
                 # Content structure
                 "content": {
-                    "stem": q.text,  # Question text
+                    "text": q.text,  # Full question text
+                    "stem": q.stem,  # Bold question root/core
                     "options": q.options,  # [{"label": "A", "value": "..."}, ...]
                     "image": q.image_base64,  # Base64 image
                 },
 
-                # Answer and solution (currently basic)
+                # Answer and solution
                 "answer_key": {
                     "correct": q.answer,  # "A", "B", etc.
                     "explanation": None,
