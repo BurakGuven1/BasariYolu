@@ -876,7 +876,17 @@ def parse_pdf_with_ocr(pdf_bytes: bytes) -> List[Question]:
 
     print(f"\n📊 Total questions found: {len(all_question_blocks)}")
 
-    # Step 2: Process each question block
+    # Step 2: Extract answer keys
+    # Initialize these variables FIRST to avoid "not defined" errors
+    answer_keys = answer_keys if 'answer_keys' in locals() else {}
+    subject_list = list(answer_keys.keys()) if answer_keys else []
+    subject_index = 0
+    subject_question_count = 0
+    current_subject = None
+
+    print(f"   📚 Subjects found: {subject_list if subject_list else 'None'}")
+
+    # Step 3: Process each question block
     questions = []
 
     for q_block in all_question_blocks:
