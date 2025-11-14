@@ -8,11 +8,25 @@ import { QuestionImage } from './pdfParser';
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
 
 export interface BackendQuestionImage {
-  id: number;  // Unique ID (handles duplicate question numbers automatically)
-  text: string;
-  options: Array<{ label: string; value: string }>;  // [{"label": "A", "value": "..."}, ...]
-  answer: string | null;
-  image_base64: string;  // data:image/png;base64,...
+  id: number;
+  subject: string | null;
+  topic: string | null;
+  subtopic: string | null;
+  difficulty: string | null;
+  format: string;
+  tags: string[];
+  content: {
+    stem: string;
+    options: Array<{ label: string; value: string }>;
+    image: string;  // data:image/png;base64,...
+  };
+  answer_key: {
+    correct: string | null;
+    explanation: string | null;
+  } | null;
+  solution: string | null;
+  owner_type: string | null;
+  visibility: string | null;
 }
 
 export interface BackendParseResult {
@@ -54,18 +68,20 @@ export async function parsePDFWithBackend(
         // Format: "data:image/png;base64,iVBORw0KGgo..."
         let blob: Blob;
 
-        if (q.image_base64 && q.image_base64.startsWith('data:image')) {
+        const imageData = q.content.image;
+
+        if (imageData && imageData.startsWith('data:image')) {
           // Extract base64 part after comma
-          const base64Data = q.image_base64.split(',')[1];
+          const base64Data = imageData.split(',')[1];
           const imageBytes = atob(base64Data);
           const imageArray = new Uint8Array(imageBytes.length);
           for (let i = 0; i < imageBytes.length; i++) {
             imageArray[i] = imageBytes.charCodeAt(i);
           }
           blob = new Blob([imageArray], { type: 'image/png' });
-        } else if (q.image_base64) {
+        } else if (imageData) {
           // Fallback for plain base64
-          const imageBytes = atob(q.image_base64);
+          const imageBytes = atob(imageData);
           const imageArray = new Uint8Array(imageBytes.length);
           for (let i = 0; i < imageBytes.length; i++) {
             imageArray[i] = imageBytes.charCodeAt(i);
@@ -77,19 +93,19 @@ export async function parsePDFWithBackend(
         }
 
         // Convert choices to string array for backward compatibility
-        const choicesArray = q.options.map(opt => `${opt.label}) ${opt.value}`);
+        const choicesArray = q.content.options.map(opt => `${opt.label}) ${opt.value}`);
 
         return {
           questionNumber: q.id,  // Use unique ID
           pageNumber: index + 1,  // Sequential page numbers
           imageBlob: blob,
-          text: q.text,
+          text: q.content.stem,
           choices: choicesArray,  // String array for compatibility
-          answer: q.answer,
+          answer: q.answer_key?.correct || null,
           text_content: {
-            stem: q.text,
-            options: q.options,  // Already in correct format!
-            answer: q.answer,
+            stem: q.content.stem,
+            options: q.content.options,  // Already in correct format!
+            answer: q.answer_key?.correct || null,
           },
           cropInfo: {
             startY: 0,
