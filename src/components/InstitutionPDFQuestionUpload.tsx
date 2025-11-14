@@ -144,6 +144,7 @@ export default function InstitutionPDFQuestionUpload({
             question_number: (img as any).pdf_question_number || img.questionNumber,
             subject: textContent?.subject || 'Genel',
             topic: textContent?.topic || 'Belirtilmemiş',
+            subtopic: textContent?.subtopic || null, // OpenAI detected subtopic
             stem: textContent?.stem || `Soru ${img.questionNumber}`,
             options: defaultOptions,
             correct_answer: correctAnswer, // From backend (may be null)
@@ -574,6 +575,7 @@ export default function InstitutionPDFQuestionUpload({
                       </span>
                       <span className="ml-2 text-xs text-gray-600">
                         {question.subject} • {question.topic}
+                        {question.subtopic && ` • ${question.subtopic}`}
                       </span>
                     </div>
                     <div className="flex gap-1">
