@@ -6,6 +6,8 @@ Handles multi-column, complex layouts, multi-line options
 import fitz  # PyMuPDF
 import re
 import base64
+import json
+import os
 from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass
 import io
@@ -13,6 +15,20 @@ import platform
 from pathlib import Path
 from PIL import Image
 from collections import defaultdict
+
+# OpenAI import (optional - only if API key is set)
+try:
+    import openai
+    OPENAI_AVAILABLE = True
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+    if OPENAI_API_KEY:
+        print("✅ OpenAI API key found")
+    else:
+        print("⚠️  OpenAI API key not set - metadata analysis will be skipped")
+        OPENAI_AVAILABLE = False
+except ImportError:
+    OPENAI_AVAILABLE = False
+    print("⚠️  OpenAI not installed - metadata analysis disabled")
 
 # Tesseract OCR setup
 try:
@@ -85,9 +101,14 @@ class Question:
     """Final question structure"""
     id: int
     text: str
+    stem: str  # Bold question root/core
     options: List[Dict[str, str]]
     answer: Optional[str]
     image_base64: Optional[str]
+    subject: Optional[str] = None  # Will be filled by OpenAI
+    topic: Optional[str] = None
+    subtopic: Optional[str] = None
+    difficulty: Optional[str] = None
 
 
 def fix_turkish_encoding(text: str) -> str:
@@ -101,7 +122,7 @@ def fix_turkish_encoding(text: str) -> str:
         '¨I': 'İ', '´I': 'İ', 'Ì': 'İ', 'Í': 'İ',
 
         # ı variations
-        'ˆı': 'ı', 'i': 'ı', '±': 'ı', 'ı': 'ı',
+        'ˆı': 'ı', '±': 'ı', 'ı': 'ı',
 
         # ş variations
         '¸s': 'ş', '¸S': 'Ş', 'ș': 'ş', 'Ș': 'Ş',
@@ -126,11 +147,15 @@ def fix_turkish_encoding(text: str) -> str:
         # Common ligatures
         'ﬁ': 'fi', 'ﬂ': 'fl', 'ﬀ': 'ff',
 
-        # Zero-width and combining characters
+        # Unicode combining characters
         '\u0307': '',  # Combining dot above
         '\u0306': '',  # Combining breve
         '\u0327': '',  # Combining cedilla
         '\u0308': '',  # Combining diaeresis
+
+        # Sinhala/other strange replacements (common in broken PDFs)
+        'ඈ': 'i',  # This is what causes "Şekඈl"
+        'ල': 'l',
     }
 
     for old, new in replacements.items():
@@ -391,37 +416,35 @@ def find_question_blocks(page: fitz.Page, page_num: int, unique_id_start: int) -
 
 def extract_options_with_clustering(text_blocks: List[TextBlock]) -> List[Dict[str, str]]:
     """
-    Extract options using X-axis alignment clustering - IMPROVED
-    Handles multi-line options with ±20pt tolerance
-    Properly groups text blocks that belong to same option
+    Extract options using X-axis alignment clustering - FIXED
+    Handles ALL option formats: A) A. A: A- and multi-line options
     """
     if not text_blocks:
         return []
 
-    # Step 1: Find option start markers (A-E)
+    # Step 1: Find option start markers (A-E) with STRICT pattern
     option_starts = []
 
     for block in text_blocks:
         text = block.text.strip()
 
-        # Enhanced pattern: A) A. A: A- A  (with space) or A)text
-        # Must be at START of line
-        match = re.match(r'^([A-E])\s*[.):\-]?\s*(.*)$', text, re.IGNORECASE)
+        # STRICT pattern: Must have A-E followed by delimiter
+        # Matches: "A)" "A." "A:" "A-" "A )" (with space)
+        match = re.match(r'^([A-E])\s*([.):\-])\s*(.*)$', text, re.IGNORECASE)
         if match:
             label = match.group(1).upper()
-            rest = match.group(2).strip()
+            delimiter = match.group(2)
+            content = match.group(3).strip()
 
-            # Only accept if:
-            # 1. It's just "A" or "A)" alone
-            # 2. Or it has content after the label
-            # 3. Block is left-aligned (not indented too much)
-            if not rest or len(rest) > 0:
-                option_starts.append({
-                    'label': label,
-                    'block': block,
-                    'x0': block.x0,
-                    'y0': block.y0,
-                })
+            # Accept if it has a delimiter (not just "A" alone)
+            # This prevents matching "Aşağıdaki" or other words starting with A-E
+            option_starts.append({
+                'label': label,
+                'block': block,
+                'x0': block.x0,
+                'y0': block.y0,
+                'has_content': len(content) > 0,
+            })
 
     if not option_starts:
         return []
@@ -436,9 +459,31 @@ def extract_options_with_clustering(text_blocks: List[TextBlock]) -> List[Dict[s
 
     option_starts = unique_option_starts
 
+    # If we have less than 4 options, it's likely incomplete - be more aggressive
+    if len(option_starts) < 4:
+        print(f"      ⚠️  Only {len(option_starts)} option starts found - searching more broadly")
+
+        # Second pass: look for ANY line starting with A-E (even without delimiter)
+        for block in text_blocks:
+            text = block.text.strip()
+            if len(text) > 0 and text[0].upper() in 'ABCDE':
+                label = text[0].upper()
+                if label not in seen_labels:
+                    # Check if this looks like an option
+                    # (not part of regular text like "Aşağıdaki")
+                    if len(text) < 50 and not any(word in text.lower() for word in ['aşağıdaki', 'yukarıdaki']):
+                        option_starts.append({
+                            'label': label,
+                            'block': block,
+                            'x0': block.x0,
+                            'y0': block.y0,
+                            'has_content': True,
+                        })
+                        seen_labels.add(label)
+
     # Step 3: Calculate average X position for option alignment
     option_x_positions = [opt['x0'] for opt in option_starts]
-    avg_option_x = sum(option_x_positions) / len(option_x_positions)
+    avg_option_x = sum(option_x_positions) / len(option_x_positions) if option_x_positions else 0
 
     # Step 4: Sort by Y position
     option_starts.sort(key=lambda opt: opt['y0'])
@@ -456,15 +501,15 @@ def extract_options_with_clustering(text_blocks: List[TextBlock]) -> List[Dict[s
         else:
             end_y = max(b.y1 for b in text_blocks) + 10
 
-        # Collect all blocks in this Y range with X alignment ±20pt
+        # Collect all blocks in this Y range with X alignment ±30pt (increased tolerance)
         option_lines = []
 
         for block in text_blocks:
             # Check if block is in Y range
             if start_y <= block.y0 < end_y:
-                # Check X alignment (±20pt tolerance)
+                # Check X alignment (±30pt tolerance)
                 x_diff = abs(block.x0 - avg_option_x)
-                if x_diff <= 20:
+                if x_diff <= 30:
                     option_lines.append((block.y0, block.text))
 
         # Sort by Y to maintain reading order
@@ -474,14 +519,14 @@ def extract_options_with_clustering(text_blocks: List[TextBlock]) -> List[Dict[s
         # Join with space
         full_text = ' '.join(option_text_parts)
 
-        # Clean: Remove option label prefix
+        # Clean: Remove option label prefix (A) A.) etc.)
         full_text = re.sub(r'^[A-E]\s*[.):\-]?\s*', '', full_text, flags=re.IGNORECASE).strip()
 
         # Apply Turkish encoding fixes
         full_text = fix_turkish_encoding(full_text)
 
-        # Only add if has content
-        if full_text and len(full_text) > 1:
+        # Only add if has content (at least 2 chars)
+        if full_text and len(full_text) >= 2:
             options.append({
                 'label': label,
                 'value': full_text,
@@ -490,15 +535,154 @@ def extract_options_with_clustering(text_blocks: List[TextBlock]) -> List[Dict[s
     # Step 6: Ensure A-E order
     options.sort(key=lambda x: x['label'])
 
-    # Step 7: Validate - should have 2-5 options
-    if len(options) < 2:
-        print(f"      ⚠️  Only {len(options)} option(s) found - may be incomplete")
-    elif len(options) > 5:
-        print(f"      ⚠️  {len(options)} options found - may have false positives")
-        # Keep only first 5
-        options = options[:5]
+    # Step 7: Log results
+    print(f"      📋 Extracted {len(options)} options: {[o['label'] for o in options]}")
 
     return options
+
+
+def extract_answer_key_from_pdf(pdf_document: fitz.Document) -> Tuple[Dict[str, Dict[int, str]], List[int]]:
+    """
+    Extract answer key from last pages of PDF
+    Format: CEVAP ANAHTARI or answer key sections
+    Returns: (answer_keys, pages_with_answer_key)
+    - answer_keys: {"TÜRKÇE": {1: "B", 2: "A", ...}, "MATEMATİK": {...}}
+    - pages_with_answer_key: [7, 8] (page numbers to skip during question parsing)
+    """
+    answer_keys = {}
+    pages_with_answer_key = []
+    current_subject = None
+
+    # Check last 3 pages for answer key
+    total_pages = len(pdf_document)
+    start_page = max(0, total_pages - 3)
+
+    for page_num in range(start_page, total_pages):
+        page = pdf_document[page_num]
+        text = page.get_text("text")
+        text = fix_turkish_encoding(text)
+
+        # Check if this page contains answer key
+        has_answer_key = re.search(r'(?:CEVAP|ANAHTAR|ANSWER|KEY)', text, re.IGNORECASE)
+
+        if not has_answer_key:
+            continue
+
+        # This page has answer key - mark it
+        pages_with_answer_key.append(page_num)
+        print(f"   📝 Found answer key on page {page_num + 1}")
+
+        # Split into lines
+        lines = text.split('\n')
+
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+
+            # Check if this is a subject header
+            # Common subjects: TÜRKÇE, MATEMATİK, FEN, SOSYAL, İNGİLİZCE
+            if re.match(r'^(TÜRKÇE|MATEMATİK|FEN|SOSYAL|İNGİLİZCE|TURKISH|MATH|SCIENCE)', line, re.IGNORECASE):
+                current_subject = line.upper()
+                if current_subject not in answer_keys:
+                    answer_keys[current_subject] = {}
+                print(f"      📚 Subject: {current_subject}")
+                continue
+
+            # Parse answer lines: "1. B  2. A  3. C  4. D  5. E"
+            # Pattern: number dot/paren followed by letter
+            matches = re.findall(r'(\d+)\s*[.)]\s*([A-E])', line, re.IGNORECASE)
+
+            if matches and current_subject:
+                for q_num_str, answer_letter in matches:
+                    q_num = int(q_num_str)
+                    answer_keys[current_subject][q_num] = answer_letter.upper()
+
+    # Log what we found
+    for subject, answers in answer_keys.items():
+        print(f"      ✅ {subject}: {len(answers)} answers")
+
+    if pages_with_answer_key:
+        print(f"   🚫 Pages {[p+1 for p in pages_with_answer_key]} will be excluded from question parsing")
+
+    return answer_keys, pages_with_answer_key
+
+
+def analyze_question_with_openai(question_text: str, stem: str, options: List[Dict], subject: str) -> Dict[str, Optional[str]]:
+    """
+    Use OpenAI GPT-4 to analyze question and extract metadata
+    Returns: {"topic": "...", "subtopic": "...", "difficulty": "easy|medium|hard"}
+    """
+    if not OPENAI_AVAILABLE or not OPENAI_API_KEY:
+        return {"topic": None, "subtopic": None, "difficulty": None}
+
+    try:
+        client = openai.OpenAI(api_key=OPENAI_API_KEY)
+
+        # Construct options text
+        options_text = "\n".join([f"{opt['label']}) {opt['value']}" for opt in options])
+
+        prompt = f"""Sen bir Türk eğitim sistemi uzmanısın. Aşağıdaki {subject} dersinden bir soruyu analiz et.
+
+Soru metni:
+{question_text}
+
+Şıklar:
+{options_text}
+
+Bu soruyu analiz edip şu bilgileri JSON formatında döndür:
+{{
+  "topic": "sorunun ana konusu (örn: Matematik için 'Geometri', 'Cebir'; Türkçe için 'Sözcük Bilgisi', 'Anlam Bilgisi')",
+  "subtopic": "daha spesifik alt konu (örn: 'Üçgenler', 'Eşitsizlikler', 'Eş Anlamlı Kelimeler')",
+  "difficulty": "easy, medium veya hard (sorunun zorluğu)"
+}}
+
+Sadece JSON döndür, başka açıklama yapma."""
+
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",  # Daha ucuz ve hızlı model
+            messages=[
+                {"role": "system", "content": "Sen bir eğitim uzmanısın. Soruları analiz edip konu ve zorluk seviyesi belirlersin."},
+                {"role": "user", "content": prompt}
+            ],
+            response_format={"type": "json_object"},
+            temperature=0.3,  # Düşük temperature = daha tutarlı sonuçlar
+        )
+
+        result = json.loads(response.choices[0].message.content)
+        return {
+            "topic": result.get("topic"),
+            "subtopic": result.get("subtopic"),
+            "difficulty": result.get("difficulty"),
+        }
+
+    except Exception as e:
+        print(f"      ⚠️  OpenAI analysis failed: {e}")
+        return {"topic": None, "subtopic": None, "difficulty": None}
+
+
+def extract_question_stem(text_blocks: List[TextBlock]) -> Tuple[str, str]:
+    """
+    Extract question text and separate the bold "stem" (question root)
+    Returns: (full_text, bold_stem)
+    Bold text is typically the core question being asked
+    """
+    regular_parts = []
+    bold_parts = []
+
+    for block in text_blocks:
+        if block.is_bold:
+            bold_parts.append(block.text)
+        else:
+            regular_parts.append(block.text)
+
+    full_text = ' '.join(regular_parts + bold_parts)
+    bold_stem = ' '.join(bold_parts)
+
+    full_text = fix_turkish_encoding(full_text)
+    bold_stem = fix_turkish_encoding(bold_stem)
+
+    return full_text.strip(), bold_stem.strip()
 
 
 def extract_question_text(text_blocks: List[TextBlock], options: List[Dict[str, str]]) -> str:
@@ -667,7 +851,7 @@ def crop_question_image(page: fitz.Page, question_block: QuestionBlock) -> Optio
 
 def parse_pdf_with_ocr(pdf_bytes: bytes) -> List[Question]:
     """
-    Main parser with advanced segmentation
+    Main parser with advanced segmentation + answer key matching
     """
     pdf_document = fitz.open(stream=pdf_bytes, filetype="pdf")
     all_question_blocks = []
@@ -675,8 +859,18 @@ def parse_pdf_with_ocr(pdf_bytes: bytes) -> List[Question]:
 
     print(f"\n📄 Processing {len(pdf_document)} pages...")
 
-    # Step 1: Find all question blocks across pages
-    for page_num in range(len(pdf_document)):
+    # Step 0: Extract answer key from last pages
+    print(f"\n🔑 Extracting answer key...")
+    answer_keys, answer_key_pages = extract_answer_key_from_pdf(pdf_document)
+
+    # Step 1: Find all question blocks across pages (excluding answer key pages)
+    total_pages = len(pdf_document)
+
+    for page_num in range(total_pages):
+        # Skip pages that contain answer keys
+        if page_num in answer_key_pages:
+            print(f"\n📄 Page {page_num + 1}: Skipping (contains answer key)")
+            continue
         page = pdf_document[page_num]
         print(f"\n📄 Page {page_num + 1}:")
 
@@ -686,18 +880,46 @@ def parse_pdf_with_ocr(pdf_bytes: bytes) -> List[Question]:
 
     print(f"\n📊 Total questions found: {len(all_question_blocks)}")
 
-    # Step 2: Process each question block
+    # Step 2: Group questions by subject (based on PDF numbering)
+    # Assumption: questions are ordered by subject (TÜRKÇE 1-20, MATEMATİK 1-20, etc.)
+    questions_by_pdf_num = {}
+    for q_block in all_question_blocks:
+        if q_block.pdf_number:
+            if q_block.pdf_number not in questions_by_pdf_num:
+                questions_by_pdf_num[q_block.pdf_number] = []
+            questions_by_pdf_num[q_block.pdf_number].append(q_block)
+
+    # Step 3: Process each question block
     questions = []
+    current_subject = None
+    subject_question_count = 0
+
+    # Try to determine subject from answer keys
+    subject_list = list(answer_keys.keys()) if answer_keys else []
+    subject_index = 0
 
     for q_block in all_question_blocks:
         try:
             page = pdf_document[q_block.page_num - 1]
 
+            # Determine subject (simple heuristic: reset counter when PDF number repeats)
+            if q_block.pdf_number == 1 and subject_question_count > 0:
+                # New subject started
+                subject_index = min(subject_index + 1, len(subject_list) - 1)
+
+            if subject_list and subject_index < len(subject_list):
+                current_subject = subject_list[subject_index]
+            subject_question_count += 1
+
             # Extract options using clustering
             options = extract_options_with_clustering(q_block.text_blocks)
 
-            # Extract question text
-            question_text = extract_question_text(q_block.text_blocks, options)
+            # Extract question text with BOLD stem separation
+            question_text, question_stem = extract_question_stem(q_block.text_blocks)
+
+            # Fallback to old method if stem extraction didn't work
+            if not question_text.strip():
+                question_text = extract_question_text(q_block.text_blocks, options)
 
             # If text still empty, use hybrid OCR
             if not question_text.strip():
@@ -707,23 +929,51 @@ def parse_pdf_with_ocr(pdf_bytes: bytes) -> List[Question]:
             # Crop image
             image_base64 = crop_question_image(page, q_block)
 
+            # Match answer from answer key
+            answer = None
+            if current_subject and answer_keys.get(current_subject):
+                answer = answer_keys[current_subject].get(q_block.pdf_number)
+
+            # Analyze with OpenAI (if available and subject is known)
+            metadata = {"topic": None, "subtopic": None, "difficulty": None}
+            if current_subject and OPENAI_AVAILABLE and OPENAI_API_KEY:
+                print(f"      🤖 Analyzing with OpenAI...")
+                metadata = analyze_question_with_openai(
+                    question_text=question_text,
+                    stem=question_stem,
+                    options=options,
+                    subject=current_subject
+                )
+
             # Create question
             question = Question(
                 id=q_block.unique_id,
                 text=question_text,
+                stem=question_stem,
                 options=options,
-                answer=None,  # Answer detection can be added later
+                answer=answer,
                 image_base64=image_base64,
+                subject=current_subject,
+                topic=metadata.get("topic"),
+                subtopic=metadata.get("subtopic"),
+                difficulty=metadata.get("difficulty"),
             )
 
             questions.append(question)
 
-            print(f"   ✅ ID={q_block.unique_id}: "
+            print(f"   ✅ ID={q_block.unique_id} (PDF#{q_block.pdf_number}): "
+                  f"subject={current_subject}, "
+                  f"topic={metadata.get('topic')}, "
                   f"text={len(question_text)} chars, "
-                  f"options={len(options)}")
+                  f"stem={len(question_stem)} chars, "
+                  f"options={len(options)}, "
+                  f"answer={answer}, "
+                  f"difficulty={metadata.get('difficulty')}")
 
         except Exception as e:
             print(f"   ❌ ID={q_block.unique_id} failed: {e}")
+            import traceback
+            traceback.print_exc()
             continue
 
     pdf_document.close()
@@ -743,24 +993,25 @@ def questions_to_json(questions: List[Question]) -> Dict[str, Any]:
         "questions": [
             {
                 "id": q.id,
-                # Metadata fields (currently null, can be populated later)
-                "subject": None,
-                "topic": None,
-                "subtopic": None,
-                "difficulty": None,  # Can be: "easy", "medium", "hard"
+                # Metadata fields (from answer key + OpenAI)
+                "subject": q.subject,  # From answer key: TÜRKÇE, MATEMATİK, etc.
+                "topic": q.topic,  # TODO: From OpenAI
+                "subtopic": q.subtopic,  # TODO: From OpenAI
+                "difficulty": q.difficulty,  # TODO: From OpenAI ("easy", "medium", "hard")
                 "format": "multiple_choice",
                 "tags": [],
 
                 # Content structure
                 "content": {
-                    "stem": q.text,  # Question text
+                    "text": q.text,  # Full question text
+                    "stem": q.stem,  # BOLD question root/core
                     "options": q.options,  # [{"label": "A", "value": "..."}, ...]
                     "image": q.image_base64,  # Base64 image
                 },
 
-                # Answer and solution (currently basic)
+                # Answer and solution
                 "answer_key": {
-                    "correct": q.answer,  # "A", "B", etc.
+                    "correct": q.answer,  # "A", "B", etc. (from PDF answer key)
                     "explanation": None,
                 } if q.answer else None,
 
