@@ -668,13 +668,18 @@ JSON FORMAT:
         }
 
 
-def extract_answer_key_from_pdf(pdf_document: fitz.Document) -> Dict[str, Dict[int, str]]:
+def extract_answer_key_from_pdf(pdf_document: fitz.Document) -> Tuple[Dict[str, Dict[int, str]], List[int]]:
     """
     Extract answer key from last pages of PDF
     Format: CEVAP ANAHTARI or answer key sections
-    Returns: {"TÜRKÇE": {1: "B", 2: "A", ...}, "MATEMATİK": {...}}
+
+    Returns:
+        Tuple of (answer_keys, pages_with_answer_key)
+        - answer_keys: {"TÜRKÇE": {1: "B", 2: "A", ...}, "MATEMATİK": {...}}
+        - pages_with_answer_key: [20, 21] (page indices to skip during question parsing)
     """
     answer_keys = {}
+    pages_with_answer_key = []
     current_subject = None
 
     # Check last 3 pages for answer key
@@ -687,10 +692,14 @@ def extract_answer_key_from_pdf(pdf_document: fitz.Document) -> Dict[str, Dict[i
         text = fix_turkish_encoding(text)
 
         # Check if this page contains answer key
-        if not re.search(r'(?:CEVAP|ANAHTAR|ANSWER|KEY)', text, re.IGNORECASE):
-            continue
+        has_answer_key = re.search(r'(?:CEVAP|ANAHTAR|ANSWER|KEY)', text, re.IGNORECASE)
+        if has_answer_key:
+            pages_with_answer_key.append(page_num)
+            print(f"   📝 Answer key detected on page {page_num + 1}")
 
-        print(f"   📝 Found answer key on page {page_num + 1}")
+        # Only parse if this page has answer key markers
+        if not has_answer_key:
+            continue
 
         # Split into lines
         lines = text.split('\n')
@@ -722,7 +731,7 @@ def extract_answer_key_from_pdf(pdf_document: fitz.Document) -> Dict[str, Dict[i
     for subject, answers in answer_keys.items():
         print(f"      ✅ {subject}: {len(answers)} answers")
 
-    return answer_keys
+    return answer_keys, pages_with_answer_key
 
 
 def extract_question_stem(text_blocks: List[TextBlock]) -> Tuple[str, str]:
@@ -923,8 +932,22 @@ def parse_pdf_with_ocr(pdf_bytes: bytes) -> List[Question]:
 
     print(f"\n📄 Processing {len(pdf_document)} pages...")
 
-    # Step 1: Find all question blocks across pages
+    # Step 0: First, detect answer key pages (so we can skip them)
+    print(f"\n🔑 Detecting answer key pages...")
+    answer_keys, answer_key_pages = extract_answer_key_from_pdf(pdf_document)
+
+    if answer_key_pages:
+        print(f"   📍 Answer key pages to skip: {[p + 1 for p in answer_key_pages]}")
+    else:
+        print(f"   ⚠️  No answer key pages detected")
+
+    # Step 1: Find all question blocks across pages (SKIP answer key pages)
     for page_num in range(len(pdf_document)):
+        # CRITICAL: Skip answer key pages!
+        if page_num in answer_key_pages:
+            print(f"\n📄 Page {page_num + 1}: ⏭️  SKIPPING (contains answer key)")
+            continue
+
         page = pdf_document[page_num]
         print(f"\n📄 Page {page_num + 1}:")
 
@@ -934,16 +957,15 @@ def parse_pdf_with_ocr(pdf_bytes: bytes) -> List[Question]:
 
     print(f"\n📊 Total questions found: {len(all_question_blocks)}")
 
-    # Step 2: Extract answer keys from PDF (last 3 pages)
-    print(f"\n🔑 Extracting answer key from last pages...")
-    answer_keys = extract_answer_key_from_pdf(pdf_document)
-
+    # Step 2: Display answer key summary
+    print(f"\n📋 Answer Key Summary:")
     if answer_keys:
-        print(f"   ✅ Answer keys found for {len(answer_keys)} subject(s)")
+        total_answers = sum(len(answers) for answers in answer_keys.values())
+        print(f"   ✅ Found {total_answers} answers across {len(answer_keys)} subject(s)")
         for subj, answers in answer_keys.items():
-            print(f"      📚 {subj}: {len(answers)} answers")
+            print(f"      📚 {subj}: {len(answers)} answers (Q1-Q{max(answers.keys())})")
     else:
-        print(f"   ⚠️  No answer key found in PDF - answers will be None")
+        print(f"   ⚠️  No answer key found in PDF")
 
     subject_list = list(answer_keys.keys()) if answer_keys else []
     subject_index = 0
