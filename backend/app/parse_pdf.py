@@ -9,6 +9,10 @@ import platform
 from pathlib import Path
 from PIL import Image
 from collections import defaultdict
+from dotenv import load_dotenv
+
+# Load .env file for environment variables (OpenAI API key, etc.)
+load_dotenv()
 
 # Tesseract OCR setup
 try:
