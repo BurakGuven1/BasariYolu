@@ -1,8 +1,3 @@
-"""
-STABLE PDF Question Parser v2.0
-Uses PyMuPDF geometric analysis + OCR hybrid system
-Handles multi-column, complex layouts, multi-line options
-"""
 import fitz  # PyMuPDF
 import re
 import base64
@@ -101,14 +96,9 @@ class Question:
     """Final question structure"""
     id: int
     text: str
-    stem: str  # Bold question root/core
     options: List[Dict[str, str]]
     answer: Optional[str]
     image_base64: Optional[str]
-    subject: Optional[str] = None  # Will be filled by OpenAI
-    topic: Optional[str] = None
-    subtopic: Optional[str] = None
-    difficulty: Optional[str] = None
 
 
 def fix_turkish_encoding(text: str) -> str:
@@ -122,7 +112,7 @@ def fix_turkish_encoding(text: str) -> str:
         '¨I': 'İ', '´I': 'İ', 'Ì': 'İ', 'Í': 'İ',
 
         # ı variations
-        'ˆı': 'ı', '±': 'ı', 'ı': 'ı',
+        'ˆı': 'ı', 'i': 'ı', '±': 'ı', 'ı': 'ı',
 
         # ş variations
         '¸s': 'ş', '¸S': 'Ş', 'ș': 'ş', 'Ș': 'Ş',
@@ -147,15 +137,11 @@ def fix_turkish_encoding(text: str) -> str:
         # Common ligatures
         'ﬁ': 'fi', 'ﬂ': 'fl', 'ﬀ': 'ff',
 
-        # Unicode combining characters
+        # Zero-width and combining characters
         '\u0307': '',  # Combining dot above
         '\u0306': '',  # Combining breve
         '\u0327': '',  # Combining cedilla
         '\u0308': '',  # Combining diaeresis
-
-        # Sinhala/other strange replacements (common in broken PDFs)
-        'ඈ': 'i',  # This is what causes "Şekඈl"
-        'ල': 'l',
     }
 
     for old, new in replacements.items():
@@ -227,112 +213,74 @@ def extract_text_blocks_with_fonts(page: fitz.Page) -> List[TextBlock]:
 
 def detect_columns(blocks: List[TextBlock], page_width: float) -> List[Tuple[float, float]]:
     """
-    Detect columns in page using X-axis clustering - ENHANCED
+    Detect columns in page using X-axis clustering
     Returns: list of (x_start, x_end) for each column
-    Uses improved gap detection to handle multi-column layouts
     """
     if not blocks:
         return [(0, page_width)]
 
-    # Get unique X positions (left edges) of blocks
-    x_positions = sorted(set(b.x0 for b in blocks))
+    # Cluster blocks by X position
+    x_positions = [b.center_x for b in blocks]
+    x_positions.sort()
 
-    if len(x_positions) < 2:
-        return [(0, page_width)]
-
-    # Find significant gaps (potential column separators)
-    # Use larger threshold for better separation: 80pt (about 1 inch)
-    gaps = []
-    for i in range(1, len(x_positions)):
-        gap_size = x_positions[i] - x_positions[i-1]
-        if gap_size > 80:  # Increased from 50pt to 80pt
-            gaps.append({
-                'position': (x_positions[i-1] + x_positions[i]) / 2,
-                'size': gap_size,
-                'before': x_positions[i-1],
-                'after': x_positions[i],
-            })
-
-    # If no significant gaps, it's a single column
-    if not gaps:
-        return [(0, page_width)]
-
-    # Build columns based on gaps
+    # Find gaps larger than 50 points (column separator)
     columns = []
     col_start = 0
 
-    for gap in gaps:
-        col_end = gap['position']
-        # Ensure column has minimum width (100pt)
-        if col_end - col_start > 100:
+    for i in range(1, len(x_positions)):
+        gap = x_positions[i] - x_positions[i-1]
+        if gap > 50:  # Column separator detected
+            col_end = (x_positions[i-1] + x_positions[i]) / 2
             columns.append((col_start, col_end))
             col_start = col_end
 
     # Last column
-    if page_width - col_start > 100:
-        columns.append((col_start, page_width))
+    columns.append((col_start, page_width))
 
-    # If no valid columns, return full width
+    # If no columns detected, return full width
     if len(columns) == 0:
         columns = [(0, page_width)]
 
-    print(f"   🔲 Detected {len(columns)} column(s): {[(f'{c[0]:.0f}-{c[1]:.0f}') for c in columns]}")
+    print(f"   🔲 Detected {len(columns)} column(s)")
     return columns
 
 
 def is_question_start_block(block: TextBlock) -> Optional[int]:
     """
-    Detect if block is a question start using multiple signals - ENHANCED
-    1. Regex pattern (multiple formats)
+    Detect if block is a question start using multiple signals:
+    1. Regex pattern
     2. Font size (usually larger)
     3. Bold style
     4. Position (usually left-aligned)
     """
     text = block.text.strip()
 
-    # Skip very long text (likely not a question number)
-    if len(text) > 100:
-        return None
-
     # Pattern 1: "Soru 12" or "SORU 12"
-    match = re.match(r'^(?:Soru|SORU|Question)\s+(\d+)', text, re.IGNORECASE)
+    match = re.match(r'^(?:Soru|SORU)\s+(\d+)', text, re.IGNORECASE)
     if match:
         return int(match.group(1))
 
     # Pattern 2: "12. Soru"
-    match = re.match(r'^(\d+)[.)]\s+(?:Soru|SORU|Question)', text, re.IGNORECASE)
+    match = re.match(r'^(\d+)[.)]\s+(?:Soru|SORU)', text, re.IGNORECASE)
     if match:
         return int(match.group(1))
 
-    # Pattern 3: Just "12)" or "12." at line start
-    # More lenient: accept if it's a reasonable question number (1-200)
+    # Pattern 3: "12)" or "12." at line start
+    # MUST be followed by uppercase or question keywords
     match = re.match(r'^(\d+)[.)]\s*(.*)$', text)
     if match:
         num = int(match.group(1))
         after = match.group(2).strip()
 
-        # Only accept question numbers in reasonable range (1-200)
-        if num < 1 or num > 200:
-            return None
-
         # Accept if:
         # - Just number (e.g., "12)")
-        # - Followed by uppercase letter
+        # - Followed by uppercase
         # - Followed by question words
         # - Block is bold (question numbers are often bold)
-        # - Font size larger than average (>= 11pt)
         if not after or \
-           (after and len(after) > 0 and after[0].isupper()) or \
-           any(word in after.lower() for word in ['hangi', 'nasıl', 'kaç', 'ne ', 'neden', 'kim', 'nerede', 'aşağıdaki', 'yukarıdaki']) or \
-           block.is_bold or \
-           block.font_size >= 11:
-            return num
-
-    # Pattern 4: "12-" or "12 -" (less common but sometimes used)
-    match = re.match(r'^(\d+)\s*[-–—]\s*(.*)$', text)
-    if match:
-        num = int(match.group(1))
-        if 1 <= num <= 200:
+           (after and after[0].isupper()) or \
+           any(word in after.lower() for word in ['hangi', 'nasıl', 'kaç', 'ne ', 'neden', 'kim', 'nerede']) or \
+           block.is_bold:
             return num
 
     return None
@@ -404,42 +352,32 @@ def find_question_blocks(page: fitz.Page, page_num: int, unique_id_start: int) -
         for i, q_start in enumerate(question_starts):
             start_y = q_start['y0']
 
-            # End Y is STRICTLY next question start (not bottom of next question)
-            # This ensures each crop contains ONLY one question
+            # End Y is next question or page bottom
             if i + 1 < len(question_starts):
-                end_y = question_starts[i + 1]['y0'] - 3  # Small gap to prevent overlap
+                end_y = question_starts[i + 1]['y0'] - 5
             else:
                 end_y = page_height
 
-            # Collect all blocks in this Y range STRICTLY
-            # CRITICAL: Use STRICT inequality to prevent including next question's first line
+            # Collect all blocks in this Y range and column
             q_text_blocks = [
                 b for b in col_blocks
-                if start_y <= b.y0 < end_y  # Strict < instead of <=
+                if start_y <= b.y0 < end_y
             ]
 
             if not q_text_blocks:
                 continue
 
-            # Calculate TIGHT bounding box using ONLY this question's blocks
-            # This prevents capturing adjacent questions in crop
+            # Calculate tight bounding box
             min_x = min(b.x0 for b in q_text_blocks)
             max_x = max(b.x1 for b in q_text_blocks)
             min_y = min(b.y0 for b in q_text_blocks)
             max_y = max(b.y1 for b in q_text_blocks)
 
-            # Add minimal padding (5pt) to avoid cutting text
-            # Keep padding small to prevent capturing adjacent questions
+            # Add padding
             crop_x0 = max(0, min_x - 5)
             crop_x1 = min(page_width, max_x + 5)
             crop_y0 = max(0, min_y - 5)
             crop_y1 = min(page_height, max_y + 5)
-
-            # ADDITIONAL CHECK: Ensure crop doesn't extend into column boundaries
-            # This prevents horizontal bleed into adjacent columns
-            col_x_min, col_x_max = columns[col_idx]
-            crop_x0 = max(crop_x0, col_x_min)
-            crop_x1 = min(crop_x1, col_x_max)
 
             question_block = QuestionBlock(
                 unique_id=unique_id,
@@ -464,50 +402,37 @@ def find_question_blocks(page: fitz.Page, page_num: int, unique_id_start: int) -
 
 def extract_options_with_clustering(text_blocks: List[TextBlock]) -> List[Dict[str, str]]:
     """
-    Extract options using X-axis alignment clustering - ENHANCED
-    Handles ALL option formats: A) A. A: A- and multi-line options
-    FILTERS OUT placeholder text like "ŞIK A", "ŞIK B"
+    Extract options using X-axis alignment clustering - IMPROVED
+    Handles multi-line options with ±20pt tolerance
+    Properly groups text blocks that belong to same option
     """
     if not text_blocks:
         return []
 
-    # Step 1: Find option start markers (A-E) with STRICT pattern
+    # Step 1: Find option start markers (A-E)
     option_starts = []
 
     for block in text_blocks:
         text = block.text.strip()
 
-        # STRICT pattern: Must have A-E followed by delimiter
-        # Matches: "A)" "A." "A:" "A-" "A )" (with space)
-        match = re.match(r'^([A-E])\s*([.):\-])\s*(.*)$', text, re.IGNORECASE)
+        # Enhanced pattern: A) A. A: A- A  (with space) or A)text
+        # Must be at START of line
+        match = re.match(r'^([A-E])\s*[.):\-]?\s*(.*)$', text, re.IGNORECASE)
         if match:
             label = match.group(1).upper()
-            delimiter = match.group(2)
-            content = match.group(3).strip()
+            rest = match.group(2).strip()
 
-            # FILTER OUT placeholder text
-            # Skip if content is just "ŞIK X", "Şık X", "X şıkkı", etc.
-            content_lower = content.lower()
-            is_placeholder = (
-                not content or  # Empty
-                content_lower.startswith('şık') or  # "Şık A"
-                content_lower.endswith('şıkkı') or  # "A şıkkı"
-                content_lower.startswith('sik') or  # Encoding issue "SIK A"
-                content_lower == label.lower() or  # Just "a" or "A"
-                re.match(r'^(şık|sik|seçenek|option)\s*[a-e]?$', content_lower)  # "Şık", "Seçenek A"
-            )
-
-            if is_placeholder:
-                continue  # Skip this option start
-
-            # Accept if it has a delimiter and real content
-            option_starts.append({
-                'label': label,
-                'block': block,
-                'x0': block.x0,
-                'y0': block.y0,
-                'has_content': len(content) > 0,
-            })
+            # Only accept if:
+            # 1. It's just "A" or "A)" alone
+            # 2. Or it has content after the label
+            # 3. Block is left-aligned (not indented too much)
+            if not rest or len(rest) > 0:
+                option_starts.append({
+                    'label': label,
+                    'block': block,
+                    'x0': block.x0,
+                    'y0': block.y0,
+                })
 
     if not option_starts:
         return []
@@ -522,31 +447,9 @@ def extract_options_with_clustering(text_blocks: List[TextBlock]) -> List[Dict[s
 
     option_starts = unique_option_starts
 
-    # If we have less than 4 options, it's likely incomplete - be more aggressive
-    if len(option_starts) < 4:
-        print(f"      ⚠️  Only {len(option_starts)} option starts found - searching more broadly")
-
-        # Second pass: look for ANY line starting with A-E (even without delimiter)
-        for block in text_blocks:
-            text = block.text.strip()
-            if len(text) > 0 and text[0].upper() in 'ABCDE':
-                label = text[0].upper()
-                if label not in seen_labels:
-                    # Check if this looks like an option
-                    # (not part of regular text like "Aşağıdaki")
-                    if len(text) < 50 and not any(word in text.lower() for word in ['aşağıdaki', 'yukarıdaki']):
-                        option_starts.append({
-                            'label': label,
-                            'block': block,
-                            'x0': block.x0,
-                            'y0': block.y0,
-                            'has_content': True,
-                        })
-                        seen_labels.add(label)
-
     # Step 3: Calculate average X position for option alignment
     option_x_positions = [opt['x0'] for opt in option_starts]
-    avg_option_x = sum(option_x_positions) / len(option_x_positions) if option_x_positions else 0
+    avg_option_x = sum(option_x_positions) / len(option_x_positions)
 
     # Step 4: Sort by Y position
     option_starts.sort(key=lambda opt: opt['y0'])
@@ -564,15 +467,15 @@ def extract_options_with_clustering(text_blocks: List[TextBlock]) -> List[Dict[s
         else:
             end_y = max(b.y1 for b in text_blocks) + 10
 
-        # Collect all blocks in this Y range with X alignment ±30pt (increased tolerance)
+        # Collect all blocks in this Y range with X alignment ±20pt
         option_lines = []
 
         for block in text_blocks:
             # Check if block is in Y range
             if start_y <= block.y0 < end_y:
-                # Check X alignment (±30pt tolerance)
+                # Check X alignment (±20pt tolerance)
                 x_diff = abs(block.x0 - avg_option_x)
-                if x_diff <= 30:
+                if x_diff <= 20:
                     option_lines.append((block.y0, block.text))
 
         # Sort by Y to maintain reading order
@@ -582,25 +485,14 @@ def extract_options_with_clustering(text_blocks: List[TextBlock]) -> List[Dict[s
         # Join with space
         full_text = ' '.join(option_text_parts)
 
-        # Clean: Remove option label prefix (A) A.) etc.)
+        # Clean: Remove option label prefix
         full_text = re.sub(r'^[A-E]\s*[.):\-]?\s*', '', full_text, flags=re.IGNORECASE).strip()
 
         # Apply Turkish encoding fixes
         full_text = fix_turkish_encoding(full_text)
 
-        # CRITICAL: Filter out placeholder/meaningless text
-        full_text_lower = full_text.lower()
-        is_meaningless = (
-            len(full_text) < 3 or  # Too short
-            full_text_lower.startswith('şık') or  # "Şık A", "Şık B"
-            full_text_lower.startswith('sik') or  # Encoding issue
-            full_text_lower.endswith('şıkkı') or  # "A şıkkı"
-            re.match(r'^(şık|sik|seçenek|option)\s*[a-e]?$', full_text_lower) or  # Just "Şık"
-            full_text_lower == label.lower()  # Just the label itself
-        )
-
-        # Only add if has meaningful content
-        if full_text and not is_meaningless:
+        # Only add if has content
+        if full_text and len(full_text) > 1:
             options.append({
                 'label': label,
                 'value': full_text,
@@ -609,8 +501,13 @@ def extract_options_with_clustering(text_blocks: List[TextBlock]) -> List[Dict[s
     # Step 6: Ensure A-E order
     options.sort(key=lambda x: x['label'])
 
-    # Step 7: Log results
-    print(f"      📋 Extracted {len(options)} options: {[o['label'] for o in options]}")
+    # Step 7: Validate - should have 2-5 options
+    if len(options) < 2:
+        print(f"      ⚠️  Only {len(options)} option(s) found - may be incomplete")
+    elif len(options) > 5:
+        print(f"      ⚠️  {len(options)} options found - may have false positives")
+        # Keep only first 5
+        options = options[:5]
 
     return options
 
@@ -960,7 +857,7 @@ def crop_question_image(page: fitz.Page, question_block: QuestionBlock) -> Optio
 
 def parse_pdf_with_ocr(pdf_bytes: bytes) -> List[Question]:
     """
-    Main parser with advanced segmentation + answer key matching
+    Main parser with advanced segmentation
     """
     pdf_document = fitz.open(stream=pdf_bytes, filetype="pdf")
     all_question_blocks = []
@@ -968,16 +865,8 @@ def parse_pdf_with_ocr(pdf_bytes: bytes) -> List[Question]:
 
     print(f"\n📄 Processing {len(pdf_document)} pages...")
 
-    # Step 0: Extract answer key from last pages
-    print(f"\n🔑 Extracting answer key...")
-    answer_keys = extract_answer_key_from_pdf(pdf_document)
-
-    # Step 1: Find all question blocks across pages (excluding answer key pages)
-    total_pages = len(pdf_document)
-    # Don't process last 2 pages if they contain answer keys
-    end_page = total_pages - 2 if answer_keys else total_pages
-
-    for page_num in range(end_page):
+    # Step 1: Find all question blocks across pages
+    for page_num in range(len(pdf_document)):
         page = pdf_document[page_num]
         print(f"\n📄 Page {page_num + 1}:")
 
@@ -987,23 +876,8 @@ def parse_pdf_with_ocr(pdf_bytes: bytes) -> List[Question]:
 
     print(f"\n📊 Total questions found: {len(all_question_blocks)}")
 
-    # Step 2: Group questions by subject (based on PDF numbering)
-    # Assumption: questions are ordered by subject (TÜRKÇE 1-20, MATEMATİK 1-20, etc.)
-    questions_by_pdf_num = {}
-    for q_block in all_question_blocks:
-        if q_block.pdf_number:
-            if q_block.pdf_number not in questions_by_pdf_num:
-                questions_by_pdf_num[q_block.pdf_number] = []
-            questions_by_pdf_num[q_block.pdf_number].append(q_block)
-
-    # Step 3: Process each question block
+    # Step 2: Process each question block
     questions = []
-    current_subject = None
-    subject_question_count = 0
-
-    # Try to determine subject from answer keys
-    subject_list = list(answer_keys.keys()) if answer_keys else []
-    subject_index = 0
 
     for q_block in all_question_blocks:
         try:
@@ -1073,9 +947,8 @@ def parse_pdf_with_ocr(pdf_bytes: bytes) -> List[Question]:
             question = Question(
                 id=q_block.unique_id,
                 text=question_text,
-                stem=question_stem,
                 options=options,
-                answer=answer,
+                answer=None,  # Answer detection can be added later
                 image_base64=image_base64,
                 subject=current_subject,
                 topic=topic,
@@ -1085,8 +958,7 @@ def parse_pdf_with_ocr(pdf_bytes: bytes) -> List[Question]:
 
             questions.append(question)
 
-            print(f"   ✅ ID={q_block.unique_id} (PDF#{q_block.pdf_number}): "
-                  f"subject={current_subject}, "
+            print(f"   ✅ ID={q_block.unique_id}: "
                   f"text={len(question_text)} chars, "
                   f"stem={len(question_stem)} chars, "
                   f"options={len(options)}, "
@@ -1096,8 +968,6 @@ def parse_pdf_with_ocr(pdf_bytes: bytes) -> List[Question]:
 
         except Exception as e:
             print(f"   ❌ ID={q_block.unique_id} failed: {e}")
-            import traceback
-            traceback.print_exc()
             continue
 
     pdf_document.close()
@@ -1117,25 +987,24 @@ def questions_to_json(questions: List[Question]) -> Dict[str, Any]:
         "questions": [
             {
                 "id": q.id,
-                # Metadata fields (from answer key + OpenAI)
-                "subject": q.subject,  # From answer key: TÜRKÇE, MATEMATİK, etc.
-                "topic": q.topic,  # TODO: From OpenAI
-                "subtopic": q.subtopic,  # TODO: From OpenAI
-                "difficulty": q.difficulty,  # TODO: From OpenAI ("easy", "medium", "hard")
+                # Metadata fields (currently null, can be populated later)
+                "subject": None,
+                "topic": None,
+                "subtopic": None,
+                "difficulty": None,  # Can be: "easy", "medium", "hard"
                 "format": "multiple_choice",
                 "tags": [],
 
                 # Content structure
                 "content": {
-                    "text": q.text,  # Full question text
-                    "stem": q.stem,  # BOLD question root/core
+                    "stem": q.text,  # Question text
                     "options": q.options,  # [{"label": "A", "value": "..."}, ...]
                     "image": q.image_base64,  # Base64 image
                 },
 
-                # Answer and solution
+                # Answer and solution (currently basic)
                 "answer_key": {
-                    "correct": q.answer,  # "A", "B", etc. (from PDF answer key)
+                    "correct": q.answer,  # "A", "B", etc.
                     "explanation": None,
                 } if q.answer else None,
 
