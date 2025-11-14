@@ -8,20 +8,11 @@ import { QuestionImage } from './pdfParser';
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
 
 export interface BackendQuestionImage {
-  question_number: number;
-  page_number: number;
+  id: number;  // Unique ID (handles duplicate question numbers automatically)
   text: string;
-  choices: string[];  // ["A) ...", "B) ...", "C) ..."]
+  options: Array<{ label: string; value: string }>;  // [{"label": "A", "value": "..."}, ...]
   answer: string | null;
   image_base64: string;  // data:image/png;base64,...
-  crop_info: {
-    x0: number;
-    y0: number;
-    x1: number;
-    y1: number;
-    width: number;
-    height: number;
-  };
 }
 
 export interface BackendParseResult {
@@ -58,12 +49,12 @@ export async function parsePDFWithBackend(
 
     // Convert backend format to frontend QuestionImage format
     const questionImages: (QuestionImage & { text?: string; choices?: string[]; answer?: string | null })[] = await Promise.all(
-      result.questions.map(async (q) => {
+      result.questions.map(async (q, index) => {
         // Convert base64 data URI to Blob
         // Format: "data:image/png;base64,iVBORw0KGgo..."
         let blob: Blob;
 
-        if (q.image_base64.startsWith('data:image')) {
+        if (q.image_base64 && q.image_base64.startsWith('data:image')) {
           // Extract base64 part after comma
           const base64Data = q.image_base64.split(',')[1];
           const imageBytes = atob(base64Data);
@@ -72,7 +63,7 @@ export async function parsePDFWithBackend(
             imageArray[i] = imageBytes.charCodeAt(i);
           }
           blob = new Blob([imageArray], { type: 'image/png' });
-        } else {
+        } else if (q.image_base64) {
           // Fallback for plain base64
           const imageBytes = atob(q.image_base64);
           const imageArray = new Uint8Array(imageBytes.length);
@@ -80,42 +71,38 @@ export async function parsePDFWithBackend(
             imageArray[i] = imageBytes.charCodeAt(i);
           }
           blob = new Blob([imageArray], { type: 'image/png' });
+        } else {
+          // No image available
+          blob = new Blob([], { type: 'image/png' });
         }
 
-        // Parse choices to extract label and value
-        const parsedChoices = q.choices.map(choice => {
-          // Extract "A) text" -> {label: "A", value: "text"}
-          const match = choice.match(/^([A-E])\)\s*(.+)/);
-          if (match) {
-            return { label: match[1], value: match[2].trim() };
-          }
-          return { label: '', value: choice };
-        });
+        // Convert choices to string array for backward compatibility
+        const choicesArray = q.options.map(opt => `${opt.label}) ${opt.value}`);
 
         return {
-          questionNumber: q.question_number,
-          pageNumber: q.page_number,
+          questionNumber: q.id,  // Use unique ID
+          pageNumber: index + 1,  // Sequential page numbers
           imageBlob: blob,
-          text: q.text,  // OCR/PyMuPDF extracted text
-          choices: q.choices,  // Raw choices array
-          answer: q.answer,  // Correct answer letter
-          text_content: {  // Backward compatibility
+          text: q.text,
+          choices: choicesArray,  // String array for compatibility
+          answer: q.answer,
+          text_content: {
             stem: q.text,
-            options: parsedChoices,
+            options: q.options,  // Already in correct format!
             answer: q.answer,
           },
           cropInfo: {
-            startY: q.crop_info.y0,
-            endY: q.crop_info.y1,
-            width: q.crop_info.width,
-            height: q.crop_info.height,
+            startY: 0,
+            endY: 0,
+            width: 0,
+            height: 0,
           },
         };
       })
     );
 
-    // Determine page count from max page_number
-    const pageCount = Math.max(...result.questions.map(q => q.page_number));
+    // Page count is total questions (each question can be on different page)
+    const pageCount = result.total_questions;
 
     console.log(`✅ Backend parsed ${result.total_questions} questions from ${pageCount} pages`);
 
