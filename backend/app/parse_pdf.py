@@ -197,74 +197,112 @@ def extract_text_blocks_with_fonts(page: fitz.Page) -> List[TextBlock]:
 
 def detect_columns(blocks: List[TextBlock], page_width: float) -> List[Tuple[float, float]]:
     """
-    Detect columns in page using X-axis clustering
+    Detect columns in page using X-axis clustering - ENHANCED
     Returns: list of (x_start, x_end) for each column
+    Uses improved gap detection to handle multi-column layouts
     """
     if not blocks:
         return [(0, page_width)]
 
-    # Cluster blocks by X position
-    x_positions = [b.center_x for b in blocks]
-    x_positions.sort()
+    # Get unique X positions (left edges) of blocks
+    x_positions = sorted(set(b.x0 for b in blocks))
 
-    # Find gaps larger than 50 points (column separator)
+    if len(x_positions) < 2:
+        return [(0, page_width)]
+
+    # Find significant gaps (potential column separators)
+    # Use larger threshold for better separation: 80pt (about 1 inch)
+    gaps = []
+    for i in range(1, len(x_positions)):
+        gap_size = x_positions[i] - x_positions[i-1]
+        if gap_size > 80:  # Increased from 50pt to 80pt
+            gaps.append({
+                'position': (x_positions[i-1] + x_positions[i]) / 2,
+                'size': gap_size,
+                'before': x_positions[i-1],
+                'after': x_positions[i],
+            })
+
+    # If no significant gaps, it's a single column
+    if not gaps:
+        return [(0, page_width)]
+
+    # Build columns based on gaps
     columns = []
     col_start = 0
 
-    for i in range(1, len(x_positions)):
-        gap = x_positions[i] - x_positions[i-1]
-        if gap > 50:  # Column separator detected
-            col_end = (x_positions[i-1] + x_positions[i]) / 2
+    for gap in gaps:
+        col_end = gap['position']
+        # Ensure column has minimum width (100pt)
+        if col_end - col_start > 100:
             columns.append((col_start, col_end))
             col_start = col_end
 
     # Last column
-    columns.append((col_start, page_width))
+    if page_width - col_start > 100:
+        columns.append((col_start, page_width))
 
-    # If no columns detected, return full width
+    # If no valid columns, return full width
     if len(columns) == 0:
         columns = [(0, page_width)]
 
-    print(f"   🔲 Detected {len(columns)} column(s)")
+    print(f"   🔲 Detected {len(columns)} column(s): {[(f'{c[0]:.0f}-{c[1]:.0f}') for c in columns]}")
     return columns
 
 
 def is_question_start_block(block: TextBlock) -> Optional[int]:
     """
-    Detect if block is a question start using multiple signals:
-    1. Regex pattern
+    Detect if block is a question start using multiple signals - ENHANCED
+    1. Regex pattern (multiple formats)
     2. Font size (usually larger)
     3. Bold style
     4. Position (usually left-aligned)
     """
     text = block.text.strip()
 
+    # Skip very long text (likely not a question number)
+    if len(text) > 100:
+        return None
+
     # Pattern 1: "Soru 12" or "SORU 12"
-    match = re.match(r'^(?:Soru|SORU)\s+(\d+)', text, re.IGNORECASE)
+    match = re.match(r'^(?:Soru|SORU|Question)\s+(\d+)', text, re.IGNORECASE)
     if match:
         return int(match.group(1))
 
     # Pattern 2: "12. Soru"
-    match = re.match(r'^(\d+)[.)]\s+(?:Soru|SORU)', text, re.IGNORECASE)
+    match = re.match(r'^(\d+)[.)]\s+(?:Soru|SORU|Question)', text, re.IGNORECASE)
     if match:
         return int(match.group(1))
 
-    # Pattern 3: "12)" or "12." at line start
-    # MUST be followed by uppercase or question keywords
+    # Pattern 3: Just "12)" or "12." at line start
+    # More lenient: accept if it's a reasonable question number (1-200)
     match = re.match(r'^(\d+)[.)]\s*(.*)$', text)
     if match:
         num = int(match.group(1))
         after = match.group(2).strip()
 
+        # Only accept question numbers in reasonable range (1-200)
+        if num < 1 or num > 200:
+            return None
+
         # Accept if:
         # - Just number (e.g., "12)")
-        # - Followed by uppercase
+        # - Followed by uppercase letter
         # - Followed by question words
         # - Block is bold (question numbers are often bold)
+        # - Font size larger than average (>= 11pt)
         if not after or \
-           (after and after[0].isupper()) or \
-           any(word in after.lower() for word in ['hangi', 'nasıl', 'kaç', 'ne ', 'neden', 'kim', 'nerede']) or \
-           block.is_bold:
+           (after and len(after) > 0 and after[0].isupper()) or \
+           any(word in after.lower() for word in ['hangi', 'nasıl', 'kaç', 'ne ', 'neden', 'kim', 'nerede', 'aşağıdaki', 'yukarıdaki']) or \
+           block.is_bold or \
+           block.font_size >= 11:
+            return num
+
+    # Pattern 4: "12-" or "12 -" (less common but sometimes used)
+    match = re.match(r'^(\d+)\s*[-–—]\s*(.*)$', text)
+    if match:
+        num = int(match.group(1))
+        if 1 <= num <= 200:
             return num
 
     return None
@@ -336,32 +374,42 @@ def find_question_blocks(page: fitz.Page, page_num: int, unique_id_start: int) -
         for i, q_start in enumerate(question_starts):
             start_y = q_start['y0']
 
-            # End Y is next question or page bottom
+            # End Y is STRICTLY next question start (not bottom of next question)
+            # This ensures each crop contains ONLY one question
             if i + 1 < len(question_starts):
-                end_y = question_starts[i + 1]['y0'] - 5
+                end_y = question_starts[i + 1]['y0'] - 3  # Small gap to prevent overlap
             else:
                 end_y = page_height
 
-            # Collect all blocks in this Y range and column
+            # Collect all blocks in this Y range STRICTLY
+            # CRITICAL: Use STRICT inequality to prevent including next question's first line
             q_text_blocks = [
                 b for b in col_blocks
-                if start_y <= b.y0 < end_y
+                if start_y <= b.y0 < end_y  # Strict < instead of <=
             ]
 
             if not q_text_blocks:
                 continue
 
-            # Calculate tight bounding box
+            # Calculate TIGHT bounding box using ONLY this question's blocks
+            # This prevents capturing adjacent questions in crop
             min_x = min(b.x0 for b in q_text_blocks)
             max_x = max(b.x1 for b in q_text_blocks)
             min_y = min(b.y0 for b in q_text_blocks)
             max_y = max(b.y1 for b in q_text_blocks)
 
-            # Add padding
+            # Add minimal padding (5pt) to avoid cutting text
+            # Keep padding small to prevent capturing adjacent questions
             crop_x0 = max(0, min_x - 5)
             crop_x1 = min(page_width, max_x + 5)
             crop_y0 = max(0, min_y - 5)
             crop_y1 = min(page_height, max_y + 5)
+
+            # ADDITIONAL CHECK: Ensure crop doesn't extend into column boundaries
+            # This prevents horizontal bleed into adjacent columns
+            col_x_min, col_x_max = columns[col_idx]
+            crop_x0 = max(crop_x0, col_x_min)
+            crop_x1 = min(crop_x1, col_x_max)
 
             question_block = QuestionBlock(
                 unique_id=unique_id,
@@ -385,11 +433,6 @@ def find_question_blocks(page: fitz.Page, page_num: int, unique_id_start: int) -
 
 
 def extract_options_with_clustering(text_blocks: List[TextBlock]) -> List[Dict[str, str]]:
-    """
-    Extract options using X-axis alignment clustering - IMPROVED
-    Handles multi-line options with ±20pt tolerance
-    Properly groups text blocks that belong to same option
-    """
     if not text_blocks:
         return []
 
@@ -404,19 +447,32 @@ def extract_options_with_clustering(text_blocks: List[TextBlock]) -> List[Dict[s
         match = re.match(r'^([A-E])\s*[.):\-]?\s*(.*)$', text, re.IGNORECASE)
         if match:
             label = match.group(1).upper()
-            rest = match.group(2).strip()
+            delimiter = match.group(2)
+            content = match.group(3).strip()
 
-            # Only accept if:
-            # 1. It's just "A" or "A)" alone
-            # 2. Or it has content after the label
-            # 3. Block is left-aligned (not indented too much)
-            if not rest or len(rest) > 0:
-                option_starts.append({
-                    'label': label,
-                    'block': block,
-                    'x0': block.x0,
-                    'y0': block.y0,
-                })
+            # FILTER OUT placeholder text
+            # Skip if content is just "ŞIK X", "Şık X", "X şıkkı", etc.
+            content_lower = content.lower()
+            is_placeholder = (
+                not content or  # Empty
+                content_lower.startswith('şık') or  # "Şık A"
+                content_lower.endswith('şıkkı') or  # "A şıkkı"
+                content_lower.startswith('sik') or  # Encoding issue "SIK A"
+                content_lower == label.lower() or  # Just "a" or "A"
+                re.match(r'^(şık|sik|seçenek|option)\s*[a-e]?$', content_lower)  # "Şık", "Seçenek A"
+            )
+
+            if is_placeholder:
+                continue  # Skip this option start
+
+            # Accept if it has a delimiter and real content
+            option_starts.append({
+                'label': label,
+                'block': block,
+                'x0': block.x0,
+                'y0': block.y0,
+                'has_content': len(content) > 0,
+            })
 
     if not option_starts:
         return []
@@ -475,8 +531,19 @@ def extract_options_with_clustering(text_blocks: List[TextBlock]) -> List[Dict[s
         # Apply Turkish encoding fixes
         full_text = fix_turkish_encoding(full_text)
 
-        # Only add if has content
-        if full_text and len(full_text) > 1:
+        # CRITICAL: Filter out placeholder/meaningless text
+        full_text_lower = full_text.lower()
+        is_meaningless = (
+            len(full_text) < 3 or  # Too short
+            full_text_lower.startswith('şık') or  # "Şık A", "Şık B"
+            full_text_lower.startswith('sik') or  # Encoding issue
+            full_text_lower.endswith('şıkkı') or  # "A şıkkı"
+            re.match(r'^(şık|sik|seçenek|option)\s*[a-e]?$', full_text_lower) or  # Just "Şık"
+            full_text_lower == label.lower()  # Just the label itself
+        )
+
+        # Only add if has meaningful content
+        if full_text and not is_meaningless:
             options.append({
                 'label': label,
                 'value': full_text,
