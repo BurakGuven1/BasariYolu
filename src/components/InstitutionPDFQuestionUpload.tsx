@@ -385,14 +385,17 @@ export default function InstitutionPDFQuestionUpload({
             <Server className="h-6 w-6 text-green-600" />
             <div className="flex-1">
               <p className="font-semibold text-gray-900">
-                Backend (PyMuPDF) ⭐ ÖNERİLEN
+                Hybrid (PyMuPDF + OpenAI Vision) ⭐ ÖNERİLEN
               </p>
               <p className="text-xs text-gray-600">
-                %100 doğruluk • Tüm görseller dahil • Mükemmel crop • Ücretsiz
+                Görsel: PyMuPDF crop (90-95%) • Metin/Şıklar: OpenAI Vision • Topic/Difficulty: AI
+              </p>
+              <p className="text-xs text-green-600 mt-1">
+                ✓ Mükemmel crop kalitesi ✓ %100 şık doğruluğu ✓ Akıllı topic tespiti
               </p>
               {backendAvailable === false && (
                 <p className="text-xs text-red-600 mt-1">
-                  ⚠️ Backend çalışmıyor. Backend'i başlatın: cd backend && ./run.sh
+                  ⚠️ Backend çalışmıyor. Backend'i başlatın: cd backend && uvicorn app.main:app --reload
                 </p>
               )}
             </div>
