@@ -536,6 +536,7 @@ def analyze_question_with_openai_vision(image_base64: str, subject: Optional[str
             "text": "",
             "stem": "",
             "options": [],
+            "subject": None,
             "topic": None,
             "subtopic": None,
             "difficulty": None,
@@ -551,25 +552,68 @@ def analyze_question_with_openai_vision(image_base64: str, subject: Optional[str
         )
 
         # Construct prompt for Turkish exam questions
-        prompt = f"""Bu Türkçe sınav sorusunu analiz et ve JSON formatında çıktı ver.
+        prompt = f"""Sen bir Türk Eğitim Sistemi uzmanısın. Bu sınav sorusunu analiz et ve JSON formatında çıktı ver.
 
-Soru numarası: {question_number or 'Bilinmiyor'}
-Konu: {subject or 'Bilinmiyor'}
+Soru #{question_number or '?'} | Beklenen Ders: {subject or 'Tespit Et'}
 
-Lütfen şunları çıkar:
-1. **text**: Sorunun tam metni (soru numarası hariç)
-2. **stem**: Sorunun ana kısmı (genelde kalın yazılmış core soru)
-3. **options**: Tüm şıklar (A-E), format: [{{"label": "A", "value": "şık metni"}}, ...]
-4. **topic**: Ana konu (örn: "Cümle Bilgisi", "Geometri", "Hücre")
-5. **subtopic**: Alt konu (örn: "Fiilimsiler", "Alan Hesaplama", "Hücre Zarı")
-6. **difficulty**: Zorluk ("easy", "medium", "hard")
-7. **answer**: Eğer görselde cevap anahtarı varsa doğru şık (A-E), yoksa null
+📋 GÖREVİN:
+Görüntüdeki sınav sorusunu TAM OLARAK oku ve şu bilgileri çıkar:
 
-ÖNEMLİ:
-- Şıkları EKSIKSIZ al (A, B, C, D, E)
-- "ŞIK A", "ŞIK B" gibi placeholder metinler ATLA
-- Türkçe karakterleri doğru yaz (İ, ı, ş, ğ, ç, ö, ü)
-- Multi-line şıkları birleştir"""
+1. **subject** (Ders): Sorunun hangi derse ait olduğunu MUTLAKA tespit et
+   - Türkçe, Matematik, Fen Bilimleri, Sosyal Bilgiler, İngilizce, vb.
+   - Soru içeriğinden ve üslubundan anlayabilirsin
+   - Örnek: Geometri sorusu → "Matematik", Fiil sorusu → "Türkçe"
+
+2. **topic** (Ana Konu): Dersin hangi ana konusuyla ilgili
+   - Türkçe: Cümle Bilgisi, Sözcük Bilgisi, Anlatım Bozuklukları, Noktalama, Paragraf
+   - Matematik: Geometri, Sayılar, Denklemler, Kesirler, Olasılık, İstatistik
+   - Fen: Madde ve Özellikleri, Kuvvet ve Hareket, Canlılar, Enerji, Dünya ve Evren
+   - Sosyal: Tarih, Coğrafya, Vatandaşlık, İnsan Hakları
+
+3. **subtopic** (Alt Konu): Daha spesifik konu
+   - Örnek: "Geometri" → "Üçgenler", "Cümle Bilgisi" → "Fiilimsiler"
+
+4. **difficulty** (Zorluk): Sorunun seviyesi
+   - "easy": Basit tanım/bilgi sorusu
+   - "medium": Orta seviye, çıkarım gerektiren
+   - "hard": Karmaşık, çoklu adım gerektiren
+
+5. **text** (Tam Metin): Sorunun TÜM metnini yaz
+   - Soru numarasını ATLA
+   - Sadece soru metnini al
+
+6. **stem** (Soru Kökü): Sorunun ana cümlesi (genelde kalın yazılmış)
+   - Örnek: "Aşağıdakilerden hangisi..." veya "Yukarıdaki metne göre..."
+
+7. **options** (Şıklar): A'dan E'ye kadar TÜM şıkları oku
+   - Format: [{{"label": "A", "value": "gerçek şık metni"}}, {{"label": "B", "value": "gerçek şık metni"}}, ...]
+   - GERÇEK METİNLERİ yaz, "Şık A", "Şık B" gibi placeholder'ları YAZMA
+   - Eğer şıkta sadece "A)", "B)" yazıyorsa ve metin yoksa, boş bırakma - yakındaki metni al
+   - Multi-line şıkları birleştir (aynı şığın devamını yanına ekle)
+
+8. **answer**: Görselde cevap anahtarı görünüyorsa doğru şık (A-E), yoksa null
+
+⚠️ KRİTİK KURALLAR:
+- Şıklardaki GERÇEK metni oku, placeholder yazma
+- subject/topic/subtopic MUTLAKA dolu olsun (null veya "Genel" yazma)
+- Türkçe karakterleri doğru kullan (İ, ı, ş, ğ, ç, ö, ü)
+- Tüm şıkları al (genelde 5 tane: A, B, C, D, E)
+
+JSON FORMAT:
+{{
+  "subject": "Matematik",
+  "topic": "Geometri",
+  "subtopic": "Üçgenler",
+  "difficulty": "medium",
+  "text": "Soru metni tam olarak...",
+  "stem": "Ana soru cümlesi...",
+  "options": [
+    {{"label": "A", "value": "Gerçek şık metni buraya"}},
+    {{"label": "B", "value": "Gerçek şık metni buraya"}},
+    ...
+  ],
+  "answer": null
+}}"""
 
         response = client.chat.completions.create(
             model="gpt-4o-mini",
@@ -601,6 +645,7 @@ Lütfen şunları çıkar:
             "text": parsed.get("text", ""),
             "stem": parsed.get("stem", ""),
             "options": parsed.get("options", []),
+            "subject": parsed.get("subject"),  # OpenAI will detect the subject
             "topic": parsed.get("topic"),
             "subtopic": parsed.get("subtopic"),
             "difficulty": parsed.get("difficulty"),
@@ -613,6 +658,7 @@ Lütfen şunları çıkar:
             "text": "",
             "stem": "",
             "options": [],
+            "subject": None,
             "topic": None,
             "subtopic": None,
             "difficulty": None,
@@ -927,9 +973,16 @@ def parse_pdf_with_ocr(pdf_bytes: bytes) -> List[Question]:
                 question_text = openai_result.get("text", "")
                 question_stem = openai_result.get("stem", "")
                 options = openai_result.get("options", [])
+
+                # OpenAI detects subject/topic/difficulty
+                openai_subject = openai_result.get("subject")
                 topic = openai_result.get("topic")
                 subtopic = openai_result.get("subtopic")
                 difficulty = openai_result.get("difficulty")
+
+                # Prefer OpenAI's subject detection over PDF answer key subject
+                if openai_subject:
+                    current_subject = openai_subject
 
                 # OpenAI might detect answer in image (rare)
                 openai_answer = openai_result.get("answer")
@@ -979,12 +1032,13 @@ def parse_pdf_with_ocr(pdf_bytes: bytes) -> List[Question]:
 
             questions.append(question)
 
-            print(f"   ✅ ID={q_block.unique_id}: "
-                  f"text={len(question_text)} chars, "
-                  f"stem={len(question_stem)} chars, "
-                  f"options={len(options)}, "
+            print(f"   ✅ ID={q_block.unique_id} (PDF#{q_block.pdf_number}): "
+                  f"subject={current_subject}, "
                   f"topic={topic}, "
+                  f"subtopic={subtopic}, "
                   f"difficulty={difficulty}, "
+                  f"text={len(question_text)} chars, "
+                  f"options={len(options)}, "
                   f"answer={answer}")
 
         except Exception as e:
