@@ -22,5 +22,5 @@ pip install -r requirements.txt
 
 # Start server using python -m to ensure correct interpreter
 Write-Host "✅ Starting FastAPI server on http://localhost:8000" -ForegroundColor Green
-Write-Host "Press CTRL+C to stop the server" -ForegroundColor Cyan
+Write-Host "Press CTRL+C to stop the server"
 python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
