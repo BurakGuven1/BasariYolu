@@ -91,15 +91,54 @@ class Question:
 
 
 def fix_turkish_encoding(text: str) -> str:
-    """Fix Turkish character encoding issues"""
+    """
+    Fix Turkish character encoding issues - COMPREHENSIVE version
+    Handles all common PDF encoding problems with Turkish characters
+    """
     replacements = {
-        '˙I': 'İ', '˙i': 'İ', 'ˆI': 'İ',
-        '¸s': 'ş', '¸S': 'Ş',
-        '˘g': 'ğ', '˘G': 'Ğ',
-        'ˆı': 'ı', 'ö': 'ö', 'ü': 'ü', 'ç': 'ç',
+        # İ variations
+        '˙I': 'İ', '˙i': 'İ', 'ˆI': 'İ', 'I˙': 'İ', 'i˙': 'İ',
+        '¨I': 'İ', '´I': 'İ', 'Ì': 'İ', 'Í': 'İ',
+
+        # ı variations
+        'ˆı': 'ı', 'i': 'ı', '±': 'ı', 'ı': 'ı',
+
+        # ş variations
+        '¸s': 'ş', '¸S': 'Ş', 'ș': 'ş', 'Ș': 'Ş',
+        's¸': 'ş', 'S¸': 'Ş', 'ş': 'ş', 'Ş': 'Ş',
+
+        # ğ variations
+        '˘g': 'ğ', '˘G': 'Ğ', 'ǧ': 'ğ', 'Ǧ': 'Ğ',
+        'g˘': 'ğ', 'G˘': 'Ğ', 'ğ': 'ğ', 'Ğ': 'Ğ',
+
+        # ç variations
+        '¸c': 'ç', '¸C': 'Ç', 'ć': 'ç', 'Ć': 'Ç',
+        'c¸': 'ç', 'C¸': 'Ç', 'ç': 'ç', 'Ç': 'Ç',
+
+        # ö variations
+        '¨o': 'ö', '¨O': 'Ö', 'ó': 'ö', 'Ó': 'Ö',
+        'o¨': 'ö', 'O¨': 'Ö', 'ö': 'ö', 'Ö': 'Ö',
+
+        # ü variations
+        '¨u': 'ü', '¨U': 'Ü', 'ú': 'ü', 'Ú': 'Ü',
+        'u¨': 'ü', 'U¨': 'Ü', 'ü': 'ü', 'Ü': 'Ü',
+
+        # Common ligatures
+        'ﬁ': 'fi', 'ﬂ': 'fl', 'ﬀ': 'ff',
+
+        # Zero-width and combining characters
+        '\u0307': '',  # Combining dot above
+        '\u0306': '',  # Combining breve
+        '\u0327': '',  # Combining cedilla
+        '\u0308': '',  # Combining diaeresis
     }
+
     for old, new in replacements.items():
         text = text.replace(old, new)
+
+    # Normalize whitespace
+    text = ' '.join(text.split())
+
     return text
 
 
@@ -352,109 +391,214 @@ def find_question_blocks(page: fitz.Page, page_num: int, unique_id_start: int) -
 
 def extract_options_with_clustering(text_blocks: List[TextBlock]) -> List[Dict[str, str]]:
     """
-    Extract options using X-axis alignment clustering
-    This handles multi-line options correctly
+    Extract options using X-axis alignment clustering - IMPROVED
+    Handles multi-line options with ±20pt tolerance
+    Properly groups text blocks that belong to same option
     """
-    # Find option-like blocks (starting with A-E)
-    option_blocks = []
+    if not text_blocks:
+        return []
+
+    # Step 1: Find option start markers (A-E)
+    option_starts = []
 
     for block in text_blocks:
         text = block.text.strip()
 
-        # Check for option pattern: A) or A. or A- or A: or just A
-        match = re.match(r'^([A-E])[.):\-\s]', text, re.IGNORECASE)
+        # Enhanced pattern: A) A. A: A- A  (with space) or A)text
+        # Must be at START of line
+        match = re.match(r'^([A-E])\s*[.):\-]?\s*(.*)$', text, re.IGNORECASE)
         if match:
-            option_blocks.append({
-                'label': match.group(1).upper(),
-                'block': block,
-                'x0': block.x0,
-            })
+            label = match.group(1).upper()
+            rest = match.group(2).strip()
 
-    if not option_blocks:
+            # Only accept if:
+            # 1. It's just "A" or "A)" alone
+            # 2. Or it has content after the label
+            # 3. Block is left-aligned (not indented too much)
+            if not rest or len(rest) > 0:
+                option_starts.append({
+                    'label': label,
+                    'block': block,
+                    'x0': block.x0,
+                    'y0': block.y0,
+                })
+
+    if not option_starts:
         return []
 
-    # Cluster by X position (options usually aligned)
-    option_x_positions = [ob['x0'] for ob in option_blocks]
+    # Step 2: Remove duplicate labels (keep first occurrence)
+    seen_labels = set()
+    unique_option_starts = []
+    for opt in option_starts:
+        if opt['label'] not in seen_labels:
+            seen_labels.add(opt['label'])
+            unique_option_starts.append(opt)
+
+    option_starts = unique_option_starts
+
+    # Step 3: Calculate average X position for option alignment
+    option_x_positions = [opt['x0'] for opt in option_starts]
     avg_option_x = sum(option_x_positions) / len(option_x_positions)
 
-    # Now collect all blocks that are part of options
-    # (same X alignment, between option labels)
+    # Step 4: Sort by Y position
+    option_starts.sort(key=lambda opt: opt['y0'])
+
+    # Step 5: For each option, collect ALL text blocks in its Y range
     options = []
 
-    option_blocks.sort(key=lambda ob: ob['block'].y0)
+    for i, opt_start in enumerate(option_starts):
+        label = opt_start['label']
+        start_y = opt_start['y0']
 
-    for i, opt_block in enumerate(option_blocks):
-        label = opt_block['label']
-        start_y = opt_block['block'].y0
-
-        # End Y is next option or end of blocks
-        if i + 1 < len(option_blocks):
-            end_y = option_blocks[i + 1]['block'].y0
+        # Determine end Y (next option's Y or end of all blocks)
+        if i + 1 < len(option_starts):
+            end_y = option_starts[i + 1]['y0'] - 2  # Small gap
         else:
-            end_y = max(b.y1 for b in text_blocks)
+            end_y = max(b.y1 for b in text_blocks) + 10
 
-        # Collect all text blocks in this Y range with similar X alignment
-        option_text_parts = []
+        # Collect all blocks in this Y range with X alignment ±20pt
+        option_lines = []
 
         for block in text_blocks:
-            # Block is in Y range and X-aligned
-            if start_y <= block.y0 < end_y and abs(block.x0 - avg_option_x) < 50:
-                option_text_parts.append(block.text)
+            # Check if block is in Y range
+            if start_y <= block.y0 < end_y:
+                # Check X alignment (±20pt tolerance)
+                x_diff = abs(block.x0 - avg_option_x)
+                if x_diff <= 20:
+                    option_lines.append((block.y0, block.text))
 
-        # Join and clean
+        # Sort by Y to maintain reading order
+        option_lines.sort(key=lambda x: x[0])
+        option_text_parts = [text for _, text in option_lines]
+
+        # Join with space
         full_text = ' '.join(option_text_parts)
 
-        # Remove the label prefix (A), A.) etc.)
-        full_text = re.sub(r'^[A-E][.):\-\s]+', '', full_text, flags=re.IGNORECASE).strip()
+        # Clean: Remove option label prefix
+        full_text = re.sub(r'^[A-E]\s*[.):\-]?\s*', '', full_text, flags=re.IGNORECASE).strip()
 
+        # Apply Turkish encoding fixes
+        full_text = fix_turkish_encoding(full_text)
+
+        # Only add if has content
         if full_text and len(full_text) > 1:
             options.append({
                 'label': label,
                 'value': full_text,
             })
 
-    # Ensure A-E order
+    # Step 6: Ensure A-E order
     options.sort(key=lambda x: x['label'])
+
+    # Step 7: Validate - should have 2-5 options
+    if len(options) < 2:
+        print(f"      ⚠️  Only {len(options)} option(s) found - may be incomplete")
+    elif len(options) > 5:
+        print(f"      ⚠️  {len(options)} options found - may have false positives")
+        # Keep only first 5
+        options = options[:5]
 
     return options
 
 
 def extract_question_text(text_blocks: List[TextBlock], options: List[Dict[str, str]]) -> str:
     """
-    Extract clean question text (before options start)
-    IMPORTANT: Don't cut off at first "A)" if it's part of question
+    Extract clean question text (before options start) - IMPROVED
+    IMPORTANT: Don't cut off at "Aşağıdakilerden hangisi A)" - that's part of question!
+    Only stop at REAL option starts with substantial content
     """
-    # Find where options actually start (first valid option block)
+    if not text_blocks:
+        return ""
+
+    # Step 1: Find where options REALLY start
+    # We need to be very careful not to mistake question text for options
     option_start_y = None
 
-    for block in text_blocks:
-        text = block.text.strip()
-        # Check if this is genuinely an option start
-        match = re.match(r'^([A-E])[.):\-]\s+(.{3,})', text, re.IGNORECASE)
-        if match and len(match.group(2)) > 3:  # Real option has content
-            option_start_y = block.y0
-            break
+    # If we already extracted options, use their labels to find start
+    if options:
+        # Find first option label in blocks
+        first_option_label = options[0]['label']
 
-    # Collect text blocks before options
+        for block in text_blocks:
+            text = block.text.strip()
+
+            # Look for this specific option label with content
+            # Pattern: "A) some text" or "A. some text" with real content
+            pattern = f'^{first_option_label}\\s*[.):\\-]\\s+(.{{5,}})'
+            match = re.match(pattern, text, re.IGNORECASE)
+
+            if match:
+                content = match.group(1).strip()
+                # Must have substantial content (not just "doğru", "yanlış", single word)
+                words = content.split()
+                if len(words) >= 2 or len(content) > 10:
+                    option_start_y = block.y0
+                    break
+
+    # Step 2: If we didn't find option start, look for first clear option marker
+    if option_start_y is None:
+        for block in text_blocks:
+            text = block.text.strip()
+
+            # Check for clear option pattern with content
+            match = re.match(r'^([A-E])\s*[.):\-]\s+(.+)$', text, re.IGNORECASE)
+            if match:
+                label = match.group(1).upper()
+                content = match.group(2).strip()
+
+                # Must be option A and have real content
+                if label == 'A' and len(content) > 8:
+                    # Double-check: not part of question like "Aşağıdakilerden A)"
+                    # Real options usually don't have question words before them
+                    prev_blocks = [b for b in text_blocks if b.y0 < block.y0]
+                    if prev_blocks:
+                        last_prev = prev_blocks[-1].text.lower()
+                        # If previous block has question indicators, this might not be option
+                        if any(word in last_prev for word in ['hangisi', 'aşağıdaki', 'hangi', 'which']):
+                            continue
+
+                    option_start_y = block.y0
+                    break
+
+    # Step 3: Collect question text (everything before options)
     question_parts = []
 
     for block in text_blocks:
+        # Stop at option start
         if option_start_y and block.y0 >= option_start_y:
             break
 
         text = block.text.strip()
 
-        # Skip answer key lines
-        if re.search(r'(?:cevap|doğru|yanıt|answer)', text, re.IGNORECASE):
+        # Skip empty
+        if not text:
             continue
 
-        # Skip lone numbers
+        # Skip answer key lines
+        if re.search(r'(?:cevap|doğru\s+cevap|yanıt|answer\s*key)', text, re.IGNORECASE):
+            continue
+
+        # Skip lone question numbers
         if re.match(r'^\d+[.)]?\s*$', text):
             continue
 
+        # Skip page numbers, footers
+        if re.match(r'^(sayfa|page)\s*\d+', text, re.IGNORECASE):
+            continue
+
+        # Add to question
         question_parts.append(text)
 
-    return ' '.join(question_parts).strip()
+    # Step 4: Join and clean
+    question_text = ' '.join(question_parts)
+
+    # Apply Turkish encoding fixes
+    question_text = fix_turkish_encoding(question_text)
+
+    # Normalize whitespace
+    question_text = ' '.join(question_text.split())
+
+    return question_text.strip()
 
 
 def extract_with_ocr_hybrid(page: fitz.Page, crop_rect: fitz.Rect, text_blocks: List[TextBlock]) -> str:
@@ -589,17 +733,42 @@ def parse_pdf_with_ocr(pdf_bytes: bytes) -> List[Question]:
 
 
 def questions_to_json(questions: List[Question]) -> Dict[str, Any]:
-    """Convert to API response format"""
+    """
+    Convert to API response format - ENHANCED
+    Matches PostgreSQL JSONB structure for questions table
+    """
     return {
         "success": True,
         "total_questions": len(questions),
         "questions": [
             {
                 "id": q.id,
-                "text": q.text,
-                "options": q.options,
-                "answer": q.answer,
-                "image_base64": q.image_base64,
+                # Metadata fields (currently null, can be populated later)
+                "subject": None,
+                "topic": None,
+                "subtopic": None,
+                "difficulty": None,  # Can be: "easy", "medium", "hard"
+                "format": "multiple_choice",
+                "tags": [],
+
+                # Content structure
+                "content": {
+                    "stem": q.text,  # Question text
+                    "options": q.options,  # [{"label": "A", "value": "..."}, ...]
+                    "image": q.image_base64,  # Base64 image
+                },
+
+                # Answer and solution (currently basic)
+                "answer_key": {
+                    "correct": q.answer,  # "A", "B", etc.
+                    "explanation": None,
+                } if q.answer else None,
+
+                "solution": None,  # Can add step-by-step solution later
+
+                # Ownership and visibility (for database compatibility)
+                "owner_type": None,  # Can be: "user", "admin", "system"
+                "visibility": None,  # Can be: "public", "private", "shared"
             }
             for q in questions
         ]
