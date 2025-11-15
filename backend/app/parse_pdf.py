@@ -694,6 +694,16 @@ def normalize_subject_name(subject: str) -> str:
         "SOSYAL BILGILER": "SOSYAL BİLGİLER",
         "INGILIZCE": "İNGİLİZCE",
         "INGILIZCЕ": "İNGİLİZCE",
+        # Science subjects
+        "FIZIK": "FİZİK",
+        "KIMYA": "KİMYA",
+        "BIYOLOJI": "BİYOLOJİ",
+        "TARIH": "TARİH",
+        "COGRAFYA": "COĞRAFYA",
+        "COĞRAFYA": "COĞRAFYA",
+        "GEOMETRI": "GEOMETRİ",
+        # Keep exam types as-is (already uppercase)
+        # TYT, AYT, YKS, LGS, KPSS stay as-is
     }
 
     return mappings.get(subject, subject)
@@ -745,10 +755,23 @@ def extract_answer_key_from_pdf(pdf_document: fitz.Document) -> Tuple[Dict[str, 
             if not line:
                 continue
 
-            # Check if this is a subject header
-            # Common subjects: TÜRKÇE, MATEMATİK, FEN, SOSYAL, İNGİLİZCE
-            if re.match(r'^(TÜRKÇE|MATEMATİK|FEN|SOSYAL|İNGİLİZCE|TURKISH|MATH|SCIENCE)', line, re.IGNORECASE):
-                current_subject = normalize_subject_name(line)
+            # Check if this is a subject header - EXPANDED PATTERNS
+            # Pattern 1: Classic subjects (TÜRKÇE, MATEMATİK, FEN, SOSYAL, İNGİLİZCE)
+            # Pattern 2: Exam types (TYT, AYT, YKS, LGS, KPSS)
+            # Pattern 3: Science subjects (FİZİK, KİMYA, BİYOLOJİ, TARİH, COĞRAFYA)
+            subject_match = re.match(
+                r'^(TÜRKÇE|MATEMATİK|FEN|SOSYAL|İNGİLİZCE|TURKISH|MATH|SCIENCE|'
+                r'TYT|AYT|YKS|LGS|KPSS|'
+                r'FİZİK|KİMYA|BİYOLOJİ|TARİH|COĞRAFYA|GEOMETRI|'
+                r'PHYSICS|CHEMISTRY|BIOLOGY|HISTORY|GEOGRAPHY)\s*\d*',
+                line,
+                re.IGNORECASE
+            )
+
+            if subject_match:
+                # Extract just the subject name (without trailing numbers like "TYT 1")
+                subject_name = subject_match.group(1)
+                current_subject = normalize_subject_name(subject_name)
                 if current_subject not in answer_keys:
                     answer_keys[current_subject] = {}
                 print(f"      📚 Subject: {current_subject}")
@@ -766,11 +789,17 @@ def extract_answer_key_from_pdf(pdf_document: fitz.Document) -> Tuple[Dict[str, 
                 matches = re.findall(r'(\d+)\s+([A-E])\b', line, re.IGNORECASE)
 
             if matches:
+                # If we found answers but no subject, create a default subject
+                if not current_subject:
+                    current_subject = "GENEL"
+                    if current_subject not in answer_keys:
+                        answer_keys[current_subject] = {}
+                    print(f"      📚 Subject: {current_subject} (auto-detected)")
+
                 for q_num_str, answer_letter in matches:
                     q_num = int(q_num_str)
-                    if current_subject:
-                        answer_keys[current_subject][q_num] = answer_letter.upper()
-                        print(f"         ✓ Q{q_num} = {answer_letter.upper()}")
+                    answer_keys[current_subject][q_num] = answer_letter.upper()
+                    print(f"         ✓ Q{q_num} = {answer_letter.upper()}")
 
     # Log what we found
     print(f"\n   📊 Answer Key Extraction Results:")
