@@ -39,6 +39,7 @@ export function convertParsedQuestionToDBFormat(
   return {
     subject: parsed.subject,
     topic: parsed.topic,
+    subtopic: parsed.subtopic || undefined, // OpenAI detected subtopic
     difficulty: parsed.difficulty || 'medium',
     format: 'multiple_choice',
     tags: [...tags, 'pdf-import'],

@@ -7,6 +7,7 @@ export interface ParsedQuestion {
   question_number: number;
   subject: string;
   topic: string;
+  subtopic?: string | null; // OpenAI detected subtopic
   stem: string;
   options: Array<{ label: string; value: string }>;
   correct_answer: string;

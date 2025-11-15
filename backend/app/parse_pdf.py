@@ -672,6 +672,33 @@ JSON FORMAT:
         }
 
 
+def normalize_subject_name(subject: str) -> str:
+    """
+    Normalize subject names for matching
+    Türkçe, TÜRKÇE, turkce -> TÜRKÇE
+    Matematik, MATEMATİK, matematik -> MATEMATİK
+    """
+    if not subject:
+        return ""
+
+    subject = subject.strip().upper()
+
+    # Normalize common variations
+    mappings = {
+        "TURKCE": "TÜRKÇE",
+        "TÜRKCE": "TÜRKÇE",
+        "MATEMATIK": "MATEMATİK",
+        "FEN": "FEN BİLİMLERİ",
+        "FEN BILIMLERI": "FEN BİLİMLERİ",
+        "SOSYAL": "SOSYAL BİLGİLER",
+        "SOSYAL BILGILER": "SOSYAL BİLGİLER",
+        "INGILIZCE": "İNGİLİZCE",
+        "INGILIZCЕ": "İNGİLİZCE",
+    }
+
+    return mappings.get(subject, subject)
+
+
 def extract_answer_key_from_pdf(pdf_document: fitz.Document) -> Tuple[Dict[str, Dict[int, str]], List[int]]:
     """
     Extract answer key from last pages of PDF
@@ -690,6 +717,8 @@ def extract_answer_key_from_pdf(pdf_document: fitz.Document) -> Tuple[Dict[str, 
     total_pages = len(pdf_document)
     start_page = max(0, total_pages - 3)
 
+    print(f"   🔍 Checking last 3 pages for answer key...")
+
     for page_num in range(start_page, total_pages):
         page = pdf_document[page_num]
         text = page.get_text("text")
@@ -700,6 +729,9 @@ def extract_answer_key_from_pdf(pdf_document: fitz.Document) -> Tuple[Dict[str, 
         if has_answer_key:
             pages_with_answer_key.append(page_num)
             print(f"   📝 Answer key detected on page {page_num + 1}")
+            # DEBUG: Print raw text to see format
+            print(f"   📄 Raw text preview (first 500 chars):")
+            print(f"      {text[:500]}")
 
         # Only parse if this page has answer key markers
         if not has_answer_key:
@@ -716,24 +748,40 @@ def extract_answer_key_from_pdf(pdf_document: fitz.Document) -> Tuple[Dict[str, 
             # Check if this is a subject header
             # Common subjects: TÜRKÇE, MATEMATİK, FEN, SOSYAL, İNGİLİZCE
             if re.match(r'^(TÜRKÇE|MATEMATİK|FEN|SOSYAL|İNGİLİZCE|TURKISH|MATH|SCIENCE)', line, re.IGNORECASE):
-                current_subject = line.upper()
+                current_subject = normalize_subject_name(line)
                 if current_subject not in answer_keys:
                     answer_keys[current_subject] = {}
                 print(f"      📚 Subject: {current_subject}")
                 continue
 
-            # Parse answer lines: "1. B  2. A  3. C  4. D  5. E"
-            # Pattern: number dot/paren followed by letter
-            matches = re.findall(r'(\d+)\s*[.)]\s*([A-E])', line, re.IGNORECASE)
+            # Parse answer lines - MULTIPLE FORMATS:
+            # Format 1: "1. B  2. A  3. C"
+            # Format 2: "1) B  2) A  3) C"
+            # Format 3: "1-B  2-A  3-C"
+            # Format 4: "1 B  2 A  3 C" (just space)
+            matches = re.findall(r'(\d+)\s*[.)\-:]\s*([A-E])', line, re.IGNORECASE)
 
-            if matches and current_subject:
+            # If no matches, try looser pattern (just number + letter)
+            if not matches:
+                matches = re.findall(r'(\d+)\s+([A-E])\b', line, re.IGNORECASE)
+
+            if matches:
                 for q_num_str, answer_letter in matches:
                     q_num = int(q_num_str)
-                    answer_keys[current_subject][q_num] = answer_letter.upper()
+                    if current_subject:
+                        answer_keys[current_subject][q_num] = answer_letter.upper()
+                        print(f"         ✓ Q{q_num} = {answer_letter.upper()}")
 
     # Log what we found
-    for subject, answers in answer_keys.items():
-        print(f"      ✅ {subject}: {len(answers)} answers")
+    print(f"\n   📊 Answer Key Extraction Results:")
+    if answer_keys:
+        for subject, answers in answer_keys.items():
+            if answers:
+                min_q = min(answers.keys())
+                max_q = max(answers.keys())
+                print(f"      ✅ {subject}: {len(answers)} answers (Q{min_q}-Q{max_q})")
+    else:
+        print(f"      ⚠️  No answers extracted!")
 
     return answer_keys, pages_with_answer_key
 
@@ -1015,8 +1063,9 @@ def parse_pdf_with_ocr(pdf_bytes: bytes) -> List[Question]:
                 difficulty = openai_result.get("difficulty")
 
                 # Prefer OpenAI's subject detection over PDF answer key subject
+                # IMPORTANT: Normalize for matching with answer key
                 if openai_subject:
-                    current_subject = openai_subject
+                    current_subject = normalize_subject_name(openai_subject)
 
                 # OpenAI might detect answer in image (rare)
                 openai_answer = openai_result.get("answer")
@@ -1050,13 +1099,18 @@ def parse_pdf_with_ocr(pdf_bytes: bytes) -> List[Question]:
                 answer = answer_keys[current_subject].get(q_block.pdf_number)
                 if answer:
                     answer_source = f"PDF Answer Key ({current_subject})"
+                    print(f"      ✅ Matched answer: Q#{q_block.pdf_number} = {answer} ({current_subject})")
+                else:
+                    print(f"      ⚠️  Q#{q_block.pdf_number} not found in {current_subject} answer key")
 
             # If no match, try all subjects (maybe subject detection failed)
             if not answer and answer_keys:
+                print(f"      🔍 Searching all subjects for Q#{q_block.pdf_number}...")
                 for subj, answers in answer_keys.items():
                     if q_block.pdf_number in answers:
                         answer = answers[q_block.pdf_number]
                         answer_source = f"PDF Answer Key ({subj})"
+                        print(f"      ✅ Found in {subj}: Q#{q_block.pdf_number} = {answer}")
                         # Update current_subject to matched subject
                         if not current_subject:
                             current_subject = subj
@@ -1066,6 +1120,7 @@ def parse_pdf_with_ocr(pdf_bytes: bytes) -> List[Question]:
             if not answer and openai_answer:
                 answer = openai_answer
                 answer_source = "OpenAI Vision"
+                print(f"      🤖 Using OpenAI answer: {answer}")
 
             # Log answer source
             if answer_source:
