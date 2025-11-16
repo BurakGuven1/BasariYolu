@@ -131,6 +131,7 @@ export default function StudentDashboard() {
 
   const institutionProfile = studentData?.profile;
   const isInstitutionStudent = Boolean(institutionProfile?.institution_student && institutionProfile?.institution_id);
+  const showInstitutionPortal = Boolean(isInstitutionStudent && institutionRequest?.status === 'approved');
 
   const loadWeeklyQuestionPlan = React.useCallback(async () => {
     if (!studentData) {
@@ -1131,7 +1132,7 @@ export default function StudentDashboard() {
     { key: 'overview', label: 'Genel Bakış', icon: TrendingUp },
     { key: 'exams', label: 'Denemeler', icon: BookOpen },
     { key: 'homeworks', label: 'Ödevler', icon: Calendar },
-    { key: 'classes', label: isInstitutionStudent ? 'Kurumlarım' : 'Sınıflarım', icon: Users },
+    { key: 'classes', label: showInstitutionPortal ? 'Kurumlarım' : 'Sınıflarım', icon: Users },
     { key: 'analysis', label: 'AI Analiz', icon: Target },
     { key: 'smartplan', label: 'Akıllı Plan', icon: Brain },
     { key: 'summaries', label: 'Konu Özetleri', icon: FileText },
@@ -1248,12 +1249,19 @@ export default function StudentDashboard() {
           <AIRecommendations studentId={studentData.id} />
         )}
         {activeTab === 'classes' && (
-          isInstitutionStudent ? (
+          showInstitutionPortal ? (
             <div className="bg-white rounded-lg p-6 shadow-sm">
               {renderInstitutionClasses()}
             </div>
           ) : (
             <div className="bg-white rounded-lg p-6 shadow-sm">
+              {isInstitutionStudent && (
+                <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                  {institutionRequest?.status === 'pending'
+                    ? 'Kurum kaydın onay bekliyor. Onaylanana kadar bireysel sınıflarını yönetebilir ve yeni sınıflara katılabilirsin.'
+                    : 'Kurum kaydın henüz aktif değil veya erişimin kaldırıldı. Bireysel sınıf özelliklerini kullanmaya devam edebilirsin.'}
+                </div>
+              )}
               <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-6">
                 <h3 className="text-lg font-semibold">Sınıflarım</h3>
                 <div className="flex flex-wrap gap-2">
