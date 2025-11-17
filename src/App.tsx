@@ -45,6 +45,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 import { PomodoroProvider } from './contexts/PomodoroContext';
 import NotFoundPage from './pages/NotFoundPage';
 import FeaturesShowcase from './components/FeaturesShowcase';
+import LiveStats from './components/LiveStats';
+import Testimonials from './components/Testimonials';
 
 const INSTITUTION_MODAL_PATHS = ['/institution/login', '/institution/register'];
 
@@ -415,13 +417,15 @@ function App() {
   const renderHomePage = () => (
     <div className="min-h-screen bg-white dark:bg-gray-900">
       <HeroV2 onGetStarted={handleGetStarted} />
+      <LiveStats />
       <ProblemSection />
       <VisionSection />
       <ProductShowcase />
       <SocialProof />
+      <Testimonials />
       <PricingSection onSelectPackage={handleSelectPackage} />
-      <ExamTopicsSection 
-        user={user} 
+      <ExamTopicsSection
+        user={user}
         hasClassViewerSession={hasClassViewerSession}
         onUpgrade={() => setShowStudentParentLoginModal(true)}
       />
