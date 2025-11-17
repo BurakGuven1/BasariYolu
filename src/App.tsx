@@ -261,22 +261,34 @@ function App() {
     }
   };
 
-  const handleSelectPackage = (packageId: string, billingCycle: 'monthly' | 'yearly') => {
-    if (user) {
-      const selectedPackage = packages.find(pkg => pkg.id === packageId);
-      if (selectedPackage) {
-        setTargetUpgradePlan({
-          id: selectedPackage.id,
-          name: selectedPackage.name,
-          monthlyPrice: selectedPackage.monthlyPrice.toString(),
-          yearlyPrice: selectedPackage.yearlyPrice.toString(),
-          billingCycle
-        });
-        setShowUpgradeModal(true);
+  const handleSelectPackage = (packageId: string, billingCycle: 'monthly' | 'sixMonth' | 'yearly') => {
+    const selectedPackage = packages.find(pkg => pkg.id === packageId);
+
+    if (!selectedPackage) return;
+
+    // Kullanıcı giriş yapmamışsa direkt iyzico linkine yönlendir
+    if (!user) {
+      const paymentLink = selectedPackage.paymentLinks?.[billingCycle];
+
+      if (paymentLink && !paymentLink.startsWith('IYZICO_LINK_')) {
+        // Gerçek iyzico linki varsa yönlendir
+        window.open(paymentLink, '_blank');
+      } else {
+        // Link henüz ayarlanmamışsa modal göster
+        alert('Ödeme sistemi yakında aktif olacak! Lütfen destek@basariyolum.com ile iletişime geçin.');
       }
-    } else {
-      setShowStudentParentLoginModal(true);
+      return;
     }
+
+    // Kullanıcı giriş yapmışsa upgrade modalı göster
+    setTargetUpgradePlan({
+      id: selectedPackage.id,
+      name: selectedPackage.name,
+      monthlyPrice: selectedPackage.monthlyPrice.toString(),
+      yearlyPrice: selectedPackage.yearlyPrice.toString(),
+      billingCycle
+    });
+    setShowUpgradeModal(true);
   };
 
   const handleInstitutionLoginSuccess = async (session: InstitutionSession) => {

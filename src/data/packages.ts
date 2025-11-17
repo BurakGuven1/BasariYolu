@@ -3,10 +3,16 @@ interface Package {
   name: string;
   description?: string;
   monthlyPrice: number;
+  sixMonthPrice: number;
   yearlyPrice: number;
   maxParents: number;
   aiSupport: boolean;
   features: string[];
+  paymentLinks?: {
+    monthly: string;
+    sixMonth: string;
+    yearly: string;
+  };
 }
 
 export const packages: Package[] = [
@@ -14,6 +20,7 @@ export const packages: Package[] = [
     id: 'basic',
     name: 'Temel Paket',
     monthlyPrice: 219.99,
+    sixMonthPrice: 1189,
     yearlyPrice: 1999.99,
     maxParents: 1,
     aiSupport: false,
@@ -24,12 +31,18 @@ export const packages: Package[] = [
       '1 veli hesabı bağlama',
       'Temel analiz raporları',
       'Haftalık çalışma hedefi'
-    ]
+    ],
+    paymentLinks: {
+      monthly: 'IYZICO_LINK_TEMEL_1AY', // İyzico panelinden bu linki alıp buraya yapıştırın
+      sixMonth: 'IYZICO_LINK_TEMEL_6AY',
+      yearly: 'IYZICO_LINK_TEMEL_12AY'
+    }
   },
   {
     id: 'advanced',
     name: 'Gelişmiş Paket',
     monthlyPrice: 319.99,
+    sixMonthPrice: 1729,
     yearlyPrice: 2599.99,
     maxParents: 2,
     aiSupport: true,
@@ -41,12 +54,18 @@ export const packages: Package[] = [
       '2 veli hesabı bağlama',
       'Konu bazlı başarı analizi',
       'Gelişmiş çalışma takibi'
-    ]
+    ],
+    paymentLinks: {
+      monthly: 'IYZICO_LINK_GELISMIS_1AY',
+      sixMonth: 'IYZICO_LINK_GELISMIS_6AY',
+      yearly: 'IYZICO_LINK_GELISMIS_12AY'
+    }
   },
   {
     id: 'professional',
     name: 'Profesyonel Paket',
     monthlyPrice: 499.99,
+    sixMonthPrice: 2699,
     yearlyPrice: 3499.99,
     maxParents: 3,
     aiSupport: true,
@@ -61,6 +80,11 @@ export const packages: Package[] = [
       'Öncelikli destek',
       'TYT-AYT Çıkmış Konular (2018-2025)',
       'Gelişmiş AI analiz ve öneriler'
-    ]
+    ],
+    paymentLinks: {
+      monthly: 'IYZICO_LINK_PROFESYONEL_1AY',
+      sixMonth: 'IYZICO_LINK_PROFESYONEL_6AY',
+      yearly: 'IYZICO_LINK_PROFESYONEL_12AY'
+    }
   }
 ];
