@@ -90,7 +90,7 @@ export default function Testimonials() {
   const currentTestimonial = testimonials[currentIndex];
 
   return (
-    <div className="bg-white dark:bg-gray-900 py-16">
+    <div className="bg-gradient-to-br from-purple-50 via-blue-50 to-cyan-50 dark:from-gray-800 dark:to-gray-900 py-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
@@ -103,7 +103,7 @@ export default function Testimonials() {
 
         {/* Main testimonial */}
         <div className="relative max-w-4xl mx-auto mb-12">
-          <div className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 rounded-3xl p-8 shadow-xl">
+          <div className="bg-white dark:from-gray-800 dark:to-gray-700 dark:bg-gradient-to-br rounded-3xl p-8 shadow-xl border-2 border-purple-100 dark:border-gray-700">
             <Quote className="w-12 h-12 text-blue-600 dark:text-blue-400 mb-4 opacity-50" />
 
             <div className="mb-6">

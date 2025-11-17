@@ -431,8 +431,8 @@ function App() {
       />
       <TeacherSection />
       <CTASection onGetStarted={handleGetStarted} />
-      
-      <footer className="bg-gray-900 dark:bg-gray-950 text-white py-12">
+
+      <footer className="bg-gradient-to-br from-gray-800 via-gray-900 to-indigo-950 dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-950 dark:to-black text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-4 gap-8">
             <div>
