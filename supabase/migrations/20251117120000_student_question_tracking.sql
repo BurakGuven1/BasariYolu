@@ -23,13 +23,14 @@ CREATE TABLE IF NOT EXISTS public.student_solved_questions (
 
   -- Metadata
   solved_at TIMESTAMPTZ DEFAULT NOW(),
+  solved_date DATE GENERATED ALWAYS AS (DATE(solved_at)) STORED,
   attempt_number INTEGER DEFAULT 1,
   metadata JSONB DEFAULT '{}'::jsonb,
 
   created_at TIMESTAMPTZ DEFAULT NOW(),
 
   -- Prevent duplicate solves (same question, same day)
-  UNIQUE(student_id, question_id, DATE(solved_at))
+  UNIQUE(student_id, question_id, solved_date)
 );
 
 -- Indexes for performance
@@ -349,7 +350,7 @@ BEGIN
     p_student_answer,
     attempt_num
   )
-  ON CONFLICT (student_id, question_id, DATE(solved_at))
+  ON CONFLICT (student_id, question_id, solved_date)
   DO UPDATE SET
     is_correct = p_is_correct,
     time_spent_seconds = p_time_spent_seconds,
