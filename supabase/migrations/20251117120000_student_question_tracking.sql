@@ -23,13 +23,14 @@ CREATE TABLE IF NOT EXISTS public.student_solved_questions (
 
   -- Metadata
   solved_at TIMESTAMPTZ DEFAULT NOW(),
+  solved_date DATE, -- Will be auto-populated by trigger
   attempt_number INTEGER DEFAULT 1,
   metadata JSONB DEFAULT '{}'::jsonb,
 
   created_at TIMESTAMPTZ DEFAULT NOW(),
 
   -- Prevent duplicate solves (same question, same day)
-  UNIQUE(student_id, question_id, DATE(solved_at))
+  UNIQUE(student_id, question_id, solved_date)
 );
 
 -- Indexes for performance
@@ -37,6 +38,24 @@ CREATE INDEX IF NOT EXISTS idx_student_solved_questions_student ON public.studen
 CREATE INDEX IF NOT EXISTS idx_student_solved_questions_subject ON public.student_solved_questions(student_id, subject);
 CREATE INDEX IF NOT EXISTS idx_student_solved_questions_solved_at ON public.student_solved_questions(solved_at DESC);
 CREATE INDEX IF NOT EXISTS idx_student_solved_questions_week ON public.student_solved_questions(student_id, DATE_TRUNC('week', solved_at));
+
+-- ============================================================================
+-- TRIGGER: Auto-populate solved_date from solved_at
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION public.set_solved_date()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.solved_date := DATE(NEW.solved_at);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_set_solved_date ON public.student_solved_questions;
+CREATE TRIGGER trigger_set_solved_date
+  BEFORE INSERT OR UPDATE ON public.student_solved_questions
+  FOR EACH ROW
+  EXECUTE FUNCTION public.set_solved_date();
 
 -- ============================================================================
 -- FUNCTION: Update Weekly Question Count
@@ -349,7 +368,7 @@ BEGIN
     p_student_answer,
     attempt_num
   )
-  ON CONFLICT (student_id, question_id, DATE(solved_at))
+  ON CONFLICT (student_id, question_id, solved_date)
   DO UPDATE SET
     is_correct = p_is_correct,
     time_spent_seconds = p_time_spent_seconds,
