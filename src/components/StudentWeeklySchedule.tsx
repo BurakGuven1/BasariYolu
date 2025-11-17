@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Clock, BookOpen, CheckCircle, Target, User, AlertCircle, MessageSquarePlus, Download } from 'lucide-react';
+import { Calendar, Clock, BookOpen, CheckCircle, Target, User, AlertCircle, MessageSquarePlus, Download, X } from 'lucide-react';
 import {
   getCurrentWeekSchedule,
   markScheduleItemComplete,
   getScheduleFeedbackForItems,
-  submitScheduleItemFeedback
+  submitScheduleItemFeedback,
+  getStudentPastStudySchedules
 } from '../lib/studyScheduleApi';
 import { rewardScheduleGoal } from '../lib/pointsSystem';
 import { exportStudySchedulePdf } from '../lib/exportSchedulePdf';
@@ -40,11 +41,30 @@ export default function StudentWeeklySchedule({ studentId, studentName }: Studen
     resources: '',
     reflection: ''
   });
-  const [isExporting, setIsExporting] = useState(false);
+  const [exportingScheduleId, setExportingScheduleId] = useState<string | null>(null);
+  const [pastSchedules, setPastSchedules] = useState<any[]>([]);
+  const [pastLoading, setPastLoading] = useState(false);
+  const [showPastSchedules, setShowPastSchedules] = useState(false);
+  const [selectedPastSchedule, setSelectedPastSchedule] = useState<any | null>(null);
 
   useEffect(() => {
     loadSchedule();
+    loadPastSchedules();
   }, [studentId]);
+
+  const loadPastSchedules = async () => {
+    setPastLoading(true);
+    try {
+      const { data, error } = await getStudentPastStudySchedules(studentId);
+      if (error) throw error;
+      setPastSchedules(data || []);
+    } catch (error) {
+      console.error('Error loading past schedules:', error);
+      setPastSchedules([]);
+    } finally {
+      setPastLoading(false);
+    }
+  };
 
   const loadSchedule = async () => {
     setLoading(true);
@@ -53,6 +73,17 @@ export default function StudentWeeklySchedule({ studentId, studentName }: Studen
       
       if (error) throw error;
       
+      if (data) {
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        const scheduleEnd = new Date(data.week_end_date);
+        scheduleEnd.setHours(23, 59, 59, 999);
+        if (scheduleEnd < now) {
+          setSchedule(null);
+          return;
+        }
+      }
+
       setSchedule(data);
 
       if (data?.study_schedule_items?.length) {
@@ -210,67 +241,68 @@ export default function StudentWeeklySchedule({ studentId, studentName }: Studen
     );
   }
 
-  if (!schedule) {
-    return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
-        <div className="text-center">
-          <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-            Henüz Program Yok
-          </h3>
-          <p className="text-gray-600 dark:text-gray-400">
-            Öğretmeniniz bu hafta için henüz bir çalışma programı yayınlamadı.
-          </p>
-        </div>
-      </div>
-    );
+  let itemsByDay: any[] = [];
+  let selectedDayData: any = null;
+  let totalItems = 0;
+  let completedItems = 0;
+  let completionRate = 0;
+
+  if (schedule) {
+    itemsByDay = DAYS_OF_WEEK.map(day => ({
+      day,
+      items: schedule.study_schedule_items
+        .filter((item: any) => item.day_of_week === day.value)
+        .sort((a: any, b: any) => a.start_time.localeCompare(b.start_time))
+    }));
+
+    selectedDayData = itemsByDay.find(d => d.day.value === selectedDay);
+    totalItems = schedule.study_schedule_items?.length || 0;
+    completedItems = schedule.study_schedule_items?.filter((item: any) => item.is_completed).length || 0;
+    completionRate = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
   }
 
-  // Items'ları güne göre grupla
-  const itemsByDay = DAYS_OF_WEEK.map(day => ({
-    day,
-    items: schedule.study_schedule_items
-      .filter((item: any) => item.day_of_week === day.value)
-      .sort((a: any, b: any) => a.start_time.localeCompare(b.start_time))
-  }));
-
-  const selectedDayData = itemsByDay.find(d => d.day.value === selectedDay);
-  const totalItems = schedule.study_schedule_items?.length || 0;
-  const completedItems = schedule.study_schedule_items?.filter((item: any) => item.is_completed).length || 0;
-  const completionRate = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
-
-  const handleExportPdf = async () => {
-    if (!schedule?.study_schedule_items?.length) {
+  const exportSchedulePdf = async (targetSchedule: any) => {
+    if (!targetSchedule?.study_schedule_items?.length) {
       alert('PDF oluşturmak için program verisi bulunamadı.');
       return;
     }
 
     try {
-      setIsExporting(true);
-      await exportStudySchedulePdf(schedule, {
+      setExportingScheduleId(targetSchedule.id || 'schedule');
+      await exportStudySchedulePdf(targetSchedule, {
         studentName,
-        teacherName: schedule.teacher?.full_name
+        teacherName: targetSchedule.teacher?.full_name
       });
     } catch (error) {
       console.error('Error exporting schedule pdf', error);
       alert('PDF oluşturulurken bir sorun oluştu.');
     } finally {
-      setIsExporting(false);
+      setExportingScheduleId(null);
     }
+  };
+
+  const handleExportPdf = async () => {
+    if (!schedule) {
+      alert('Aktif bir çalışma programı bulunamadı.');
+      return;
+    }
+    await exportSchedulePdf(schedule);
   };
 
   return (
     <div className="space-y-6">
+      {schedule ? (
+        <>
       {/* Header Card */}
-      <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between mb-4">
+      <div className="rounded-xl border border-indigo-100 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <div className="flex items-center space-x-2 mb-2">
+            <div className="flex items-center space-x-2 mb-2 text-indigo-700">
               <Calendar className="w-6 h-6" />
-              <h2 className="text-2xl font-bold">Haftalık Çalışma Programım</h2>
+              <h2 className="text-2xl font-bold text-indigo-900">Haftalık Çalışma Programım</h2>
             </div>
-            <p className="text-blue-100 text-sm">
-              {new Date(schedule.week_start_date).toLocaleDateString('tr-TR')} - {' '}
+            <p className="text-sm text-gray-500">
+              {new Date(schedule.week_start_date).toLocaleDateString('tr-TR')} -{' '}
               {new Date(schedule.week_end_date).toLocaleDateString('tr-TR')}
             </p>
           </div>
@@ -279,7 +311,7 @@ export default function StudentWeeklySchedule({ studentId, studentName }: Studen
             {/* Progress Circle */}
             <div className="flex flex-col items-center">
               <div className="relative w-20 h-20">
-                <svg className="transform -rotate-90 w-20 h-20">
+                <svg className="transform -rotate-90 w-20 h-20 text-indigo-200">
                   <circle
                     cx="40"
                     cy="40"
@@ -287,7 +319,7 @@ export default function StudentWeeklySchedule({ studentId, studentName }: Studen
                     stroke="currentColor"
                     strokeWidth="6"
                     fill="transparent"
-                    className="text-white/30"
+                    className="text-indigo-100"
                   />
                   <circle
                     cx="40"
@@ -298,40 +330,40 @@ export default function StudentWeeklySchedule({ studentId, studentName }: Studen
                     fill="transparent"
                     strokeDasharray={`${2 * Math.PI * 36}`}
                     strokeDashoffset={`${2 * Math.PI * 36 * (1 - completionRate / 100)}`}
-                    className="text-white transition-all duration-500"
+                    className="text-indigo-500 transition-all duration-500"
                   />
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-xl font-bold">{completionRate}%</span>
+                  <span className="text-xl font-bold text-indigo-900">{completionRate}%</span>
                 </div>
               </div>
-              <span className="text-xs text-blue-100 mt-1">Tamamlandı</span>
+              <span className="text-xs text-gray-500 mt-1">Tamamlandı</span>
             </div>
 
             <button
               type="button"
               onClick={handleExportPdf}
-              disabled={isExporting}
-              className="inline-flex items-center gap-2 rounded-lg bg-white/20 px-4 py-2 text-sm font-semibold text-white backdrop-blur hover:bg-white/30 disabled:opacity-60 disabled:hover:bg-white/20"
+              disabled={Boolean(exportingScheduleId)}
+              className="inline-flex items-center gap-2 rounded-lg border border-indigo-200 px-4 py-2 text-sm font-semibold text-indigo-600 hover:bg-indigo-50 disabled:opacity-60"
             >
               <Download className="h-4 w-4" />
-              {isExporting ? 'Hazırlanıyor...' : 'PDF indir'}
+              {exportingScheduleId ? 'Hazırlanıyor...' : 'PDF indir'}
             </button>
           </div>
         </div>
 
         {/* Teacher Info */}
-        <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3 flex items-center space-x-3">
-          <User className="w-5 h-5" />
+        <div className="mt-4 rounded-lg border border-indigo-100 bg-indigo-50 p-3 flex items-center space-x-3">
+          <User className="w-5 h-5 text-indigo-600" />
           <div>
-            <p className="text-sm opacity-90">Öğretmen</p>
-            <p className="font-semibold">{schedule.teacher?.full_name || 'Bilinmiyor'}</p>
+            <p className="text-sm text-indigo-600">Öğretmen</p>
+            <p className="font-semibold text-indigo-900">{schedule.teacher?.full_name || 'Bilinmiyor'}</p>
           </div>
         </div>
 
         {schedule.description && (
-          <div className="mt-3 bg-white/10 backdrop-blur-sm rounded-lg p-3">
-            <p className="text-sm">{schedule.description}</p>
+          <div className="mt-3 rounded-lg border border-gray-100 bg-gray-50 p-3 text-sm text-gray-600">
+            {schedule.description}
           </div>
         )}
       </div>
@@ -550,6 +582,143 @@ export default function StudentWeeklySchedule({ studentId, studentName }: Studen
           )}
         </div>
       </div>
+        </>
+      ) : (
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
+          <div className="text-center">
+            <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              Henüz Program Yok
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400">
+              Öğretmeniniz bu hafta için henüz bir çalışma programı yayınlamadı.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {(pastSchedules.length > 0 || pastLoading) && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Geçmiş Çalışma Programlarım
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Süresi tamamlanan programlar burada listelenir.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowPastSchedules(prev => !prev)}
+              className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-900/40"
+            >
+              <Clock className="h-4 w-4" />
+              {showPastSchedules ? 'Gizle' : 'Göster'} ({pastSchedules.length})
+            </button>
+          </div>
+          {showPastSchedules && (
+            pastLoading ? (
+              <div className="flex items-center justify-center py-6">
+                <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-blue-600"></div>
+              </div>
+            ) : pastSchedules.length === 0 ? (
+              <p className="mt-4 text-sm text-gray-500 text-center">
+                Henüz geçmiş program bulunmuyor.
+              </p>
+            ) : (
+              <div className="mt-4 space-y-3">
+                {pastSchedules.map(past => (
+                  <div
+                    key={past.id}
+                    className="rounded-xl border border-gray-100 bg-slate-50/80 p-4 dark:border-gray-800 dark:bg-gray-900/50"
+                  >
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                      <div>
+                        <p className="font-semibold text-gray-900 dark:text-white">{past.title}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {new Date(past.week_start_date).toLocaleDateString('tr-TR')} -{' '}
+                          {new Date(past.week_end_date).toLocaleDateString('tr-TR')}
+                          {past.teacher?.full_name ? ` • ${past.teacher.full_name}` : ''}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedPastSchedule(past)}
+                          className="rounded-full border border-indigo-200 px-3 py-1 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 dark:border-indigo-800 dark:text-indigo-200 dark:hover:bg-indigo-900/40"
+                        >
+                          Detayları Gör
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => exportSchedulePdf(past)}
+                          disabled={Boolean(exportingScheduleId)}
+                          className="inline-flex items-center gap-2 rounded-full border border-emerald-200 px-3 py-1 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 disabled:opacity-60 dark:border-emerald-800 dark:text-emerald-200 dark:hover:bg-emerald-900/40"
+                        >
+                          <Download className="h-4 w-4" />
+                          {exportingScheduleId === past.id ? 'Hazırlanıyor...' : 'PDF indir'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          )}
+        </div>
+      )}
+
+      {selectedPastSchedule && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-3xl rounded-2xl bg-white p-6 shadow-2xl dark:bg-gray-900">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {selectedPastSchedule.title}
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {new Date(selectedPastSchedule.week_start_date).toLocaleDateString('tr-TR')} -{' '}
+                  {new Date(selectedPastSchedule.week_end_date).toLocaleDateString('tr-TR')}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedPastSchedule(null)}
+                className="rounded-full bg-gray-100 p-2 text-gray-500 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="mt-4 space-y-3 max-h-[70vh] overflow-y-auto pr-2">
+              {selectedPastSchedule.study_schedule_items?.length ? (
+                selectedPastSchedule.study_schedule_items.map((item: any) => (
+                  <div key={item.id} className="rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+                    <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-300">
+                      <span>
+                        {DAYS_OF_WEEK.find(day => day.value === item.day_of_week)?.label || 'Gün'} • {item.start_time} - {item.end_time}
+                      </span>
+                      {item.subject && (
+                        <span className="font-semibold text-gray-900 dark:text-white">{item.subject}</span>
+                      )}
+                    </div>
+                    {item.goal && (
+                      <p className="mt-1 text-sm text-blue-600 dark:text-blue-300">{item.goal}</p>
+                    )}
+                    {(item.description || item.topic) && (
+                      <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                        {item.description || item.topic}
+                      </p>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-gray-500">Bu program için detaylı kayıt bulunamadı.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {feedbackModalItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -687,35 +856,35 @@ export default function StudentWeeklySchedule({ studentId, studentName }: Studen
       )}
 
       {/* Weekly Summary */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+      <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
+        <h3 className="text-lg font-bold text-gray-900 mb-4">
           Haftalık Özet
         </h3>
-        
+
         <div className="grid grid-cols-3 gap-4">
-          <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+          <div className="text-center p-4 rounded-lg bg-blue-50">
             <div className="text-3xl font-bold text-blue-600 mb-1">
               {totalItems}
             </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">
+            <div className="text-sm text-gray-600">
               Toplam Ders
             </div>
           </div>
 
-          <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+          <div className="text-center p-4 rounded-lg bg-green-50">
             <div className="text-3xl font-bold text-green-600 mb-1">
               {completedItems}
             </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">
+            <div className="text-sm text-gray-600">
               Tamamlanan
             </div>
           </div>
 
-          <div className="text-center p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+          <div className="text-center p-4 rounded-lg bg-orange-50">
             <div className="text-3xl font-bold text-orange-600 mb-1">
               {totalItems - completedItems}
             </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">
+            <div className="text-sm text-gray-600">
               Kalan
             </div>
           </div>
@@ -724,14 +893,14 @@ export default function StudentWeeklySchedule({ studentId, studentName }: Studen
         {/* Progress Bar */}
         <div className="mt-6">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <span className="text-sm font-medium text-gray-700">
               Haftalık İlerleme
             </span>
             <span className="text-sm font-bold text-blue-600">
               {completionRate}%
             </span>
           </div>
-          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+          <div className="w-full bg-gray-200 rounded-full h-3">
             <div
               className="bg-gradient-to-r from-blue-500 to-purple-600 h-3 rounded-full transition-all duration-500"
               style={{ width: `${completionRate}%` }}

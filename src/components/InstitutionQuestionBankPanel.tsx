@@ -39,8 +39,8 @@ interface QuestionFormState {
   explanation: string;
   tags: string;
   published: boolean;
-  page_number?: number;
-  page_image_url?: string;
+  page_number?: number | null;
+  page_image_url?: string | null;
 }
 
 interface BlueprintFormState {
@@ -92,19 +92,19 @@ interface ModalProps {
 function Modal({ open, title, onClose, children }: ModalProps) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4 py-6">
-      <div className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-lg">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+    <div className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-black/40 px-4 py-6 sm:py-10">
+      <div className="relative w-full max-w-3xl rounded-2xl bg-white shadow-xl sm:rounded-3xl">
+        <div className="sticky top-0 flex items-center justify-between border-b border-gray-100 bg-white px-5 py-4 sm:px-6">
+          <h2 className="text-base font-semibold text-gray-900 sm:text-lg">{title}</h2>
           <button
             type="button"
             onClick={onClose}
-            className="rounded border border-gray-200 px-3 py-1 text-sm text-gray-500 hover:border-gray-300 hover:text-gray-700"
+            className="rounded border border-gray-200 px-3 py-1 text-sm text-gray-500 transition hover:border-gray-300 hover:text-gray-700"
           >
             Kapat
           </button>
         </div>
-        {children}
+        <div className="max-h-[80vh] overflow-y-auto px-5 py-4 sm:px-6">{children}</div>
       </div>
     </div>
   );
@@ -245,8 +245,8 @@ export default function InstitutionQuestionBankPanel({ session }: InstitutionQue
       explanation: question.explanation ?? '',
       tags: (question.tags ?? []).join(', '),
       published: question.is_published,
-      page_number: question.page_number,
-      page_image_url: question.page_image_url,
+      page_number: question.page_number ?? null,
+      page_image_url: question.page_image_url ?? null,
     });
     setQuestionMode('edit');
     setQuestionModalOpen(true);
@@ -620,17 +620,17 @@ export default function InstitutionQuestionBankPanel({ session }: InstitutionQue
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-start gap-3">
-                      {question.page_image_url && (
+                      {question.page_image_url ? (
                         <div className="flex-shrink-0">
                           <img
-                            src={question.page_image_url}
+                            src={question.page_image_url ?? undefined}
                             alt={`Soru ${question.question_number || ''} görseli`}
                             className="h-16 w-16 rounded border border-gray-200 object-cover cursor-pointer hover:ring-2 hover:ring-blue-400"
-                            onClick={() => window.open(question.page_image_url, '_blank')}
+                            onClick={() => window.open(question.page_image_url ?? undefined, '_blank')}
                             title="Görseli büyüt"
                           />
                         </div>
-                      )}
+                      ) : null}
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-gray-900">
                           {question.question_prompt || question.question_text}
@@ -824,10 +824,10 @@ export default function InstitutionQuestionBankPanel({ session }: InstitutionQue
                     Soru Görseli {questionForm.page_number && `(Sayfa ${questionForm.page_number})`}
                   </p>
                   <img
-                    src={questionForm.page_image_url}
+                    src={questionForm.page_image_url ?? undefined}
                     alt="Soru görseli"
                     className="w-full rounded border border-gray-300 cursor-pointer hover:ring-2 hover:ring-blue-400"
-                    onClick={() => window.open(questionForm.page_image_url!, '_blank')}
+                    onClick={() => window.open(questionForm.page_image_url ?? undefined, '_blank')}
                   />
                   <p className="text-xs text-gray-500 mt-2">
                     Görseli büyütmek için tıklayın
