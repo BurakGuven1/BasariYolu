@@ -25,11 +25,7 @@ CREATE TABLE IF NOT EXISTS ai_questions (
   tokens_used INTEGER,
   model_used VARCHAR(50) DEFAULT 'gpt-4o-mini',
   category VARCHAR(100), -- e.g., 'Matematik', 'Fizik', 'Genel'
-  asked_at TIMESTAMPTZ DEFAULT NOW(),
-
-  -- Indexes for faster queries
-  INDEX idx_ai_questions_student (student_id, asked_at DESC),
-  INDEX idx_ai_questions_category (category)
+  asked_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Function to get current week's credits for a student
@@ -238,6 +234,7 @@ CREATE POLICY "Students can insert their own AI questions"
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS idx_ai_credits_student_week ON ai_credits(student_id, week_start_date);
 CREATE INDEX IF NOT EXISTS idx_ai_questions_student_date ON ai_questions(student_id, asked_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ai_questions_category ON ai_questions(category);
 
 -- Comments
 COMMENT ON TABLE ai_credits IS 'Tracks weekly AI question credits for professional package students';
