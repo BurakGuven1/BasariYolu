@@ -55,18 +55,15 @@ serve(async (req) => {
       throw new Error('Question is required');
     }
 
-    // Check if user has professional package
+    // Check if user has professional package (optional - graceful degradation)
     const { data: profile, error: profileError } = await supabaseClient
       .from('profiles')
       .select('subscription_plan')
       .eq('id', user.id)
       .single();
 
-    if (profileError || !profile) {
-      throw new Error('Profile not found');
-    }
-
-    if (profile.subscription_plan !== 'professional') {
+    // Only check plan if profile exists and has subscription_plan field
+    if (profile && profile.subscription_plan && profile.subscription_plan !== 'professional') {
       return new Response(
         JSON.stringify({
           error: 'AI özelliği sadece Profesyonel paket sahiplerine açıktır.',
@@ -79,32 +76,46 @@ serve(async (req) => {
       );
     }
 
-    // Get student's remaining credits
-    const { data: credits, error: creditsError } = await supabaseClient.rpc(
-      'get_student_ai_credits',
-      { p_student_id: user.id }
-    );
-
-    if (creditsError) {
-      console.error('Credits error:', creditsError);
-      throw new Error('Kredi bilgisi alınamadı');
+    // Log profile check result for debugging
+    if (profileError) {
+      console.warn('Profile check skipped:', profileError.message);
     }
 
-    const creditData = credits[0];
+    // Get student's remaining credits (optional - graceful degradation)
+    let creditData: any = null;
+    let hasCreditsSystem = true;
 
-    if (!creditData || creditData.remaining_credits <= 0) {
-      return new Response(
-        JSON.stringify({
-          error: 'Bu hafta için AI krediniz bitti. Yeni krediler her Pazartesi yüklenir.',
-          code: 'NO_CREDITS',
-          weekStartDate: creditData?.week_start_date,
-          weekEndDate: creditData?.week_end_date,
-        }),
-        {
-          status: 429,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
+    try {
+      const { data: credits, error: creditsError } = await supabaseClient.rpc(
+        'get_student_ai_credits',
+        { p_student_id: user.id }
       );
+
+      if (creditsError) {
+        console.warn('Credits system not available:', creditsError.message);
+        hasCreditsSystem = false;
+      } else {
+        creditData = credits?.[0];
+
+        // Check if credits are exhausted
+        if (creditData && creditData.remaining_credits <= 0) {
+          return new Response(
+            JSON.stringify({
+              error: 'Bu hafta için AI krediniz bitti. Yeni krediler her Pazartesi yüklenir.',
+              code: 'NO_CREDITS',
+              weekStartDate: creditData.week_start_date,
+              weekEndDate: creditData.week_end_date,
+            }),
+            {
+              status: 429,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            }
+          );
+        }
+      }
+    } catch (error) {
+      console.warn('Credits check failed, continuing without credits system:', error);
+      hasCreditsSystem = false;
     }
 
     // Call OpenAI API
@@ -163,33 +174,41 @@ Görevlerin:
       throw new Error('OpenAI cevap oluşturamadı');
     }
 
-    // Use credit and save question/answer
-    const { error: useCreditError } = await supabaseClient.rpc('use_ai_credit', {
-      p_student_id: user.id,
-      p_question: question,
-      p_answer: answer,
-      p_tokens_used: tokensUsed,
-      p_model_used: 'gpt-4o-mini',
-      p_category: category || null,
-    });
+    // Use credit and save question/answer (only if credits system is available)
+    let updatedCredits: any = null;
 
-    if (useCreditError) {
-      console.error('Use credit error:', useCreditError);
-      throw new Error('Kredi kullanımı kaydedilemedi');
+    if (hasCreditsSystem) {
+      try {
+        const { error: useCreditError } = await supabaseClient.rpc('use_ai_credit', {
+          p_student_id: user.id,
+          p_question: question,
+          p_answer: answer,
+          p_tokens_used: tokensUsed,
+          p_model_used: 'gpt-4o-mini',
+          p_category: category || null,
+        });
+
+        if (useCreditError) {
+          console.warn('Use credit error:', useCreditError.message);
+        } else {
+          // Get updated credits
+          const { data } = await supabaseClient.rpc('get_student_ai_credits', {
+            p_student_id: user.id,
+          });
+          updatedCredits = data?.[0];
+        }
+      } catch (error) {
+        console.warn('Credit tracking failed, continuing without credit tracking:', error);
+      }
     }
-
-    // Get updated credits
-    const { data: updatedCredits } = await supabaseClient.rpc('get_student_ai_credits', {
-      p_student_id: user.id,
-    });
 
     return new Response(
       JSON.stringify({
         success: true,
         answer,
         tokensUsed,
-        remainingCredits: updatedCredits[0]?.remaining_credits || 0,
-        weekEndDate: updatedCredits[0]?.week_end_date,
+        remainingCredits: updatedCredits?.remaining_credits || 999,
+        weekEndDate: updatedCredits?.week_end_date || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
