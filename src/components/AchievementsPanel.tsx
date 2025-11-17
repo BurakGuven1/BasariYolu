@@ -50,15 +50,28 @@ export default function AchievementsPanel({ studentId, studentName }: Achievemen
 
   const fetchQuestionCount = async () => {
     try {
-      const { count, error } = await supabase
-        .from('study_sessions')
-        .select('*', { count: 'exact', head: true })
-        .eq('student_id', studentId);
+      // Get REAL question count from student_solved_questions
+      const { data, error } = await supabase
+        .from('student_question_stats')
+        .select('total_questions_solved')
+        .eq('student_id', studentId)
+        .single();
 
-      if (error) throw error;
-      setQuestionCount(count || 0);
+      if (error) {
+        // Fallback: count from student_solved_questions directly
+        const { count, error: countError } = await supabase
+          .from('student_solved_questions')
+          .select('question_id', { count: 'exact', head: true })
+          .eq('student_id', studentId);
+
+        if (countError) throw countError;
+        setQuestionCount(count || 0);
+      } else {
+        setQuestionCount(data?.total_questions_solved || 0);
+      }
     } catch (error) {
       console.error('Error fetching question count:', error);
+      setQuestionCount(0);
     }
   };
 
