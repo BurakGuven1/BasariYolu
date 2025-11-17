@@ -132,6 +132,7 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
     const parentUser = {
       id: `parent_${student.id}_${Date.now()}`,
       email: `parent_${student.id}@temp.com`,
+      userType: 'parent' as const,
       profile: {
         full_name: 'Veli',
         user_type: 'parent'
