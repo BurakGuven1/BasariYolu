@@ -37,7 +37,8 @@ CREATE TABLE IF NOT EXISTS public.student_solved_questions (
 CREATE INDEX IF NOT EXISTS idx_student_solved_questions_student ON public.student_solved_questions(student_id);
 CREATE INDEX IF NOT EXISTS idx_student_solved_questions_subject ON public.student_solved_questions(student_id, subject);
 CREATE INDEX IF NOT EXISTS idx_student_solved_questions_solved_at ON public.student_solved_questions(solved_at DESC);
-CREATE INDEX IF NOT EXISTS idx_student_solved_questions_week ON public.student_solved_questions(student_id, DATE_TRUNC('week', solved_at));
+CREATE INDEX IF NOT EXISTS idx_student_solved_questions_student_date ON public.student_solved_questions(student_id, solved_at DESC);
+CREATE INDEX IF NOT EXISTS idx_student_solved_questions_date ON public.student_solved_questions(solved_date);
 
 -- ============================================================================
 -- TRIGGER: Auto-populate solved_date from solved_at
