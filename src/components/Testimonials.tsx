@@ -90,21 +90,21 @@ export default function Testimonials() {
   const currentTestimonial = testimonials[currentIndex];
 
   return (
-    <div className="bg-gradient-to-br from-purple-50 via-blue-50 to-cyan-50 dark:from-gray-800 dark:to-gray-900 py-16">
+    <div className="bg-white py-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+          <h2 className="text-4xl font-bold text-gray-900 mb-4">
             Öğrencilerimiz Ne Diyor?
           </h2>
-          <p className="text-xl text-gray-600 dark:text-gray-300">
+          <p className="text-xl text-gray-600">
             Binlerce öğrencinin başarı hikayesine ortak olun
           </p>
         </div>
 
         {/* Main testimonial */}
         <div className="relative max-w-4xl mx-auto mb-12">
-          <div className="bg-white dark:from-gray-800 dark:to-gray-700 dark:bg-gradient-to-br rounded-3xl p-8 shadow-xl border-2 border-purple-100 dark:border-gray-700">
-            <Quote className="w-12 h-12 text-blue-600 dark:text-blue-400 mb-4 opacity-50" />
+          <div className="bg-white rounded-3xl p-8 shadow-xl border border-indigo-50">
+            <Quote className="w-12 h-12 text-indigo-400 mb-4 opacity-50" />
 
             <div className="mb-6">
               <div className="flex items-center gap-1 mb-4">
@@ -113,7 +113,7 @@ export default function Testimonials() {
                 ))}
               </div>
 
-              <p className="text-xl text-gray-700 dark:text-gray-200 leading-relaxed mb-6 italic">
+              <p className="text-xl text-gray-700 leading-relaxed mb-6 italic">
                 "{currentTestimonial.text}"
               </p>
 
@@ -121,21 +121,21 @@ export default function Testimonials() {
                 <div className="flex items-center gap-4">
                   <div className="text-5xl">{currentTestimonial.image}</div>
                   <div>
-                    <div className="font-bold text-gray-900 dark:text-white text-lg">
+                    <div className="font-bold text-gray-900 text-lg">
                       {currentTestimonial.name}
                     </div>
-                    <div className="text-gray-600 dark:text-gray-400">
+                    <div className="text-gray-600">
                       {currentTestimonial.role}
                     </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-500">
+                    <div className="text-sm text-gray-500">
                       {currentTestimonial.school}
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-white dark:bg-gray-800 px-4 py-2 rounded-lg shadow-md">
-                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Başarı</div>
-                  <div className="font-bold text-blue-600 dark:text-blue-400">
+                <div className="bg-indigo-50 px-4 py-2 rounded-lg shadow-md">
+                  <div className="text-xs text-gray-500 mb-1">Başarı</div>
+                  <div className="font-bold text-indigo-700">
                     {currentTestimonial.achievement}
                   </div>
                 </div>
@@ -146,7 +146,7 @@ export default function Testimonials() {
           {/* Navigation buttons */}
           <button
             onClick={prevTestimonial}
-            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 bg-white dark:bg-gray-800 p-3 rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-110"
+            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 bg-white p-3 rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-110"
             aria-label="Önceki"
           >
             <ChevronLeft className="w-6 h-6 text-gray-600 dark:text-gray-300" />
@@ -154,7 +154,7 @@ export default function Testimonials() {
 
           <button
             onClick={nextTestimonial}
-            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 bg-white dark:bg-gray-800 p-3 rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-110"
+            className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 bg-white p-3 rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-110"
             aria-label="Sonraki"
           >
             <ChevronRight className="w-6 h-6 text-gray-600 dark:text-gray-300" />
@@ -173,7 +173,7 @@ export default function Testimonials() {
                   : 'opacity-50 hover:opacity-100'
               }`}
             >
-              <div className="text-4xl bg-white dark:bg-gray-800 rounded-full p-2 shadow-md">
+              <div className="text-4xl bg-white rounded-full p-2 shadow-md">
                 {testimonial.image}
               </div>
               {index === currentIndex && (
@@ -185,17 +185,17 @@ export default function Testimonials() {
 
         {/* Trust indicators */}
         <div className="mt-12 text-center">
-          <div className="inline-flex flex-wrap items-center justify-center gap-6 text-sm text-gray-600 dark:text-gray-400">
+          <div className="inline-flex flex-wrap items-center justify-center gap-6 text-sm text-gray-600">
             <div className="flex items-center gap-2">
               <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
               <span className="font-semibold">4.9/5</span>
               <span>Ortalama Puan</span>
             </div>
-            <div className="w-px h-6 bg-gray-300 dark:bg-gray-600" />
+            <div className="w-px h-6 bg-gray-200" />
             <div>
               <span className="font-semibold">1,200+</span> Mutlu Öğrenci
             </div>
-            <div className="w-px h-6 bg-gray-300 dark:bg-gray-600" />
+            <div className="w-px h-6 bg-gray-200" />
             <div>
               <span className="font-semibold">95%</span> Başarı Oranı
             </div>

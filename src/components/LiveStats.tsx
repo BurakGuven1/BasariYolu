@@ -126,7 +126,7 @@ export default function LiveStats() {
     },
     {
       icon: <BookOpen className="w-8 h-8" />,
-      label: 'Bu Hafta Çözülen Soru',
+      label: 'Çözülen Soru',
       value: animatedStats.questionsThisWeek,
       suffix: '+',
       color: 'from-purple-500 to-pink-500',
@@ -149,14 +149,14 @@ export default function LiveStats() {
 
   if (loading) {
     return (
-      <div className="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-800 dark:to-gray-900 py-16">
+      <div className="bg-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-full text-sm font-semibold mb-4">
+            <div className="inline-flex items-center gap-2 bg-indigo-50 text-indigo-700 px-4 py-2 rounded-full text-sm font-semibold mb-4">
               <Sparkles className="w-4 h-4" />
               Canlı İstatistikler
             </div>
-            <h2 className="text-4xl font-bold text-gray-900 dark:text-white">
+            <h2 className="text-4xl font-bold text-gray-900">
               Yükleniyor...
             </h2>
           </div>
@@ -166,17 +166,17 @@ export default function LiveStats() {
   }
 
   return (
-    <div className="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-800 dark:to-gray-900 py-16">
+    <div className="bg-white py-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-full text-sm font-semibold mb-4 animate-pulse">
+          <div className="inline-flex items-center gap-2 bg-indigo-50 text-indigo-700 px-4 py-2 rounded-full text-sm font-semibold mb-4 animate-pulse">
             <Sparkles className="w-4 h-4" />
-            Canlı İstatistikler
+            Haftalık Canlı İstatistikler
           </div>
-          <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+          <h2 className="text-4xl font-bold text-gray-900 mb-4">
             Binlerce Öğrenci Güveniyor
           </h2>
-          <p className="text-xl text-gray-600 dark:text-gray-300">
+          <p className="text-xl text-gray-600">
             Her gün büyüyen başarı hikayelerimize sen de katıl
           </p>
         </div>
@@ -191,16 +191,16 @@ export default function LiveStats() {
               <div className="absolute inset-0 bg-gradient-to-r opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl blur-xl"
                    style={{ background: `linear-gradient(135deg, ${stat.color})` }}
               />
-              <div className="relative bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
+              <div className="relative bg-white rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2">
                 <div className={`inline-flex p-3 rounded-xl bg-gradient-to-r ${stat.color} text-white mb-4`}>
                   {stat.icon}
                 </div>
-                <div className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
+                <div className="text-4xl font-bold text-gray-900 mb-2">
                   {stat.prefix}
                   {stat.value.toLocaleString('tr-TR')}
                   {stat.suffix}
                 </div>
-                <div className="text-sm text-gray-600 dark:text-gray-300 font-medium">
+                <div className="text-sm text-gray-600 font-medium">
                   {stat.label}
                 </div>
               </div>
@@ -209,15 +209,15 @@ export default function LiveStats() {
         </div>
 
         {/* Trust badges */}
-        <div className="mt-12 flex flex-wrap justify-center items-center gap-8 opacity-60">
+        <div className="mt-12 flex flex-wrap justify-center items-center gap-8 text-gray-500">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />
-            <span className="text-sm text-gray-600 dark:text-gray-400">Veriler gerçek zamanlı güncelleniyor</span>
+            <span className="text-sm text-gray-500">Veriler gerçek zamanlı güncelleniyor</span>
           </div>
-          <div className="text-sm text-gray-600 dark:text-gray-400">
+          <div className="text-sm text-gray-500">
             🔒 %100 Güvenli Platform
           </div>
-          <div className="text-sm text-gray-600 dark:text-gray-400">
+          <div className="text-sm text-gray-500">
             ⚡ 7/24 Aktif Destek
           </div>
         </div>

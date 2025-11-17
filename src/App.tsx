@@ -8,6 +8,7 @@ import { packages } from './data/packages';
 import Navbar from './components/Navbar';
 import PricingSection from './components/PricingSection';
 import TeacherSection from './components/TeacherSection';
+import SiteFooter from './components/SiteFooter';
 import LoginModal from './components/LoginModal';
 import StudentDashboard from './components/StudentDashboard';
 import ParentDashboard from './components/ParentDashboard';
@@ -18,7 +19,6 @@ import HeroV2 from './components/HeroV2';
 import ProblemSection from './components/ProblemSection';
 import VisionSection from './components/VisionSection';
 import ProductShowcase from './components/ProductShowcase';
-import SocialProof from './components/SocialProof';
 import CTASection from './components/CTASection';
 import UpgradeModal from './components/UpgradeModal';
 import BlogList from './components/BlogList';
@@ -421,7 +421,6 @@ function App() {
       <ProblemSection />
       <VisionSection />
       <ProductShowcase />
-      <SocialProof />
       <Testimonials />
       <PricingSection onSelectPackage={handleSelectPackage} />
       <ExamTopicsSection
@@ -431,78 +430,12 @@ function App() {
       />
       <TeacherSection />
       <CTASection onGetStarted={handleGetStarted} />
-
-      <footer className="bg-gradient-to-br from-gray-800 via-gray-900 to-indigo-950 dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-950 dark:to-black text-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-4 gap-8">
-            <div>
-              <h3 className="text-lg font-semibold mb-4">BaşarıYolu</h3>
-              <p className="text-gray-400 text-sm">
-                Türkiye'nin en kapsamlı öğrenci takip platformu.
-                Yapay zeka desteğiyle akademik başarınızı artırın.
-              </p>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-3">Özellikler</h4>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li>Deneme Takibi</li>
-                <li>AI Analiz</li>
-                <li>Veli Paneli</li>
-                <li>Ödev Sistemi</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-3">İçerik</h4>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li>
-                  <button onClick={handleNavigateToBlog} className="hover:text-white">
-                    Blog
-                  </button>
-                </li>
-                <li>Çalışma Teknikleri</li>
-                <li>Sınav Stratejileri</li>
-                <li>Motivasyon</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-3">Yasal</h4>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li>
-                  <button onClick={handleNavigateToTerms} className="hover:text-white">
-                    Kullanım Şartları
-                  </button>
-                </li>
-                <li>
-                  <button onClick={handleNavigateToPrivacy} className="hover:text-white">
-                    Gizlilik Politikası
-                  </button>
-                </li>
-                <li>
-                  <button onClick={handleNavigateToRefund} className="hover:text-white">
-                    İptal ve İade
-                  </button>
-                </li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400 text-sm">
-            <p>&copy; {new Date().getFullYear()} BaşarıYolu. Tüm hakları saklıdır.</p>
-            <p className="mt-2 text-xs">
-              <button onClick={handleNavigateToTerms} className="hover:text-white mx-2">
-                Kullanım Şartları
-              </button>
-              |
-              <button onClick={handleNavigateToPrivacy} className="hover:text-white mx-2">
-                Gizlilik
-              </button>
-              |
-              <button onClick={handleNavigateToRefund} className="hover:text-white mx-2">
-                İade Politikası
-              </button>
-            </p>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter
+        onNavigateToBlog={handleNavigateToBlog}
+        onNavigateToTerms={handleNavigateToTerms}
+        onNavigateToPrivacy={handleNavigateToPrivacy}
+        onNavigateToRefund={handleNavigateToRefund}
+      />
     </div>
   );
 

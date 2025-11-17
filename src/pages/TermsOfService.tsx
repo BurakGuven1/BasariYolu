@@ -44,7 +44,7 @@ export default function TermsOfService() {
                 <li>Ödemeler Paddle.com aracılığıyla güvenli şekilde işlenir</li>
                 <li>Aboneliğinizi istediğiniz zaman iptal edebilirsiniz</li>
                 <li>İptal sonrası mevcut dönem sonuna kadar erişim devam eder</li>
-                <li>İade politikası: İlk 14 gün içinde tam iade garantisi</li>
+                <li>İade politikası: İlk 7 gün içinde kısmi iade garantisi</li>
               </ul>
             </section>
 
