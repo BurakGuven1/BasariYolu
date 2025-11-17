@@ -316,12 +316,12 @@ export default function AIChatPanel() {
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
                 placeholder="Sorunuzu buraya yazın..."
-                disabled={loading || (credits?.remaining_credits || 0) <= 0}
+                disabled={loading || (credits !== null && credits.remaining_credits <= 0)}
                 className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
               />
               <button
                 type="submit"
-                disabled={loading || !question.trim() || (credits?.remaining_credits || 0) <= 0}
+                disabled={loading || !question.trim() || (credits !== null && credits.remaining_credits <= 0)}
                 className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg font-semibold hover:from-blue-600 hover:to-purple-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {loading ? (
