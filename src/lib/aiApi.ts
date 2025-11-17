@@ -27,6 +27,8 @@ export interface AskAIResponse {
   tokensUsed: number;
   remainingCredits: number;
   weekEndDate: string;
+  conversationId?: string;
+  modelUsed?: string;
 }
 
 export interface AskAIError {
@@ -57,12 +59,24 @@ export async function getAICredits(studentId: string): Promise<AICredits | null>
   }
 }
 
+export interface Message {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  image_url?: string;
+}
+
 /**
  * Ask AI a question (uses Edge Function)
  */
 export async function askAI(
   question: string,
-  category?: string
+  options?: {
+    category?: string;
+    conversationId?: string;
+    messages?: Message[];
+    imageUrl?: string;
+    imageBase64?: string;
+  }
 ): Promise<AskAIResponse> {
   try {
     // Get session token
@@ -85,7 +99,11 @@ export async function askAI(
         },
         body: JSON.stringify({
           question,
-          category,
+          category: options?.category,
+          conversationId: options?.conversationId,
+          messages: options?.messages,
+          imageUrl: options?.imageUrl,
+          imageBase64: options?.imageBase64,
         }),
       }
     );
@@ -175,4 +193,102 @@ export function formatAIDate(dateString: string): string {
     month: 'short',
     year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
   });
+}
+
+/**
+ * Get student's conversations
+ */
+export async function getConversations(studentId: string, limit: number = 20) {
+  try {
+    const { data, error } = await supabase.rpc('get_student_conversations', {
+      p_student_id: studentId,
+      p_limit: limit,
+    });
+
+    if (error) {
+      console.error('Error fetching conversations:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in getConversations:', error);
+    return [];
+  }
+}
+
+/**
+ * Get conversation messages
+ */
+export async function getConversationMessages(conversationId: string, limit: number = 50) {
+  try {
+    const { data, error } = await supabase.rpc('get_conversation_messages', {
+      p_conversation_id: conversationId,
+      p_limit: limit,
+    });
+
+    if (error) {
+      console.error('Error fetching conversation messages:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in getConversationMessages:', error);
+    return [];
+  }
+}
+
+/**
+ * Delete a conversation
+ */
+export async function deleteConversation(conversationId: string) {
+  try {
+    const { error } = await supabase
+      .from('ai_conversations')
+      .delete()
+      .eq('id', conversationId);
+
+    if (error) {
+      console.error('Error deleting conversation:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in deleteConversation:', error);
+    return false;
+  }
+}
+
+/**
+ * Upload image to Supabase Storage
+ */
+export async function uploadAIImage(file: File, studentId: string): Promise<string | null> {
+  try {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${studentId}/${Date.now()}.${fileExt}`;
+
+    const { data, error } = await supabase.storage
+      .from('ai-chat-images')
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+
+    if (error) {
+      console.error('Error uploading image:', error);
+      return null;
+    }
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('ai-chat-images')
+      .getPublicUrl(data.path);
+
+    return urlData.publicUrl;
+  } catch (error) {
+    console.error('Error in uploadAIImage:', error);
+    return null;
+  }
 }
