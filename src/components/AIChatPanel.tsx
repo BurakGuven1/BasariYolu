@@ -7,8 +7,6 @@ import {
   CheckCircle,
   Loader2,
   Brain,
-  TrendingUp,
-  Calendar,
   MessageSquare,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';

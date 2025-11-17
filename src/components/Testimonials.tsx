@@ -149,7 +149,7 @@ export default function Testimonials() {
             className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 bg-white p-3 rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-110"
             aria-label="Önceki"
           >
-            <ChevronLeft className="w-6 h-6 text-gray-600 dark:text-gray-300" />
+            <ChevronLeft className="w-6 h-6 text-gray-600" />
           </button>
 
           <button
@@ -157,7 +157,7 @@ export default function Testimonials() {
             className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 bg-white p-3 rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-110"
             aria-label="Sonraki"
           >
-            <ChevronRight className="w-6 h-6 text-gray-600 dark:text-gray-300" />
+            <ChevronRight className="w-6 h-6 text-gray-600" />
           </button>
         </div>
 
@@ -169,7 +169,7 @@ export default function Testimonials() {
               onClick={() => setCurrentIndex(index)}
               className={`relative transition-all ${
                 index === currentIndex
-                  ? 'scale-110 ring-4 ring-blue-500 dark:ring-blue-400'
+                  ? 'scale-110 ring-4 ring-blue-500'
                   : 'opacity-50 hover:opacity-100'
               }`}
             >
