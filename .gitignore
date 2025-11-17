@@ -20,6 +20,10 @@ build/
 .env.production.local
 .env.example
 
+backend/venv/
+__pycache__/
+*.pyc
+
 # Supabase
 .supabase/
 
