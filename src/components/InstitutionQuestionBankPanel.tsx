@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Plus, Search, Trash2, Edit3, CheckCircle2, Circle, FilePlus } from 'lucide-react';
+import { Search, Trash2, Edit3, CheckCircle2, Circle, FilePlus, Upload, Image as ImageIcon } from 'lucide-react';
 import type { InstitutionSession } from '../lib/institutionApi';
 import type {
   InstitutionExamBlueprint,
@@ -20,6 +20,7 @@ import {
   updateInstitutionExamBlueprint,
   updateInstitutionQuestion,
 } from '../lib/institutionQuestionApi';
+import InstitutionPDFQuestionUpload from './InstitutionPDFQuestionUpload';
 
 const SUBJECTS = ['Turkce', 'Matematik', 'Fen Bilimleri', 'Sosyal Bilgiler', 'Ingilizce', 'Din Kulturu'];
 const PAGE_SIZE = 20;
@@ -38,6 +39,8 @@ interface QuestionFormState {
   explanation: string;
   tags: string;
   published: boolean;
+  page_number?: number | null;
+  page_image_url?: string | null;
 }
 
 interface BlueprintFormState {
@@ -89,19 +92,19 @@ interface ModalProps {
 function Modal({ open, title, onClose, children }: ModalProps) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4 py-6">
-      <div className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-lg dark:bg-gray-900">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h2>
+    <div className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-black/40 px-4 py-6 sm:py-10">
+      <div className="relative w-full max-w-3xl rounded-2xl bg-white shadow-xl sm:rounded-3xl">
+        <div className="sticky top-0 flex items-center justify-between border-b border-gray-100 bg-white px-5 py-4 sm:px-6">
+          <h2 className="text-base font-semibold text-gray-900 sm:text-lg">{title}</h2>
           <button
             type="button"
             onClick={onClose}
-            className="rounded border border-gray-200 px-3 py-1 text-sm text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:border-gray-700 dark:text-gray-300"
+            className="rounded border border-gray-200 px-3 py-1 text-sm text-gray-500 transition hover:border-gray-300 hover:text-gray-700"
           >
             Kapat
           </button>
         </div>
-        {children}
+        <div className="max-h-[80vh] overflow-y-auto px-5 py-4 sm:px-6">{children}</div>
       </div>
     </div>
   );
@@ -142,6 +145,8 @@ export default function InstitutionQuestionBankPanel({ session }: InstitutionQue
   const [blueprintModalOpen, setBlueprintModalOpen] = useState(false);
   const [blueprintForm, setBlueprintForm] = useState<BlueprintFormState>(emptyBlueprintForm());
   const [blueprintMode, setBlueprintMode] = useState<'create' | 'edit'>('create');
+
+  const [pdfUploadModalOpen, setPdfUploadModalOpen] = useState(false);
 
   const [feedback, setFeedback] = useState<Feedback>(null);
 
@@ -225,14 +230,6 @@ export default function InstitutionQuestionBankPanel({ session }: InstitutionQue
     return () => clearTimeout(timer);
   }, [feedback]);
 
-  const openCreateQuestion = () => {
-    const subject = subjectFilter !== 'all' ? subjectFilter : SUBJECTS[0];
-    const topic = topicFilter !== 'all' ? topicFilter : '';
-    setQuestionForm(emptyQuestionForm(subject, topic));
-    setQuestionMode('create');
-    setQuestionModalOpen(true);
-  };
-
   const openEditQuestion = (question: InstitutionQuestion) => {
     setQuestionForm({
       id: question.id,
@@ -248,6 +245,8 @@ export default function InstitutionQuestionBankPanel({ session }: InstitutionQue
       explanation: question.explanation ?? '',
       tags: (question.tags ?? []).join(', '),
       published: question.is_published,
+      page_number: question.page_number ?? null,
+      page_image_url: question.page_image_url ?? null,
     });
     setQuestionMode('edit');
     setQuestionModalOpen(true);
@@ -463,19 +462,19 @@ export default function InstitutionQuestionBankPanel({ session }: InstitutionQue
     <section className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Soru bankasi</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Sorularinizi ders ve konulara gore kaydedip sinav taslaklarina donusturun.
+          <h2 className="text-lg font-semibold text-gray-900">Soru bankasi</h2>
+          <p className="text-sm text-gray-500">
+            PDF'den sorularinizi yukleyip ders ve konulara gore duzenleyin, sinav taslaklarina donusturun.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={openCreateQuestion}
-            className="inline-flex items-center gap-2 rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            onClick={() => setPdfUploadModalOpen(true)}
+            className="inline-flex items-center gap-2 rounded bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700"
           >
-            <Plus className="h-4 w-4" />
-            Yeni soru
+            <Upload className="h-4 w-4" />
+            PDF'den Yükle
           </button>
           <button
             type="button"
@@ -489,27 +488,27 @@ export default function InstitutionQuestionBankPanel({ session }: InstitutionQue
       </header>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <div className="rounded border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900">
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-300">Toplam soru</p>
-          <p className="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">
+        <div className="rounded border border-gray-200 bg-white p-4 shadow-sm">
+          <p className="text-xs font-medium text-gray-500">Toplam soru</p>
+          <p className="mt-1 text-2xl font-semibold text-gray-900">
             {summaryLoading ? '...' : summary.totalQuestions}
           </p>
         </div>
-        <div className="rounded border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900">
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-300">Yayinda</p>
-          <p className="mt-1 text-2xl font-semibold text-green-600 dark:text-green-400">
+        <div className="rounded border border-gray-200 bg-white p-4 shadow-sm">
+          <p className="text-xs font-medium text-gray-500">Yayinda</p>
+          <p className="mt-1 text-2xl font-semibold text-green-600">
             {summaryLoading ? '...' : summary.publishedQuestions}
           </p>
         </div>
-        <div className="rounded border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900">
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-300">Taslak</p>
-          <p className="mt-1 text-2xl font-semibold text-amber-600 dark:text-amber-400">
+        <div className="rounded border border-gray-200 bg-white p-4 shadow-sm">
+          <p className="text-xs font-medium text-gray-500">Taslak</p>
+          <p className="mt-1 text-2xl font-semibold text-amber-600">
             {summaryLoading ? '...' : summary.draftQuestions}
           </p>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 rounded border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+      <div className="flex flex-wrap items-center gap-3 rounded border border-gray-200 bg-white p-4 shadow-sm">
         <div className="flex items-center gap-2">
           <select
             value={subjectFilter}
@@ -583,10 +582,10 @@ export default function InstitutionQuestionBankPanel({ session }: InstitutionQue
         </div>
       </div>
 
-      <div className="overflow-hidden rounded border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead className="bg-gray-50 dark:bg-gray-800">
-            <tr className="text-xs uppercase text-gray-500 dark:text-gray-300">
+      <div className="overflow-hidden rounded border border-gray-200 bg-white shadow-sm">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr className="text-xs uppercase text-gray-500">
               <th className="px-4 py-2 text-left">Sec</th>
               <th className="px-4 py-2 text-left">Soru</th>
               <th className="px-4 py-2 text-left">Ders / Konu</th>
@@ -596,22 +595,22 @@ export default function InstitutionQuestionBankPanel({ session }: InstitutionQue
               <th className="px-4 py-2 text-right">Islemler</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100 text-sm dark:divide-gray-800">
+          <tbody className="divide-y divide-gray-100 text-sm">
             {questionLoading ? (
               <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-gray-500 dark:text-gray-400">
+                <td colSpan={7} className="px-4 py-6 text-center text-gray-500">
                   Sorular yukleniyor...
                 </td>
               </tr>
             ) : questions.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-gray-500 dark:text-gray-400">
-                  Kayit bulunamadi. Filtreleri degistirin veya yeni soru ekleyin.
+                <td colSpan={7} className="px-4 py-6 text-center text-gray-500">
+                  Kayit bulunamadi. Filtreleri degistirin veya PDF'den soru yukleyin.
                 </td>
               </tr>
             ) : (
               questions.map((question) => (
-                <tr key={question.id} className="text-gray-700 dark:text-gray-200">
+                <tr key={question.id} className="text-gray-700">
                   <td className="px-4 py-3">
                     <input
                       type="checkbox"
@@ -620,21 +619,44 @@ export default function InstitutionQuestionBankPanel({ session }: InstitutionQue
                     />
                   </td>
                   <td className="px-4 py-3">
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      {question.question_prompt || question.question_text}
-                    </p>
-                    {question.passage_text && (
-                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
-                        {question.passage_text}
-                      </p>
-                    )}
-                    {question.tags?.length ? (
-                      <p className="text-xs text-gray-500 dark:text-gray-400">#{question.tags.join(' #')}</p>
-                    ) : null}
+                    <div className="flex items-start gap-3">
+                      {question.page_image_url ? (
+                        <div className="flex-shrink-0">
+                          <img
+                            src={question.page_image_url ?? undefined}
+                            alt={`Soru ${question.question_number || ''} görseli`}
+                            className="h-16 w-16 rounded border border-gray-200 object-cover cursor-pointer hover:ring-2 hover:ring-blue-400"
+                            onClick={() => window.open(question.page_image_url ?? undefined, '_blank')}
+                            title="Görseli büyüt"
+                          />
+                        </div>
+                      ) : null}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900">
+                          {question.question_prompt || question.question_text}
+                        </p>
+                        {question.passage_text && (
+                          <p className="mt-1 text-xs text-gray-500 line-clamp-2">
+                            {question.passage_text}
+                          </p>
+                        )}
+                        <div className="mt-1 flex items-center gap-2">
+                          {question.page_number && (
+                            <span className="inline-flex items-center gap-1 text-xs text-gray-500">
+                              <ImageIcon className="h-3 w-3" />
+                              Sayfa {question.page_number}
+                            </span>
+                          )}
+                          {question.tags?.length ? (
+                            <p className="text-xs text-gray-500">#{question.tags.join(' #')}</p>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <p className="font-medium">{question.subject}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{question.topic}</p>
+                    <p className="text-xs text-gray-500">{question.topic}</p>
                   </td>
                   <td className="px-4 py-3">
                     {question.question_type === 'multiple_choice' ? 'Coktan secmeli' : 'Yazili'}
@@ -686,7 +708,7 @@ export default function InstitutionQuestionBankPanel({ session }: InstitutionQue
             )}
           </tbody>
         </table>
-        <div className="flex items-center justify-between border-t border-gray-200 bg-gray-50 px-4 py-3 text-xs text-gray-500 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300">
+        <div className="flex items-center justify-between border-t border-gray-200 bg-gray-50 px-4 py-3 text-xs text-gray-500">
           <span>
             Toplam {questionCount} kayit - Sayfa {page} / {totalPages}
           </span>
@@ -711,30 +733,30 @@ export default function InstitutionQuestionBankPanel({ session }: InstitutionQue
         </div>
       </div>
 
-      <section className="rounded border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+      <section className="rounded border border-gray-200 bg-white p-4 shadow-sm">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Sinav taslaklari</h3>
-          <span className="text-xs text-gray-500 dark:text-gray-400">{blueprints.length} kayit</span>
+          <h3 className="text-sm font-semibold text-gray-900">Sinav taslaklari</h3>
+          <span className="text-xs text-gray-500">{blueprints.length} kayit</span>
         </div>
-        <p className="mb-4 text-xs text-gray-500 dark:text-gray-400">
+        <p className="mb-4 text-xs text-gray-500">
           Taslaklar, kurumunuzun paylasmak istedigi sinavlari once hazirlayip saklayabileceginiz alanlardir. Ogretmenler
           istedigi anda bu taslaklari siniflara atayabilir.
         </p>
         {blueprints.length === 0 ? (
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-sm text-gray-500">
             Henuz taslak olusturmadiniz. Sorulari secip taslak kaydedebilirsiniz.
           </p>
         ) : (
-          <ul className="space-y-3 text-sm text-gray-700 dark:text-gray-200">
+          <ul className="space-y-3 text-sm text-gray-700">
             {blueprints.map((blueprint) => (
               <li
                 key={blueprint.id}
-                className="flex flex-col gap-2 rounded border border-gray-200 p-3 dark:border-gray-700"
+                className="flex flex-col gap-2 rounded border border-gray-200 p-3"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <p className="font-semibold">{blueprint.name}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <p className="text-xs text-gray-500">
                       {blueprint.exam_type} - {blueprint.question_count} soru
                     </p>
                   </div>
@@ -766,7 +788,7 @@ export default function InstitutionQuestionBankPanel({ session }: InstitutionQue
                   </div>
                 </div>
                 {blueprint.description && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{blueprint.description}</p>
+                  <p className="text-xs text-gray-500">{blueprint.description}</p>
                 )}
               </li>
             ))}
@@ -792,6 +814,29 @@ export default function InstitutionQuestionBankPanel({ session }: InstitutionQue
         onClose={() => setQuestionModalOpen(false)}
       >
         <form className="space-y-3" onSubmit={handleQuestionSubmit}>
+          {/* Soru Görseli Önizlemesi */}
+          {questionForm.page_image_url && (
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+              <div className="flex items-start gap-3">
+                <ImageIcon className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-gray-900 mb-2">
+                    Soru Görseli {questionForm.page_number && `(Sayfa ${questionForm.page_number})`}
+                  </p>
+                  <img
+                    src={questionForm.page_image_url ?? undefined}
+                    alt="Soru görseli"
+                    className="w-full rounded border border-gray-300 cursor-pointer hover:ring-2 hover:ring-blue-400"
+                    onClick={() => window.open(questionForm.page_image_url ?? undefined, '_blank')}
+                  />
+                  <p className="text-xs text-gray-500 mt-2">
+                    Görseli büyütmek için tıklayın
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="flex flex-col gap-1 text-sm">
               Ders
@@ -867,7 +912,7 @@ export default function InstitutionQuestionBankPanel({ session }: InstitutionQue
                 setQuestionForm((prev) => ({ ...prev, passageText: event.target.value }))
               }
               rows={4}
-              className="rounded border border-gray-200 px-3 py-2 text-sm text-gray-800 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
+              className="rounded border border-gray-200 px-3 py-2 text-sm text-gray-800"
               placeholder="Öğrencinin okuyacağı metni buraya yazın."
             />
           </label>
@@ -880,7 +925,7 @@ export default function InstitutionQuestionBankPanel({ session }: InstitutionQue
               onChange={(event) =>
                 setQuestionForm((prev) => ({ ...prev, questionPrompt: event.target.value }))
               }
-              className="rounded border border-gray-200 px-3 py-2 text-sm text-gray-800 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
+              className="rounded border border-gray-200 px-3 py-2 text-sm text-gray-800"
               placeholder="Soru cümlesini yazın"
             />
           </label>
@@ -893,7 +938,7 @@ export default function InstitutionQuestionBankPanel({ session }: InstitutionQue
                 setQuestionForm((prev) => ({ ...prev, text: event.target.value }))
               }
               rows={4}
-              className="rounded border border-gray-200 px-3 py-2 text-sm text-gray-800 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
+              className="rounded border border-gray-200 px-3 py-2 text-sm text-gray-800"
               placeholder="Soruya ait detaylı açıklama veya seçenek öncesi metin"
             />
           </label>
@@ -1045,7 +1090,7 @@ export default function InstitutionQuestionBankPanel({ session }: InstitutionQue
             />
           </label>
 
-          <p className="text-xs text-gray-500 dark:text-gray-400">
+          <p className="text-xs text-gray-500">
             Taslaga dahil edilecek soru sayisi: <strong>{selectedIds.length}</strong>
           </p>
 
@@ -1062,6 +1107,26 @@ export default function InstitutionQuestionBankPanel({ session }: InstitutionQue
             </button>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        open={pdfUploadModalOpen}
+        title="PDF'den Soru Yükle"
+        onClose={() => setPdfUploadModalOpen(false)}
+      >
+        <InstitutionPDFQuestionUpload
+          institutionId={institution.id}
+          onSuccess={(insertedCount) => {
+            setFeedback({
+              type: 'success',
+              message: `${insertedCount} soru başarıyla eklendi!`,
+            });
+            setPdfUploadModalOpen(false);
+            // Trigger re-fetch by changing page or filter
+            setPage(1);
+          }}
+          onClose={() => setPdfUploadModalOpen(false)}
+        />
       </Modal>
     </section>
   );

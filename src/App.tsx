@@ -3,11 +3,12 @@ import { useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { BookOpenCheck } from 'lucide-react';
 import ErrorBoundary from './components/ErrorBoundary';
-import { useAuth } from './hooks/useAuth';
+import { useAuthContext } from './contexts/AuthContext';
 import { packages } from './data/packages';
 import Navbar from './components/Navbar';
 import PricingSection from './components/PricingSection';
 import TeacherSection from './components/TeacherSection';
+import SiteFooter from './components/SiteFooter';
 import LoginModal from './components/LoginModal';
 import StudentDashboard from './components/StudentDashboard';
 import ParentDashboard from './components/ParentDashboard';
@@ -18,7 +19,6 @@ import HeroV2 from './components/HeroV2';
 import ProblemSection from './components/ProblemSection';
 import VisionSection from './components/VisionSection';
 import ProductShowcase from './components/ProductShowcase';
-import SocialProof from './components/SocialProof';
 import CTASection from './components/CTASection';
 import UpgradeModal from './components/UpgradeModal';
 import BlogList from './components/BlogList';
@@ -31,7 +31,7 @@ import InstitutionRegisterModal from './components/InstitutionRegisterModal';
 import InstitutionLoginModal from './components/InstitutionLoginModal';
 import InstitutionDashboard from './components/InstitutionDashboard';
 import InstitutionStudentAccessModal from './components/InstitutionStudentAccessModal';
-import { InstitutionSession, refreshInstitutionSession } from './lib/institutionApi';
+import { InstitutionSession } from './lib/institutionApi';
 import { supabase } from './lib/supabase';
 import { blogPosts } from './data/blogPosts';
 import {
@@ -40,21 +40,23 @@ import {
   getBlogPostStructuredData,
   getOrganizationStructuredData,
 } from './lib/seo';
+import ProtectedRoute from './components/ProtectedRoute';
 
 import { PomodoroProvider } from './contexts/PomodoroContext';
 import NotFoundPage from './pages/NotFoundPage';
+import FeaturesShowcase from './components/FeaturesShowcase';
+import LiveStats from './components/LiveStats';
+import Testimonials from './components/Testimonials';
 
 const INSTITUTION_MODAL_PATHS = ['/institution/login', '/institution/register'];
 
 function App() {
-  const { user, loading, setParentUser, clearUser } = useAuth();
+  const { user, loading, login, logout } = useAuthContext();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [targetUpgradePlan, setTargetUpgradePlan] = useState<any>(null);
   const [showStudentParentLoginModal, setShowStudentParentLoginModal] = useState(false);
   const [showTeacherLoginModal, setShowTeacherLoginModal] = useState(false);
-  const [institutionSession, setInstitutionSession] = useState<InstitutionSession | null>(null);
   const [showInstitutionStudentModal, setShowInstitutionStudentModal] = useState(false);
-  const [teacherUser, setTeacherUser] = useState<any>(null);
   const [hasClassViewerSession, setHasClassViewerSession] = useState(false);
 
   const location = useLocation();
@@ -64,8 +66,10 @@ function App() {
   const isInstitutionDashboardPath = location.pathname === '/institution';
   const institutionModalReturnPathRef = React.useRef<string | null>(null);
 
-  const isInstitutionUser =
-    Boolean(institutionSession) || user?.profile?.user_type === 'institution_owner';
+  const isInstitutionUser = user?.userType === 'institution';
+  const isTeacherUser = user?.userType === 'teacher';
+  const isStudentUser = user?.userType === 'student';
+  const isParentUser = user?.userType === 'parent';
 
   const openInstitutionAuthRoute = React.useCallback(
     (targetPath: string) => {
@@ -93,21 +97,7 @@ function App() {
     }
   }, [location.pathname]);
 
-  React.useEffect(() => {
-    let active = true;
-    const loadInstitutionSession = async () => {
-      try {
-        const latest = await refreshInstitutionSession();
-        if (active) setInstitutionSession(latest);
-      } catch (error) {
-        console.error('Institution session refresh failed on mount', error);
-      }
-    };
-    loadInstitutionSession();
-    return () => {
-      active = false;
-    };
-  }, []);
+  // Institution session is now managed by AuthContext
 
   React.useEffect(() => {
     const handleOpenInstitutionLogin = () => openInstitutionAuthRoute('/institution/login');
@@ -126,6 +116,9 @@ function App() {
     const classViewerSession = localStorage.getItem('classViewerSession');
     setHasClassViewerSession(!!classViewerSession);
   }, []);
+
+  // Remove legacy institution session refresh
+  // Now handled by AuthContext
   React.useEffect(() => {
     const slugMatch = location.pathname.match(/^\/blog\/([^/]+)/);
     const slug = slugMatch?.[1];
@@ -243,24 +236,15 @@ function App() {
 
 
   const handleLogout = async () => {
-    try {
-      
-      setTeacherUser(null);
-      setInstitutionSession(null);
-
-      await clearUser();
-      navigate('/', { replace: true });
-    } catch (err) {
-      console.error('Logout error', err);
-      window.location.href = '/';
-    }
+    await logout();
   };
 
   const handleLogin = (loginUser?: any) => {
-    console.log('handleLogin called');
+    console.log('handleLogin called', loginUser);
 
-    if (loginUser && loginUser.isParentLogin) {
-      setParentUser(loginUser);
+    if (loginUser) {
+      // Use AuthContext login
+      login(loginUser);
     }
 
     setTimeout(() => {
@@ -277,22 +261,34 @@ function App() {
     }
   };
 
-  const handleSelectPackage = (packageId: string, billingCycle: 'monthly' | 'yearly') => {
-    if (user) {
-      const selectedPackage = packages.find(pkg => pkg.id === packageId);
-      if (selectedPackage) {
-        setTargetUpgradePlan({
-          id: selectedPackage.id,
-          name: selectedPackage.name,
-          monthlyPrice: selectedPackage.monthlyPrice.toString(),
-          yearlyPrice: selectedPackage.yearlyPrice.toString(),
-          billingCycle
-        });
-        setShowUpgradeModal(true);
+  const handleSelectPackage = (packageId: string, billingCycle: 'monthly' | 'sixMonth' | 'yearly') => {
+    const selectedPackage = packages.find(pkg => pkg.id === packageId);
+
+    if (!selectedPackage) return;
+
+    // Kullanıcı giriş yapmamışsa direkt iyzico linkine yönlendir
+    if (!user) {
+      const paymentLink = selectedPackage.paymentLinks?.[billingCycle];
+
+      if (paymentLink && !paymentLink.startsWith('IYZICO_LINK_')) {
+        // Gerçek iyzico linki varsa yönlendir
+        window.open(paymentLink, '_blank');
+      } else {
+        // Link henüz ayarlanmamışsa modal göster
+        alert('Ödeme sistemi yakında aktif olacak! Lütfen destek@basariyolum.com ile iletişime geçin.');
       }
-    } else {
-      setShowStudentParentLoginModal(true);
+      return;
     }
+
+    // Kullanıcı giriş yapmışsa upgrade modalı göster
+    setTargetUpgradePlan({
+      id: selectedPackage.id,
+      name: selectedPackage.name,
+      monthlyPrice: selectedPackage.monthlyPrice.toString(),
+      yearlyPrice: selectedPackage.yearlyPrice.toString(),
+      billingCycle
+    });
+    setShowUpgradeModal(true);
   };
 
   const handleInstitutionLoginSuccess = async (session: InstitutionSession) => {
@@ -305,7 +301,6 @@ function App() {
 
     if (!session.institution.is_active) {
       await supabase.auth.signOut();
-      setInstitutionSession(null);
       alert(
         'Kurum hesabiniz henuz aktif degil. Basvurunuz onaylandiginda kurumsal girisi kullanabilirsiniz.'
       );
@@ -313,40 +308,35 @@ function App() {
       return;
     }
 
-    setInstitutionSession(session);
+    // Use AuthContext to save institution session
+    login({
+      id: session.user.id,
+      email: session.user.email || '',
+      userType: 'institution',
+      institutionSession: session,
+    });
+
     institutionModalReturnPathRef.current = null;
     Promise.resolve().then(() => navigate('/institution', { replace: true }));
   };
 
   const handleInstitutionRegisterSuccess = (_session: InstitutionSession) => {
     institutionModalReturnPathRef.current = null;
-    setInstitutionSession(null);
     navigate('/', { replace: true });
     alert('Basvurunuz alindi. Onaylandiginda bilgilendirileceksiniz.');
   };
 
   const handleInstitutionLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (err) {
-      console.error('Institution logout error', err);
-    } finally {
-      setInstitutionSession(null);
-      institutionModalReturnPathRef.current = null;
-      navigate('/', { replace: true });
-    }
+    await logout();
   };
 
   const handleInstitutionRefresh = React.useCallback(async () => {
-    try {
-      const latest = await refreshInstitutionSession();
-      if (latest) {
-        setInstitutionSession(latest);
-      }
-    } catch (err) {
-      console.error('Institution session refresh error', err);
+    // Refresh is now handled by AuthContext
+    // Just trigger a refresh
+    if (user?.userType === 'institution') {
+      // AuthContext will handle this automatically
     }
-  }, []);
+  }, [user]);
 
   const handleNavigateToBlog = () => {
     navigate('/blog');
@@ -390,10 +380,10 @@ function App() {
   }, [user, location.pathname, isInstitutionUser, navigate]);
 
   React.useEffect(() => {
-    if (!loading && !teacherUser && !user && location.pathname === '/dashboard') {
+    if (!loading && !user && location.pathname === '/dashboard') {
       navigate('/', { replace: true });
     }
-  }, [loading, user, teacherUser, location.pathname, navigate]);
+  }, [loading, user, location.pathname, navigate]);
 
   if (loading) {
     return (
@@ -407,24 +397,29 @@ function App() {
   }
 
   const DashboardRoute = () => {
-    if (teacherUser) return <TeacherDashboard teacherUser={teacherUser} onLogout={handleLogout} />;
-
     if (!user) {
       return <Navigate to="/" replace />;
     }
 
-    if (user.isParentLogin) return <ParentDashboard />;
+    if (user.userType === 'teacher') {
+      return <TeacherDashboard teacherUser={user.teacherData} onLogout={handleLogout} />;
+    }
+
+    if (user.userType === 'parent' || user.isParentLogin) {
+      return <ParentDashboard />;
+    }
+
     return <StudentDashboard />;
   };
 
   const InstitutionDashboardRoute = () => {
-    if (!institutionSession) {
+    if (!user || user.userType !== 'institution' || !user.institutionSession) {
       return <Navigate to="/institution/login" replace />;
     }
 
     return (
       <InstitutionDashboard
-        session={institutionSession}
+        session={user.institutionSession}
         onLogout={handleInstitutionLogout}
         onRefresh={handleInstitutionRefresh}
       />
@@ -434,95 +429,30 @@ function App() {
   const renderHomePage = () => (
     <div className="min-h-screen bg-white dark:bg-gray-900">
       <HeroV2 onGetStarted={handleGetStarted} />
+      <LiveStats />
       <ProblemSection />
       <VisionSection />
       <ProductShowcase />
-      <SocialProof />
+      <Testimonials />
       <PricingSection onSelectPackage={handleSelectPackage} />
-      <ExamTopicsSection 
-        user={user} 
+      <ExamTopicsSection
+        user={user}
         hasClassViewerSession={hasClassViewerSession}
         onUpgrade={() => setShowStudentParentLoginModal(true)}
       />
       <TeacherSection />
       <CTASection onGetStarted={handleGetStarted} />
-      
-      <footer className="bg-gray-900 dark:bg-gray-950 text-white py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-4 gap-8">
-            <div>
-              <h3 className="text-lg font-semibold mb-4">BaşarıYolu</h3>
-              <p className="text-gray-400 text-sm">
-                Türkiye'nin en kapsamlı öğrenci takip platformu.
-                Yapay zeka desteğiyle akademik başarınızı artırın.
-              </p>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-3">Özellikler</h4>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li>Deneme Takibi</li>
-                <li>AI Analiz</li>
-                <li>Veli Paneli</li>
-                <li>Ödev Sistemi</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-3">İçerik</h4>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li>
-                  <button onClick={handleNavigateToBlog} className="hover:text-white">
-                    Blog
-                  </button>
-                </li>
-                <li>Çalışma Teknikleri</li>
-                <li>Sınav Stratejileri</li>
-                <li>Motivasyon</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-3">Yasal</h4>
-              <ul className="space-y-2 text-sm text-gray-400">
-                <li>
-                  <button onClick={handleNavigateToTerms} className="hover:text-white">
-                    Kullanım Şartları
-                  </button>
-                </li>
-                <li>
-                  <button onClick={handleNavigateToPrivacy} className="hover:text-white">
-                    Gizlilik Politikası
-                  </button>
-                </li>
-                <li>
-                  <button onClick={handleNavigateToRefund} className="hover:text-white">
-                    İptal ve İade
-                  </button>
-                </li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400 text-sm">
-            <p>&copy; {new Date().getFullYear()} BaşarıYolu. Tüm hakları saklıdır.</p>
-            <p className="mt-2 text-xs">
-              <button onClick={handleNavigateToTerms} className="hover:text-white mx-2">
-                Kullanım Şartları
-              </button>
-              |
-              <button onClick={handleNavigateToPrivacy} className="hover:text-white mx-2">
-                Gizlilik
-              </button>
-              |
-              <button onClick={handleNavigateToRefund} className="hover:text-white mx-2">
-                İade Politikası
-              </button>
-            </p>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter
+        onNavigateToBlog={handleNavigateToBlog}
+        onNavigateToTerms={handleNavigateToTerms}
+        onNavigateToPrivacy={handleNavigateToPrivacy}
+        onNavigateToRefund={handleNavigateToRefund}
+      />
     </div>
   );
 
   const HomePageContent = () => renderHomePage();
-  const isQuestionBankAllowed = Boolean(user || teacherUser || institutionSession);
+  const isQuestionBankAllowed = Boolean(user);
 
 
   const isBlogDetailPath = location.pathname.startsWith('/blog/') && location.pathname !== '/blog';
@@ -538,8 +468,8 @@ function App() {
       isInstitutionLoginPath ||
       isInstitutionRegisterPath
     ) &&
-    !teacherUser &&
-    !institutionSession;
+    !isTeacherUser &&
+    !isInstitutionUser;
 
   const routes = (
     <Routes>
@@ -554,6 +484,8 @@ function App() {
       <Route path="/gizlilik-politikasi" element={<Navigate to="/privacy-policy" replace />} />
       <Route path="/refund-policy" element={<RefundPolicy />} />
       <Route path="/iade-politikasi" element={<Navigate to="/refund-policy" replace />} />
+      <Route path="/features" element={<FeaturesShowcase />} />
+      <Route path="/ozellikler" element={<Navigate to="/features" replace />} />
       <Route
         path="/question-bank"
         element={isQuestionBankAllowed ? <QuestionBankPage /> : <Navigate to="/" replace />}
@@ -590,7 +522,6 @@ function App() {
         isOpen={showStudentParentLoginModal}
         onClose={() => setShowStudentParentLoginModal(false)}
         onLogin={handleLogin}
-        setUserState={setParentUser}
       />
 
       <TeacherLogin
@@ -598,9 +529,15 @@ function App() {
         onClose={() => setShowTeacherLoginModal(false)}
         onSuccess={(teacher) => {
           setShowTeacherLoginModal(false);
-          setTeacherUser(teacher);
+          // Use AuthContext login
+          login({
+            id: teacher.id,
+            email: teacher.email || '',
+            userType: 'teacher',
+            teacherData: teacher,
+          });
           navigate('/dashboard');
-          console.log('Teacher login success, setting view to dashboard');
+          console.log('Teacher login success, navigating to dashboard');
         }}
       />
 

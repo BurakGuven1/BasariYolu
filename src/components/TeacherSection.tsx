@@ -220,7 +220,7 @@ export default function TeacherSection() {
                 onClick={() => window.dispatchEvent(new Event('openInstitutionRegister'))}
                 className="rounded-lg border border-blue-500 px-5 py-2 text-sm font-semibold text-blue-600 hover:bg-blue-50 transition-colors"
               >
-                Kurum Kaydi Olustur
+                Kurum Kaydı Oluştur
               </button>
               <button
                 onClick={() => window.dispatchEvent(new Event('openInstitutionLogin'))}
