@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Users, Plus, BookOpen, Settings, LogOut, Copy, Eye, EyeOff, CreditCard as Edit, Building2, School, RefreshCw } from 'lucide-react';
+import { Users, Plus, BookOpen, Settings, LogOut, Copy, Eye, EyeOff, CreditCard as Edit, Building2, School, RefreshCw, Calendar } from 'lucide-react';
 import { getTeacherClasses, createClass, getClassData } from '../lib/teacherApi';
 import { PACKAGE_OPTIONS, calculateClassPrice } from '../types/teacher';
 import ClassManagementPanel from './ClassManagementPanel';
@@ -7,6 +7,7 @@ import { sendAnnouncementNotification } from '../lib/notificationApi';
 import { supabase } from '../lib/supabase';
 import InstitutionQuestionBankPanel from './InstitutionQuestionBankPanel';
 import InstitutionStudentExamPanel from './InstitutionStudentExamPanel';
+import TeacherScheduleView from './TeacherScheduleView';
 import {
   acceptInstitutionTeacherInvite,
   listTeacherInstitutionRequests,
@@ -491,6 +492,10 @@ useEffect(() => {
                     institutionId={derivedInstitutionSession.institution.id}
                     institutionName={derivedInstitutionSession.institution.name}
                     teacherUserId={teacher?.id ?? selectedMembership?.user_id ?? null}
+                  />
+                  <TeacherScheduleView
+                    teacherId={teacher?.id ?? selectedMembership?.user_id ?? null}
+                    institutionId={derivedInstitutionSession.institution.id}
                   />
                   <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                     <div className="mb-4 flex flex-wrap items-center justify-between gap-2">

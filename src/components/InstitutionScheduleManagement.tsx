@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Calendar, Plus, Edit2, Trash2, Save, X, Clock, MapPin, Users, BookOpen, AlertCircle } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 import {
   getInstitutionScheduleEntries,
   createScheduleEntry,
@@ -18,12 +19,13 @@ import {
 
 interface InstitutionScheduleManagementProps {
   institutionId: string;
-  teachers: any[]; // From existing institution teacher data
+  teachers?: any[]; // Optional - will fetch if not provided
 }
 
-export default function InstitutionScheduleManagement({ institutionId, teachers }: InstitutionScheduleManagementProps) {
+export default function InstitutionScheduleManagement({ institutionId, teachers: teachersProp }: InstitutionScheduleManagementProps) {
   const [scheduleEntries, setScheduleEntries] = useState<ScheduleEntry[]>([]);
   const [classes, setClasses] = useState<InstitutionClass[]>([]);
+  const [teachers, setTeachers] = useState<any[]>(teachersProp || []);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,6 +56,33 @@ export default function InstitutionScheduleManagement({ institutionId, teachers 
   useEffect(() => {
     loadData();
   }, [institutionId]);
+
+  useEffect(() => {
+    if (!teachersProp) {
+      loadTeachers();
+    }
+  }, [institutionId, teachersProp]);
+
+  const loadTeachers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('institution_members')
+        .select('user_id, profiles(id, full_name)')
+        .eq('institution_id', institutionId)
+        .eq('role', 'teacher');
+
+      if (error) throw error;
+
+      const teacherList = data?.map(member => ({
+        id: member.profiles?.id,
+        full_name: member.profiles?.full_name || 'İsimsiz Öğretmen'
+      })).filter(t => t.id) || [];
+
+      setTeachers(teacherList);
+    } catch (err) {
+      console.error('Error loading teachers:', err);
+    }
+  };
 
   const loadData = async () => {
     setLoading(true);

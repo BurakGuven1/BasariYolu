@@ -1,12 +1,13 @@
 
 import { useMemo, useState, type ComponentType } from 'react';
-import { Building2, Users, FileSpreadsheet, ClipboardList, ShieldCheck, LogOut, Mail, CheckCircle2, Layers, Copy, Download, BarChart3 } from 'lucide-react';
+import { Building2, Users, FileSpreadsheet, ClipboardList, ShieldCheck, LogOut, Mail, CheckCircle2, Layers, Copy, Download, BarChart3, Calendar } from 'lucide-react';
 import { InstitutionSession } from '../lib/institutionApi';
 import InstitutionQuestionBankPanel from './InstitutionQuestionBankPanel';
 import InstitutionStudentApprovalPanel from './InstitutionStudentApprovalPanel';
 import InstitutionEngagementPanel from './InstitutionEngagementPanel';
 import InstitutionTeacherManagementPanel from './InstitutionTeacherManagementPanel';
 import InstitutionAnalyticsPanel from './InstitutionAnalyticsPanel';
+import InstitutionScheduleManagement from './InstitutionScheduleManagement';
 import { exportStudentsToExcel, exportExamResultsToExcel, exportPerformanceReportToExcel } from '../lib/institutionExportUtils';
 
 interface InstitutionDashboardProps {
@@ -42,7 +43,7 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
   const isTeacherRole = session.role === 'teacher';
   const canManageInstitution = ['owner', 'manager'].includes(session.role);
   const canAccessQuestionBank = canManageInstitution || isTeacherRole;
-  type PanelKey = 'overview' | 'analytics' | 'question-bank' | 'teachers' | 'students' | 'engagement';
+  type PanelKey = 'overview' | 'analytics' | 'question-bank' | 'schedule' | 'teachers' | 'students' | 'engagement';
   const [activePanel, setActivePanel] = useState<PanelKey>('overview');
 
   type PanelItem = {
@@ -75,6 +76,13 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
         description: 'Sorular ve sınav taslakları',
         icon: ClipboardList,
         visible: canAccessQuestionBank,
+      },
+      {
+        key: 'schedule',
+        label: 'Ders Programı',
+        description: 'Haftalık ders programı ve zaman çizelgesi',
+        icon: Calendar,
+        visible: canManageInstitution && isActive,
       },
       {
         key: 'teachers',
@@ -699,6 +707,17 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
               <InstitutionQuestionBankPanel session={session} />
             ) : (
               renderPanelMessage('Soru bankasına erişim için kurum yönetici rolü gerekir.')
+            ))}
+
+          {resolvedPanel === 'schedule' &&
+            (canManageInstitution ? (
+              isActive ? (
+                <InstitutionScheduleManagement institutionId={session.institution.id} />
+              ) : (
+                renderPanelMessage('Ders programı yalnızca aktif kurumlar için kullanılabilir.')
+              )
+            ) : (
+              renderPanelMessage('Ders programı yönetimi yalnızca kurum yöneticilerine açıktır.')
             ))}
 
           {resolvedPanel === 'teachers' &&
