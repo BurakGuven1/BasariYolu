@@ -363,7 +363,6 @@ useEffect(() => {
     }
   };
 
-  const showInstitutionTab = institutionMemberships.length > 0;
   const selectedMembership = useMemo(
     () => institutionMemberships.find((membership) => membership.id === selectedMembershipId),
     [institutionMemberships, selectedMembershipId],
@@ -775,328 +774,280 @@ useEffect(() => {
           {resolvedPanel === 'classes' && (
             <div className="space-y-6">
               {showInstitutionTab && (
-          <div className="mb-8 flex flex-col gap-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="font-semibold text-blue-900">Kurumsal görevleriniz var</p>
-              <p className="text-xs text-blue-700">
-                {institutionMemberships.length} kurumda öğretmen yetkisine sahipsiniz. Kurum panellerine geçerek soru
-                bankası ve sınav taslaklarını yönetebilirsiniz.
-              </p>
-            </div>
-            <button
-              onClick={() => setActivePanel('institutions')}
-              className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-white px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50"
-            >
-              <Building2 className="h-4 w-4" />
-              Kurumlarım
-            </button>
-          </div>
-        )}
-
-        <div className="mb-8 rounded-xl border border-purple-200 bg-white p-4 shadow-sm space-y-3">
-          <div>
-            <h3 className="text-lg font-semibold text-purple-800">Kurum kodu ile katıl</h3>
-            <p className="text-sm text-purple-600">Kodla başvuru yaptığınızda kurum onayı sonrası erişiminiz açılır.</p>
-          </div>
-          <form className="flex flex-col gap-3 sm:flex-row sm:items-end" onSubmit={handleJoinSubmit}>
-            <label className="flex-1 text-sm font-medium text-gray-700">
-              Kurum kodu
-              <input
-                value={joinCode}
-                onChange={(event) => setJoinCode(event.target.value.toUpperCase())}
-                placeholder="Örn. KRM12345"
-                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-gray-900 focus:border-purple-400 focus:outline-none"
-              />
-            </label>
-            <button
-              type="submit"
-              disabled={joinLoading || !joinCode.trim()}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-purple-700 disabled:cursor-not-allowed disabled:bg-purple-300"
-            >
-              {joinLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Building2 className="h-4 w-4" />}
-              Koda katıl
-            </button>
-          </form>
-          {joinMessage && <p className="text-xs text-emerald-600">{joinMessage}</p>}
-          {joinError && <p className="text-xs text-red-600">{joinError}</p>}
-          {requestError && <p className="text-xs text-red-600">{requestError}</p>}
-          {requestsLoading ? (
-            <p className="text-sm text-gray-500">Başvurularınız yükleniyor...</p>
-          ) : teacherRequests.length === 0 ? (
-            <p className="text-sm text-gray-500">Henüz kurum başvurunuz bulunmuyor.</p>
-          ) : (
-            <div className="space-y-2 text-sm">
-              {teacherRequests.map((request) => (
-                <div
-                  key={request.id}
-                  className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"
-                >
+                <div className="mb-8 flex flex-col gap-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p className="font-semibold text-gray-900">{request.institution?.name ?? 'Kurum'}</p>
-                    <p className="text-xs text-gray-500">
-                      Başvuru: {new Date(request.created_at).toLocaleDateString('tr-TR')}
+                    <p className="font-semibold text-blue-900">Kurumsal görevleriniz var</p>
+                    <p className="text-xs text-blue-700">
+                      {institutionMemberships.length} kurumda öğretmen yetkisine sahipsiniz. Kurum panellerine geçerek soru
+                      bankası ve sınav taslaklarını yönetebilirsiniz.
                     </p>
-                    {request.status === 'rejected' && request.rejection_reason && (
-                      <p className="text-xs text-red-600">Neden: {request.rejection_reason}</p>
-                    )}
                   </div>
-                  <span
-                    className={`mt-1 inline-flex items-center justify-center rounded-full px-3 py-1 text-[11px] font-semibold ${
-                      request.status === 'approved'
-                        ? 'bg-emerald-100 text-emerald-700'
-                        : request.status === 'pending'
-                          ? 'bg-amber-100 text-amber-700'
-                          : 'bg-red-100 text-red-700'
-                    }`}
+                  <button
+                    onClick={() => setActivePanel('institutions')}
+                    className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-white px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50"
                   >
-                    {request.status === 'approved'
-                      ? 'Onaylandı'
-                      : request.status === 'pending'
-                        ? 'Onay bekliyor'
-                        : 'Reddedildi'}
-                  </span>
+                    <Building2 className="h-4 w-4" />
+                    Kurumlarım
+                  </button>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+              )}
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg p-6 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-600 text-sm">Toplam Sınıf</p>
-                <p className="text-2xl font-bold text-blue-600">{classes.length}</p>
+              <div className="mb-8 rounded-xl border border-purple-200 bg-white p-4 shadow-sm space-y-3">
+                <div>
+                  <h3 className="text-lg font-semibold text-purple-800">Kurum kodu ile katıl</h3>
+                  <p className="text-sm text-purple-600">Kodla başvuru yaptığınızda kurum onayı sonrası erişiminiz açılır.</p>
+                </div>
+                <form className="flex flex-col gap-3 sm:flex-row sm:items-end" onSubmit={handleJoinSubmit}>
+                  <label className="flex-1 text-sm font-medium text-gray-700">
+                    Kurum kodu
+                    <input
+                      value={joinCode}
+                      onChange={(event) => setJoinCode(event.target.value.toUpperCase())}
+                      placeholder="Örn. KRM12345"
+                      className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-gray-900 focus:border-purple-400 focus:outline-none"
+                    />
+                  </label>
+                  <button
+                    type="submit"
+                    disabled={joinLoading || !joinCode.trim()}
+                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-purple-700 disabled:cursor-not-allowed disabled:bg-purple-300"
+                  >
+                    {joinLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Building2 className="h-4 w-4" />}
+                    Koda katıl
+                  </button>
+                </form>
+                {joinMessage && <p className="text-xs text-emerald-600">{joinMessage}</p>}
+                {joinError && <p className="text-xs text-red-600">{joinError}</p>}
+                {requestError && <p className="text-xs text-red-600">{requestError}</p>}
+                {requestsLoading ? (
+                  <p className="text-sm text-gray-500">Başvurularınız yükleniyor...</p>
+                ) : teacherRequests.length === 0 ? (
+                  <p className="text-sm text-gray-500">Henüz kurum başvurunuz bulunmuyor.</p>
+                ) : (
+                  <div className="space-y-2 text-sm">
+                    {teacherRequests.map((request) => (
+                      <div
+                        key={request.id}
+                        className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"
+                      >
+                        <div>
+                          <p className="font-semibold text-gray-900">{request.institution?.name ?? 'Kurum'}</p>
+                          <p className="text-xs text-gray-500">
+                            Başvuru: {new Date(request.created_at).toLocaleDateString('tr-TR')}
+                          </p>
+                          {request.status === 'rejected' && request.rejection_reason && (
+                            <p className="text-xs text-red-600">Neden: {request.rejection_reason}</p>
+                          )}
+                        </div>
+                        <span
+                          className={`mt-1 inline-flex items-center justify-center rounded-full px-3 py-1 text-[11px] font-semibold ${
+                            request.status === 'approved'
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : request.status === 'pending'
+                                ? 'bg-amber-100 text-amber-700'
+                                : 'bg-red-100 text-red-700'
+                          }`}
+                        >
+                          {request.status === 'approved'
+                            ? 'Onaylandı'
+                            : request.status === 'pending'
+                              ? 'Onay bekliyor'
+                              : 'Reddedildi'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-              <BookOpen className="h-8 w-8 text-blue-600" />
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-lg p-6 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-600 text-sm">Toplam Öğrenci</p>
-                <p className="text-2xl font-bold text-green-600">
-                  {classes.reduce((sum, cls) => sum + (cls.current_students || 0), 0)}
-                </p>
-              </div>
-              <Users className="h-8 w-8 text-green-600" />
-            </div>
-          </div>
 
-          <div className="bg-white rounded-lg p-6 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-600 text-sm">Aktif Sınıf</p>
-                <p className="text-2xl font-bold text-purple-600">
-                  {classes.filter(cls => cls.status === 'active').length}
-                </p>
-              </div>
-              <Settings className="h-8 w-8 text-purple-600" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg p-6 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-600 text-sm">Aylık Tutar</p>
-                <p className="text-2xl font-bold text-orange-600">
-                  {classes
-                    .filter(cls => cls.status === 'active')
-                    .reduce((sum, cls) => {
-                      const pricing = calculateClassPrice(cls.current_students || 0, cls.package_type);
-                      return sum + pricing.monthlyPrice;
-                    }, 0)
-                    .toLocaleString()}₺
-                </p>
-              </div>
-              <BookOpen className="h-8 w-8 text-orange-600" />
-            </div>
-          </div>
-        </div>
-
-        {/* Classes */}
-        <div className="bg-white rounded-lg p-6 shadow-sm">
-          <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-6">
-            <h3 className="text-lg font-semibold">Sınıflarım</h3>
-            <button
-              onClick={() => setShowCreateClass(true)}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-green-700"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Yeni Sınıf</span>
-            </button>
-          </div>
-
-          {classes.length === 0 ? (
-            <div className="text-center py-12">
-              <BookOpen className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Henüz sınıf oluşturmadınız</h3>
-              <p className="text-gray-600 mb-6">İlk sınıfınızı oluşturun ve öğrencilerinizi davet edin.</p>
-              <button
-                onClick={() => setShowCreateClass(true)}
-                className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700"
+              {/* Classes */}
+              <div className="bg-white rounded-lg p-6 shadow-sm">
+                <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-6">
+                  <h3 className="text-lg font-semibold">Sınıflarım</h3>
+                  <button
+                    onClick={() => setShowCreateClass(true)}
+                className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-green-700"
               >
-                İlk Sınıfı Oluştur
+                <Plus className="h-4 w-4" />
+                <span>Yeni Sınıf</span>
               </button>
             </div>
-          ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {classes.map((cls) => (
-                (() => {
-                  const details = classDetails[cls.id];
-                  const assignments = details?.class_assignments || [];
-                  const announcements = details?.class_announcements || [];
-                  const exams = details?.class_exams || [];
-                  
-                  return (
-                <div key={cls.id} className="border rounded-lg p-6 hover:shadow-md transition-shadow">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start mb-4">
-                    <div>
-                      <h4 className="font-semibold text-lg">{cls.class_name}</h4>
-                      {cls.description && (
-                        <p className="text-gray-600 text-sm mt-1">{cls.description}</p>
-                      )}
-                    </div>
+  
+            {classes.length === 0 ? (
+              <div className="text-center py-12">
+                <BookOpen className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Henüz sınıf oluşturmadınız</h3>
+                <p className="text-gray-600 mb-6">İlk sınıfınızı oluşturun ve öğrencilerinizi davet edin.</p>
+                <button
+                  onClick={() => setShowCreateClass(true)}
+                  className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700"
+                >
+                  İlk Sınıfı Oluştur
+                </button>
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {classes.map((cls) => (
+                  (() => {
+                    const details = classDetails[cls.id];
+                    const assignments = details?.class_assignments || [];
+                    const announcements = details?.class_announcements || [];
+                    const exams = details?.class_exams || [];
                     
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(cls.status)}`}>
-                      {getStatusText(cls.status)}
-                    </span>
-                  </div>
-
-                  <div className="space-y-2 mb-4">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:justify-between text-sm">
-                      <span>Öğrenci:</span>
-                      <span className="font-medium">{cls.current_students || 0}/{cls.student_capacity}</span>
-                    </div>
-                    <div className="flex flex-col gap-2 sm:flex-row sm:justify-between text-sm">
-                      <span>Paket:</span>
-                      <span className="font-medium">
-                        {PACKAGE_OPTIONS.find(p => p.type === cls.package_type)?.name}
+                    return (
+                  <div key={cls.id} className="border rounded-lg p-6 hover:shadow-md transition-shadow">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start mb-4">
+                      <div>
+                        <h4 className="font-semibold text-lg">{cls.class_name}</h4>
+                        {cls.description && (
+                          <p className="text-gray-600 text-sm mt-1">{cls.description}</p>
+                        )}
+                      </div>
+                      
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(cls.status)}`}>
+                        {getStatusText(cls.status)}
                       </span>
                     </div>
-                    <div className="flex flex-col gap-2 sm:flex-row sm:justify-between text-sm">
-                      <span>Aylık Tutar:</span>
-                      <span className="font-medium text-green-600">
-                        {calculateClassPrice(cls.current_students || 0, cls.package_type).monthlyPrice.toLocaleString()}₺
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Class Content Summary */}
-                  <div className="border-t pt-3 mb-3">
-                    <div className="grid grid-cols-3 gap-2 text-xs">
-                      <div className="text-center">
-                        <div className="font-semibold text-blue-600">{assignments.length}</div>
-                        <div className="text-gray-600">Ödev</div>
+  
+                    <div className="space-y-2 mb-4">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:justify-between text-sm">
+                        <span>Öğrenci:</span>
+                        <span className="font-medium">{cls.current_students || 0}/{cls.student_capacity}</span>
                       </div>
-                      <div className="text-center">
-                        <div className="font-semibold text-purple-600">{announcements.length}</div>
-                        <div className="text-gray-600">Duyuru</div>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:justify-between text-sm">
+                        <span>Paket:</span>
+                        <span className="font-medium">
+                          {PACKAGE_OPTIONS.find(p => p.type === cls.package_type)?.name}
+                        </span>
                       </div>
-                      <div className="text-center">
-                        <div className="font-semibold text-orange-600">{exams.length}</div>
-                        <div className="text-gray-600">Sınav</div>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:justify-between text-sm">
+                        <span>Aylık Tutar:</span>
+                        <span className="font-medium text-green-600">
+                          {calculateClassPrice(cls.current_students || 0, cls.package_type).monthlyPrice.toLocaleString()}₺
+                        </span>
                       </div>
                     </div>
-                  </div>
-
-                  {/* Class Content Details */}
-                  {(assignments.length > 0 || announcements.length > 0 || exams.length > 0) && (
-                    <div className="border-t pt-3 mb-3 max-h-40 overflow-y-auto">
-                      <div className="text-xs text-gray-600 mb-2">İçerikler:</div>
-                      <div className="space-y-1">
-                        {assignments.slice(0, 3).map((assignment: any) => (
-                          <div key={assignment.id} className="text-xs bg-blue-50 p-2 rounded flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
-                            <div>
-                              <div className="font-medium text-blue-800">📝 {assignment.title}</div>
-                              <div className="text-blue-600">{assignment.subject} - {new Date(assignment.due_date).toLocaleDateString('tr-TR')}</div>
-                            </div>
-                          </div>
-                        ))}
-                        {announcements.slice(0, 2).map((announcement: any) => (
-                          <div key={announcement.id} className="text-xs bg-purple-50 p-2 rounded">
-                            <div className="font-medium text-purple-800">📢 {announcement.title}</div>
-                            <div className="text-purple-600">{announcement.content.substring(0, 40)}...</div>
-                          </div>
-                        ))}
-                        {exams.slice(0, 2).map((exam: any) => (
-                          <div key={exam.id} className="text-xs bg-orange-50 p-2 rounded">
-                            <div className="font-medium text-orange-800">🏆 {exam.exam_name}</div>
-                            <div className="text-orange-600">{exam.exam_type} - {new Date(exam.exam_date).toLocaleDateString('tr-TR')}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {/* Recent Activity */}
-                  {(assignments.length > 0 || announcements.length > 0 || exams.length > 0) && (
+  
+                    {/* Class Content Summary */}
                     <div className="border-t pt-3 mb-3">
-                      <div className="text-xs text-gray-600 mb-2">Son Aktiviteler:</div>
-                      <div className="space-y-1">
-                        {assignments.slice(0, 2).map((assignment: any) => (
-                          <div key={assignment.id} className="text-xs bg-blue-50 p-2 rounded">
-                            <div className="font-medium text-blue-800">📝 {assignment.title}</div>
-                            <div className="text-blue-600">Son teslim: {new Date(assignment.due_date).toLocaleDateString('tr-TR')}</div>
-                          </div>
-                        ))}
-                        {announcements.slice(0, 1).map((announcement: any) => (
-                          <div key={announcement.id} className="text-xs bg-purple-50 p-2 rounded">
-                            <div className="font-medium text-purple-800">📢 {announcement.title}</div>
-                            <div className="text-purple-600">{announcement.content.substring(0, 50)}...</div>
-                          </div>
-                        ))}
-                        {exams.slice(0, 1).map((exam: any) => (
-                          <div key={exam.id} className="text-xs bg-orange-50 p-2 rounded">
-                            <div className="font-medium text-orange-800">🏆 {exam.exam_name}</div>
-                            <div className="text-orange-600">{new Date(exam.exam_date).toLocaleDateString('tr-TR')}</div>
-                          </div>
-                        ))}
+                      <div className="grid grid-cols-3 gap-2 text-xs">
+                        <div className="text-center">
+                          <div className="font-semibold text-blue-600">{assignments.length}</div>
+                          <div className="text-gray-600">Ödev</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="font-semibold text-purple-600">{announcements.length}</div>
+                          <div className="text-gray-600">Duyuru</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="font-semibold text-orange-600">{exams.length}</div>
+                          <div className="text-gray-600">Sınav</div>
+                        </div>
                       </div>
                     </div>
-                  )}
-
-                  <div className="border-t pt-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-gray-600">Davet Kodu:</span>
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => setShowInviteCode(showInviteCode === cls.id ? null : cls.id)}
-                          className="text-blue-600 hover:text-blue-700"
-                        >
-                          {showInviteCode === cls.id ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
-                        <button
-                          onClick={() => copyInviteCode(cls.invite_code)}
-                          className="text-green-600 hover:text-green-700"
-                        >
-                          <Copy className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                    {showInviteCode === cls.id && (
-                      <div className="mb-3 p-2 bg-gray-100 rounded font-mono text-sm text-center">
-                        {cls.invite_code}
+  
+                    {/* Class Content Details */}
+                    {(assignments.length > 0 || announcements.length > 0 || exams.length > 0) && (
+                      <div className="border-t pt-3 mb-3 max-h-40 overflow-y-auto">
+                        <div className="text-xs text-gray-600 mb-2">İçerikler:</div>
+                        <div className="space-y-1">
+                          {assignments.slice(0, 3).map((assignment: any) => (
+                            <div key={assignment.id} className="text-xs bg-blue-50 p-2 rounded flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
+                              <div>
+                                <div className="font-medium text-blue-800">📝 {assignment.title}</div>
+                                <div className="text-blue-600">{assignment.subject} - {new Date(assignment.due_date).toLocaleDateString('tr-TR')}</div>
+                              </div>
+                            </div>
+                          ))}
+                          {announcements.slice(0, 2).map((announcement: any) => (
+                            <div key={announcement.id} className="text-xs bg-purple-50 p-2 rounded">
+                              <div className="font-medium text-purple-800">📢 {announcement.title}</div>
+                              <div className="text-purple-600">{announcement.content.substring(0, 40)}...</div>
+                            </div>
+                          ))}
+                          {exams.slice(0, 2).map((exam: any) => (
+                            <div key={exam.id} className="text-xs bg-orange-50 p-2 rounded">
+                              <div className="font-medium text-orange-800">🏆 {exam.exam_name}</div>
+                              <div className="text-orange-600">{exam.exam_type} - {new Date(exam.exam_date).toLocaleDateString('tr-TR')}</div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
-                    <div className="border-t pt-4 mt-4">
-                      <button
-                        onClick={() => handleManageClass(cls)}
-                        className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 flex items-center justify-center space-x-2"
-                      >
-                        <Edit className="h-4 w-4" />
-                        <span>Sınıfı Yönet</span>
-                      </button>
+                    {/* Recent Activity */}
+                    {(assignments.length > 0 || announcements.length > 0 || exams.length > 0) && (
+                      <div className="border-t pt-3 mb-3">
+                        <div className="text-xs text-gray-600 mb-2">Son Aktiviteler:</div>
+                        <div className="space-y-1">
+                          {assignments.slice(0, 2).map((assignment: any) => (
+                            <div key={assignment.id} className="text-xs bg-blue-50 p-2 rounded">
+                              <div className="font-medium text-blue-800">📝 {assignment.title}</div>
+                              <div className="text-blue-600">Son teslim: {new Date(assignment.due_date).toLocaleDateString('tr-TR')}</div>
+                            </div>
+                          ))}
+                          {announcements.slice(0, 1).map((announcement: any) => (
+                            <div key={announcement.id} className="text-xs bg-purple-50 p-2 rounded">
+                              <div className="font-medium text-purple-800">📢 {announcement.title}</div>
+                              <div className="text-purple-600">{announcement.content.substring(0, 50)}...</div>
+                            </div>
+                          ))}
+                          {exams.slice(0, 1).map((exam: any) => (
+                            <div key={exam.id} className="text-xs bg-orange-50 p-2 rounded">
+                              <div className="font-medium text-orange-800">🏆 {exam.exam_name}</div>
+                              <div className="text-orange-600">{new Date(exam.exam_date).toLocaleDateString('tr-TR')}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+  
+                    <div className="border-t pt-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm text-gray-600">Davet Kodu:</span>
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => setShowInviteCode(showInviteCode === cls.id ? null : cls.id)}
+                            className="text-blue-600 hover:text-blue-700"
+                          >
+                            {showInviteCode === cls.id ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </button>
+                          <button
+                            onClick={() => copyInviteCode(cls.invite_code)}
+                            className="text-green-600 hover:text-green-700"
+                          >
+                            <Copy className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                      {showInviteCode === cls.id && (
+                        <div className="mb-3 p-2 bg-gray-100 rounded font-mono text-sm text-center">
+                          {cls.invite_code}
+                        </div>
+                      )}
+                      <div className="border-t pt-4 mt-4">
+                        <button
+                          onClick={() => handleManageClass(cls)}
+                          className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 flex items-center justify-center space-x-2"
+                        >
+                          <Edit className="h-4 w-4" />
+                          <span>Sınıfı Yönet</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-                  );
-                })()
-              ))}
+                    );
+                  })()
+                ))}
+              </div>
+            )}
+          </div>
             </div>
           )}
-        </div>
+
+          {resolvedPanel === 'institutions' && (
+            <div>Kurumlar panel içeriği (mevcut kod buraya taşınacak)</div>
+          )}
+        </main>
       </div>
 
       {/* Create Class Modal */}
@@ -1212,10 +1163,6 @@ useEffect(() => {
           </div>
         </div>
       )}
-            </div>
-          )}
-        </main>
-      </div>
     </div>
   );
 }
