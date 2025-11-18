@@ -427,9 +427,9 @@ Görevlerin:
       updatedCredits?.remaining_credits ??
       (creditData ? Math.max(creditData.remaining_credits - 1, 0) : DAILY_CREDIT_LIMIT);
 
-    const fallbackWeekEnd =
-      updatedCredits?.week_end_date ||
-      creditData?.week_end_date ||
+    const fallbackResetsAt =
+      updatedCredits?.resets_at ||
+      creditData?.resets_at ||
       new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
     return new Response(
@@ -438,7 +438,7 @@ Görevlerin:
         answer,
         tokensUsed,
         remainingCredits: fallbackRemaining,
-        weekEndDate: fallbackWeekEnd,
+        resetsAt: fallbackResetsAt,
         conversationId: activeConversationId,
         modelUsed: model,
       }),

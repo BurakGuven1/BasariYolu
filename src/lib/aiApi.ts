@@ -4,11 +4,11 @@
 import { supabase } from './supabase';
 
 export interface AICredits {
-  weekly_credits: number;
+  daily_credits: number;
   used_credits: number;
   remaining_credits: number;
-  week_start_date: string;
-  week_end_date: string;
+  day_date: string;
+  resets_at: string;
 }
 
 export interface AIQuestion {
@@ -26,7 +26,7 @@ export interface AskAIResponse {
   answer: string;
   tokensUsed: number;
   remainingCredits: number;
-  weekEndDate: string;
+  resetsAt: string;
   conversationId?: string;
   modelUsed?: string;
 }
