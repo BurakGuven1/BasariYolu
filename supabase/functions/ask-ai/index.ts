@@ -9,10 +9,18 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const DAILY_CREDIT_LIMIT = 15;
+
 interface Message {
   role: 'user' | 'assistant' | 'system';
   content: string;
   image_url?: string;
+}
+
+interface StoredMessage {
+  role: string;
+  content: string;
+  image_url?: string | null;
 }
 
 interface RequestBody {
@@ -59,7 +67,14 @@ serve(async (req) => {
     }
 
     // Parse request body
-    const { question, category, conversationId, messages, imageUrl, imageBase64 }: RequestBody = await req.json();
+    const {
+      question,
+      category,
+      conversationId,
+      messages,
+      imageUrl,
+      imageBase64,
+    }: RequestBody = await req.json();
 
     // Log request details for debugging
     console.log('=== Request Received ===');
@@ -121,7 +136,7 @@ serve(async (req) => {
         if (creditData && creditData.remaining_credits <= 0) {
           return new Response(
             JSON.stringify({
-              error: 'Bu hafta için AI krediniz bitti. Yeni krediler her Pazartesi yüklenir.',
+              error: 'Bugün için AI kredi limitinize ulaştınız. Krediler her 24 saatte otomatik yenilenir.',
               code: 'NO_CREDITS',
               weekStartDate: creditData.week_start_date,
               weekEndDate: creditData.week_end_date,
@@ -142,6 +157,34 @@ serve(async (req) => {
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openaiApiKey) {
       throw new Error('OpenAI API key not configured');
+    }
+
+    // Attempt to hydrate conversation history if frontend didn't send messages
+    let conversationHistory: Message[] = Array.isArray(messages) ? messages : [];
+
+    if (conversationHistory.length === 0 && conversationId) {
+      try {
+        const { data: storedMessages, error: historyError } = await supabaseClient
+          .from('ai_messages')
+          .select('role, content, image_url')
+          .eq('conversation_id', conversationId)
+          .order('created_at', { ascending: true })
+          .limit(20);
+
+        if (historyError) {
+          console.warn('Failed to load stored conversation history:', historyError.message);
+        } else if (storedMessages && storedMessages.length > 0) {
+          conversationHistory = storedMessages.map(
+            (msg: StoredMessage): Message => ({
+              role: msg.role === 'assistant' || msg.role === 'system' ? (msg.role as 'assistant' | 'system') : 'user',
+              content: msg.content,
+              image_url: msg.image_url ?? undefined,
+            })
+          );
+        }
+      } catch (historyException) {
+        console.warn('Error hydrating conversation history:', historyException);
+      }
     }
 
     // Determine if we have an image
@@ -175,10 +218,19 @@ Görevlerin:
     const openaiMessages: any[] = [systemMessage];
 
     // Add conversation history if provided
-    if (messages && messages.length > 0) {
+    const normalizedHistory = conversationHistory
+      .filter(
+        (m) =>
+          m &&
+          typeof m.content === 'string' &&
+          (m.role === 'user' || m.role === 'assistant' || m.role === 'system')
+      )
+      .slice(-12); // keep last 12 turns to control token usage
+
+    if (normalizedHistory.length > 0) {
       // Add previous messages (excluding system messages from history)
       // Support both text-only and vision messages
-      const historyMessages = messages
+      const historyMessages = normalizedHistory
         .filter((m) => m.role !== 'system')
         .map((m) => {
           // If message has an image, use Vision API format
@@ -371,13 +423,22 @@ Görevlerin:
       }
     }
 
+    const fallbackRemaining =
+      updatedCredits?.remaining_credits ??
+      (creditData ? Math.max(creditData.remaining_credits - 1, 0) : DAILY_CREDIT_LIMIT);
+
+    const fallbackWeekEnd =
+      updatedCredits?.week_end_date ||
+      creditData?.week_end_date ||
+      new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
     return new Response(
       JSON.stringify({
         success: true,
         answer,
         tokensUsed,
-        remainingCredits: updatedCredits?.remaining_credits || 999,
-        weekEndDate: updatedCredits?.week_end_date || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        remainingCredits: fallbackRemaining,
+        weekEndDate: fallbackWeekEnd,
         conversationId: activeConversationId,
         modelUsed: model,
       }),

@@ -8,7 +8,6 @@ import {
   Loader2,
   Brain,
   MessageSquare,
-  Image as ImageIcon,
   X,
   Camera,
 } from 'lucide-react';
@@ -21,13 +20,11 @@ import { useFeatureAccess } from '../hooks/useFeatureAccess';
 import {
   getAICredits,
   askAI,
-  getAIHistory,
   formatAIDate,
   uploadAIImage,
   getConversations,
   getConversationMessages,
   type AICredits,
-  type AIQuestion,
   type AskAIError,
   type Message as APIMessage,
 } from '../lib/aiApi';
@@ -40,46 +37,112 @@ interface Message {
   imageUrl?: string;
 }
 
+interface ConversationSummary {
+  id: string;
+  title: string | null;
+  created_at: string;
+  updated_at: string | null;
+  last_message_at: string | null;
+  message_count: number;
+}
+
+const DAILY_CREDIT_LIMIT = 15;
+
+const createDefaultCredits = (): AICredits => {
+  const start = new Date();
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+  return {
+    weekly_credits: DAILY_CREDIT_LIMIT,
+    used_credits: 0,
+    remaining_credits: DAILY_CREDIT_LIMIT,
+    week_start_date: start.toISOString(),
+    week_end_date: end.toISOString(),
+  };
+};
+
+const formatMessageContent = (content: string) => {
+  if (!content) return '';
+
+  let formatted = content;
+
+  formatted = formatted.replace(/\\\[(.+?)\\\]/gs, (_match, expr) => `$$${expr.trim()}$$`);
+
+  formatted = formatted.replace(/\[(.+?)\]/gs, (match, expr) => {
+    const inner = (expr as string).trim();
+    if (inner.startsWith('\\')) {
+      return `\\(${inner}\\)`;
+    }
+    return match;
+  });
+
+  return formatted;
+};
+
 export default function AIChatPanel() {
   const { user } = useAuth();
   const { planName } = useFeatureAccess();
   const [credits, setCredits] = useState<AICredits | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [history, setHistory] = useState<AIQuestion[]>([]);
   const [question, setQuestion] = useState('');
   const [loading, setLoading] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [conversationsLoading, setConversationsLoading] = useState(false);
+  const [conversationMessagesLoading, setConversationMessagesLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const normalizedPlan = (planName || '').toLowerCase();
+  const hasAIAccess = ['professional', 'profesyonel', 'advanced', 'gelismis'].includes(normalizedPlan);
+
   // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Load credits and history on mount
+  // Load credits and conversations on mount
   useEffect(() => {
-    if (user?.id) {
+    if (user?.id && hasAIAccess) {
       loadCredits();
-      loadHistory();
+      loadConversations();
     }
-  }, [user?.id]);
+  }, [user?.id, hasAIAccess]);
 
   const loadCredits = async () => {
-    if (!user?.id) return;
-    const data = await getAICredits(user.id);
-    setCredits(data);
+    if (!user?.id) return null;
+    try {
+      const data = await getAICredits(user.id);
+      if (data) {
+        setCredits(data);
+        return data;
+      }
+      setCredits((prev) => prev ?? createDefaultCredits());
+      return null;
+    } catch (err) {
+      console.error('Error loading AI credits:', err);
+      return null;
+    }
   };
 
-  const loadHistory = async () => {
-    if (!user?.id) return;
-    const data = await getAIHistory(user.id, 20);
-    setHistory(data);
+  const loadConversations = async () => {
+    if (!user?.id) return [];
+    setConversationsLoading(true);
+    try {
+      const data = await getConversations(user.id, 30);
+      setConversations(data);
+      return data;
+    } catch (err) {
+      console.error('Error loading conversations:', err);
+      return [];
+    } finally {
+      setConversationsLoading(false);
+    }
   };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -185,30 +248,49 @@ export default function AIChatPanel() {
       };
       setMessages((prev) => [...prev, assistantMessage]);
 
-      // Update credits
-      setCredits((prev) =>
-        prev
-          ? {
-              ...prev,
-              remaining_credits: response.remainingCredits,
-              used_credits: prev.weekly_credits - response.remainingCredits,
-            }
-          : null
-      );
+      // Update credits optimistically until fresh data loads
+      setCredits((prev) => {
+        const base = prev ?? createDefaultCredits();
+        const weekly = base.weekly_credits || DAILY_CREDIT_LIMIT;
+        const reported =
+          typeof response.remainingCredits === 'number'
+            ? response.remainingCredits
+            : null;
 
-      // Reload history
-      loadHistory();
+        let remaining = base.remaining_credits ?? weekly;
+
+        if (
+          reported !== null &&
+          reported <= remaining &&
+          reported >= 0 &&
+          reported <= weekly
+        ) {
+          remaining = reported;
+        } else {
+          remaining = Math.max(remaining - 1, 0);
+        }
+
+        return {
+          ...base,
+          weekly_credits: weekly,
+          remaining_credits: remaining,
+          used_credits: weekly - remaining,
+        };
+      });
+
+      // Reload conversations list and credits to include the latest activity
+      await loadConversations();
+      await loadCredits();
     } catch (err: any) {
       const errorData = err as AskAIError;
 
       if (errorData.code === 'PLAN_RESTRICTION') {
         setError('AI özelliği sadece Profesyonel ve Gelişmiş paket sahiplerine açıktır.');
       } else if (errorData.code === 'NO_CREDITS') {
-        setError(
-          `Bu hafta için AI krediniz bitti. Yeni krediler ${new Date(
-            errorData.weekEndDate || ''
-          ).toLocaleDateString('tr-TR')} tarihinde yüklenecek.`
-        );
+        const resetDate = errorData.weekEndDate
+          ? new Date(errorData.weekEndDate).toLocaleDateString('tr-TR')
+          : '24 saat';
+        setError(`Bugün için günlük AI limitinizi doldurdunuz. Krediler ${resetDate} tarihinde yenilenecek.`);
       } else {
         setError(errorData.error || 'Bir hata oluştu. Lütfen tekrar deneyin.');
       }
@@ -220,26 +302,38 @@ export default function AIChatPanel() {
     }
   };
 
-  const loadHistoryQuestion = (historyItem: AIQuestion) => {
-    setMessages([
-      {
-        id: `history-q-${historyItem.id}`,
-        role: 'user',
-        content: historyItem.question,
-        timestamp: new Date(historyItem.asked_at),
-      },
-      {
-        id: `history-a-${historyItem.id}`,
-        role: 'assistant',
-        content: historyItem.answer,
-        timestamp: new Date(historyItem.asked_at),
-      },
-    ]);
-    setShowHistory(false);
+  const handleSelectConversation = async (selectedId: string) => {
+    if (!selectedId) return;
+    setConversationMessagesLoading(true);
+    try {
+      const data = await getConversationMessages(selectedId, 200);
+      const formattedMessages: Message[] = (data || [])
+        .filter((entry: any) => entry.role === 'user' || entry.role === 'assistant')
+        .map((entry: any) => ({
+          id: entry.id || `${selectedId}-${entry.created_at}`,
+          role: entry.role === 'assistant' ? 'assistant' : 'user',
+          content: entry.content || '',
+          timestamp: entry.created_at ? new Date(entry.created_at) : new Date(),
+          imageUrl: entry.image_url || undefined,
+        }));
+      setMessages(formattedMessages);
+      setConversationId(selectedId);
+      setError(null);
+      setShowHistory(false);
+    } catch (err) {
+      console.error('Error loading conversation messages:', err);
+      setError('Sohbet yüklenirken bir hata oluştu. Lütfen tekrar deneyin.');
+    } finally {
+      setConversationMessagesLoading(false);
+    }
   };
 
-  // Check if user has professional or advanced plan
-  const hasAIAccess = planName === 'professional' || planName === 'advanced';
+  const handleStartNewConversation = () => {
+    setConversationId(null);
+    setMessages([]);
+    setError(null);
+    setShowHistory(false);
+  };
 
   if (!hasAIAccess) {
     return (
@@ -281,7 +375,7 @@ export default function AIChatPanel() {
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                <span>Haftalık 10 soru hakkı</span>
+                <span>Günlük 15 soru hakkı</span>
               </li>
             </ul>
           </div>
@@ -317,21 +411,30 @@ export default function AIChatPanel() {
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => setShowHistory(!showHistory)}
-                className="lg:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-              >
-                <History className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleStartNewConversation}
+                  className="hidden lg:inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-blue-600 dark:text-blue-300 border border-blue-100 dark:border-blue-700 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-800/40 transition-colors"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  Yeni Sohbet
+                </button>
+                <button
+                  onClick={() => setShowHistory(!showHistory)}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  <History className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                </button>
+              </div>
             </div>
 
             {/* Credits Display */}
             {credits && (
-              <div className="flex items-center gap-4 text-sm">
+              <div className="flex items-center gap-4 text-sm flex-wrap">
                 <div className="flex items-center gap-2 bg-green-100 dark:bg-green-900 px-3 py-1.5 rounded-full">
                   <Sparkles className="w-4 h-4 text-green-600 dark:text-green-300" />
                   <span className="font-semibold text-green-700 dark:text-green-200">
-                    {credits.remaining_credits} / {credits.weekly_credits} Kredi
+                    {credits.remaining_credits} / {credits.weekly_credits} Günlük Kredi
                   </span>
                 </div>
                 <span className="text-gray-600 dark:text-gray-400">
@@ -344,7 +447,12 @@ export default function AIChatPanel() {
 
           {/* Messages Area */}
           <div className="flex-1 overflow-y-auto p-6 space-y-4">
-            {messages.length === 0 ? (
+            {conversationMessagesLoading && (
+              <div className="flex justify-center my-4">
+                <Loader2 className="w-6 h-6 text-gray-500 dark:text-gray-300 animate-spin" />
+              </div>
+            )}
+            {messages.length === 0 && !conversationMessagesLoading ? (
               <div className="flex flex-col items-center justify-center h-full text-center">
                 <MessageSquare className="w-16 h-16 text-gray-300 dark:text-gray-600 mb-4" />
                 <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">
@@ -398,7 +506,7 @@ export default function AIChatPanel() {
                           },
                         }}
                       >
-                        {message.content}
+                        {formatMessageContent(message.content)}
                       </ReactMarkdown>
                     </div>
                     <p
@@ -518,33 +626,59 @@ export default function AIChatPanel() {
             </button>
           )}
 
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <History className="w-5 h-5" />
-            Geçmiş Sorular
-          </h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <History className="w-5 h-5" />
+              Geçmiş Sohbetler
+            </h3>
+            <button
+              onClick={handleStartNewConversation}
+              className="text-sm text-blue-600 dark:text-blue-300 font-medium"
+            >
+              + Yeni Sohbet
+            </button>
+          </div>
 
-          {history.length === 0 ? (
+          {conversationsLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-6 h-6 text-gray-500 dark:text-gray-300 animate-spin" />
+            </div>
+          ) : conversations.length === 0 ? (
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Henüz soru geçmişiniz yok
+              Henüz kayıtlı sohbetiniz yok. Yeni bir sohbet başlatın ve buradan geri dönün.
             </p>
           ) : (
             <div className="space-y-3">
-              {history.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => loadHistoryQuestion(item)}
-                  className="w-full text-left p-3 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg transition-colors"
-                >
-                  <p className="text-sm font-medium text-gray-900 dark:text-white line-clamp-2 mb-1">
-                    {item.question}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {formatAIDate(item.asked_at)}
-                  </p>
-                </button>
-              ))}
+              {conversations.map((conversation) => {
+                const lastActivity =
+                  conversation.last_message_at ||
+                  conversation.updated_at ||
+                  conversation.created_at;
+                const activityTimestamp = lastActivity || new Date().toISOString();
+                const isActive = conversationId === conversation.id;
+                return (
+                  <button
+                    key={conversation.id}
+                    onClick={() => handleSelectConversation(conversation.id)}
+                    className={`w-full text-left p-3 rounded-lg transition-colors ${
+                      isActive
+                        ? 'bg-blue-50 dark:bg-blue-900/40 border border-blue-200 dark:border-blue-800'
+                        : 'bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1 line-clamp-1">
+                      {conversation.title || 'Yeni Sohbet'}
+                    </p>
+                    <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                      <span>{formatAIDate(activityTimestamp)}</span>
+                      <span>{conversation.message_count} mesaj</span>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           )}
+
         </div>
       </div>
     </div>

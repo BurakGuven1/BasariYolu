@@ -38,6 +38,40 @@ import {
   type InstitutionStudentRequest,
 } from '../lib/institutionStudentApi';
 
+type DashboardTab =
+  | 'overview'
+  | 'exams'
+  | 'homeworks'
+  | 'schedule'
+  | 'summaries'
+  | 'pomodoro'
+  | 'formulas'
+  | 'maps'
+  | 'notes'
+  | 'analysis'
+  | 'classes'
+  | 'smartplan'
+  | 'subscription'
+  | 'ai-chat';
+
+const DASHBOARD_TAB_KEY = 'studentDashboardActiveTab';
+const DASHBOARD_TABS: DashboardTab[] = [
+  'overview',
+  'exams',
+  'homeworks',
+  'schedule',
+  'summaries',
+  'pomodoro',
+  'formulas',
+  'maps',
+  'notes',
+  'analysis',
+  'classes',
+  'smartplan',
+  'subscription',
+  'ai-chat',
+];
+
 const getCurrentWeekRange = () => {
   const now = new Date();
   const start = new Date(now);
@@ -64,7 +98,15 @@ export default function StudentDashboard() {
   const [dailyChallenge, setDailyChallenge] = useState<any>(null);
   const { planName } = useFeatureAccess();
   const { user, clearUser } = useAuth();
-  const [activeTab, setActiveTab] = useState<'overview' | 'exams' | 'homeworks' | 'schedule' | 'summaries' | 'pomodoro' | 'formulas' | 'maps' | 'notes' | 'analysis' | 'classes' | 'smartplan' | 'subscription' | 'ai-chat'>('overview');
+  const [activeTab, setActiveTab] = useState<DashboardTab>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem(DASHBOARD_TAB_KEY) as DashboardTab | null;
+      if (stored && DASHBOARD_TABS.includes(stored)) {
+        return stored;
+      }
+    }
+    return 'overview';
+  });
   const [showExamForm, setShowExamForm] = useState(false);
   const [showHomeworkForm, setShowHomeworkForm] = useState(false);
   const [showInviteCode, setShowInviteCode] = useState(false);
@@ -117,6 +159,12 @@ export default function StudentDashboard() {
   const [institutionAnnouncements, setInstitutionAnnouncements] = useState<InstitutionAnnouncement[]>([]);
   const [institutionAssignments, setInstitutionAssignments] = useState<InstitutionAssignment[]>([]);
   const [institutionPortalReloadKey, setInstitutionPortalReloadKey] = useState(0);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(DASHBOARD_TAB_KEY, activeTab);
+    }
+  }, [activeTab]);
 
   const {
     studentData,
@@ -1189,7 +1237,12 @@ export default function StudentDashboard() {
               >
                 <Icon className="h-4 w-4" />
                 <span>{label}</span>
-                {(key === 'pomodoro' || key === 'formulas'|| key === 'maps'|| key === 'notes' || key === 'summaries') && (
+                {(key === 'pomodoro' ||
+                  key === 'formulas' ||
+                  key === 'maps' ||
+                  key === 'notes' ||
+                  key === 'summaries' ||
+                  key === 'ai-chat') && (
                   <span className="px-2 py-0.5 bg-gradient-to-r from-purple-500 to-blue-500 text-white text-xs rounded-full font-bold">
                     PRO
                   </span>
