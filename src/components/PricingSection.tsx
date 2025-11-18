@@ -337,9 +337,9 @@ export default function PricingSection({ onSelectPackage }: PricingSectionProps)
                         </div>
                       )}
                     </div>
-                    <p className="text-gray-600">
-                      {pkg.maxParents} veli hesabı • {pkg.aiSupport ? 'AI desteği' : 'Temel özellikler'}
-                    </p>
+                   <b><p className="text-gray-600">
+                       • {pkg.aiSupport ? 'Her konuda Yapay Zeka Destekli Soru Çözümü' : 'Temel özellikler'}
+                    </p></b>
                   </div>
 
                   <ul className="space-y-3 mb-8">
