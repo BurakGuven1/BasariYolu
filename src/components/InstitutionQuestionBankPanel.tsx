@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Search, Trash2, Edit3, CheckCircle2, Circle, FilePlus, Upload, Image as ImageIcon } from 'lucide-react';
+import { Search, Trash2, Edit3, CheckCircle2, Circle, FilePlus, Upload, Image as ImageIcon, FileDown } from 'lucide-react';
+import jsPDF from 'jspdf';
 import type { InstitutionSession } from '../lib/institutionApi';
 import type {
   InstitutionExamBlueprint,
@@ -458,6 +459,157 @@ export default function InstitutionQuestionBankPanel({ session }: InstitutionQue
 
   const clearSelection = () => setSelectedIds([]);
 
+  const handleExportToPDF = async () => {
+    if (selectedIds.length === 0) {
+      setFeedback({ type: 'error', message: 'Lütfen en az bir soru seçin.' });
+      return;
+    }
+
+    try {
+      const selectedQuestions = questions.filter(q => selectedIds.includes(q.id));
+
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 15;
+      const contentWidth = pageWidth - 2 * margin;
+      let yPos = margin;
+
+      // Title
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Soru Bankası', margin, yPos);
+      yPos += 10;
+
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`${institution.name} - ${new Date().toLocaleDateString('tr-TR')}`, margin, yPos);
+      yPos += 10;
+
+      // Questions
+      for (let i = 0; i < selectedQuestions.length; i++) {
+        const q = selectedQuestions[i];
+
+        // Check if we need a new page
+        if (yPos > pageHeight - 40) {
+          pdf.addPage();
+          yPos = margin;
+        }
+
+        // Question number and metadata
+        pdf.setFontSize(11);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(`Soru ${i + 1}`, margin, yPos);
+        yPos += 6;
+
+        pdf.setFontSize(9);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(`Ders: ${q.subject} | Konu: ${q.topic || '-'} | Zorluk: ${q.difficulty}`, margin, yPos);
+        yPos += 8;
+
+        // Passage text if exists
+        if (q.passage_text) {
+          pdf.setFontSize(9);
+          const passageLines = pdf.splitTextToSize(`Metin: ${q.passage_text}`, contentWidth);
+          pdf.text(passageLines, margin, yPos);
+          yPos += passageLines.length * 5 + 4;
+        }
+
+        // Question prompt
+        if (q.question_prompt) {
+          pdf.setFontSize(9);
+          const promptLines = pdf.splitTextToSize(q.question_prompt, contentWidth);
+          pdf.text(promptLines, margin, yPos);
+          yPos += promptLines.length * 5 + 4;
+        }
+
+        // Question image if exists
+        if (q.page_image_url) {
+          try {
+            // Check if we need a new page for image
+            if (yPos > pageHeight - 100) {
+              pdf.addPage();
+              yPos = margin;
+            }
+
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+
+            await new Promise((resolve, reject) => {
+              img.onload = resolve;
+              img.onerror = reject;
+              img.src = q.page_image_url!;
+            });
+
+            const imgWidth = Math.min(contentWidth, 80);
+            const imgHeight = (img.height / img.width) * imgWidth;
+
+            pdf.addImage(img, 'PNG', margin, yPos, imgWidth, imgHeight);
+            yPos += imgHeight + 6;
+          } catch (err) {
+            console.error('Image load error:', err);
+            pdf.setFontSize(8);
+            pdf.setTextColor(150, 150, 150);
+            pdf.text('[Görsel yüklenemedi]', margin, yPos);
+            yPos += 6;
+            pdf.setTextColor(0, 0, 0);
+          }
+        }
+
+        // Question text
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'bold');
+        const questionLines = pdf.splitTextToSize(q.text, contentWidth);
+        pdf.text(questionLines, margin, yPos);
+        yPos += questionLines.length * 5 + 6;
+
+        // Choices for multiple choice
+        if (q.type === 'multiple_choice' && q.choices && q.choices.length > 0) {
+          pdf.setFont('helvetica', 'normal');
+          pdf.setFontSize(9);
+
+          for (const choice of q.choices) {
+            const choiceText = `${choice.label}) ${choice.text}`;
+            const choiceLines = pdf.splitTextToSize(choiceText, contentWidth - 5);
+            pdf.text(choiceLines, margin + 5, yPos);
+            yPos += choiceLines.length * 5 + 2;
+          }
+          yPos += 4;
+        }
+
+        // Answer key
+        pdf.setFontSize(9);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(`Cevap: ${q.answer_key || '-'}`, margin, yPos);
+        yPos += 8;
+
+        // Explanation if exists
+        if (q.explanation) {
+          pdf.setFont('helvetica', 'italic');
+          pdf.setFontSize(8);
+          const expLines = pdf.splitTextToSize(`Açıklama: ${q.explanation}`, contentWidth);
+          pdf.text(expLines, margin, yPos);
+          yPos += expLines.length * 4 + 6;
+        }
+
+        // Separator
+        pdf.setLineWidth(0.5);
+        pdf.setDrawColor(200, 200, 200);
+        pdf.line(margin, yPos, pageWidth - margin, yPos);
+        yPos += 8;
+      }
+
+      // Save PDF
+      const filename = `sorular_${new Date().getTime()}.pdf`;
+      pdf.save(filename);
+
+      setFeedback({ type: 'success', message: `${selectedQuestions.length} soru PDF olarak indirildi.` });
+    } catch (error) {
+      console.error('PDF export error:', error);
+      setFeedback({ type: 'error', message: 'PDF oluşturulurken hata oluştu.' });
+    }
+  };
+
   return (
     <section className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
@@ -468,6 +620,16 @@ export default function InstitutionQuestionBankPanel({ session }: InstitutionQue
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {selectedIds.length > 0 && (
+            <button
+              type="button"
+              onClick={handleExportToPDF}
+              className="inline-flex items-center gap-2 rounded bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+            >
+              <FileDown className="h-4 w-4" />
+              PDF İndir ({selectedIds.length})
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setPdfUploadModalOpen(true)}
