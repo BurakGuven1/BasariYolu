@@ -12,6 +12,10 @@ import {
   X,
   Camera,
 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 import { useAuth } from '../hooks/useAuth';
 import { useFeatureAccess } from '../hooks/useFeatureAccess';
 import {
@@ -373,7 +377,30 @@ export default function AIChatPanel() {
                         className="rounded-lg mb-2 max-w-full max-h-64 object-contain"
                       />
                     )}
-                    <p className="whitespace-pre-wrap">{message.content}</p>
+                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                      <ReactMarkdown
+                        remarkPlugins={[remarkMath]}
+                        rehypePlugins={[rehypeKatex]}
+                        components={{
+                          // Custom styling for markdown elements
+                          p: ({ children }) => (
+                            <p className="mb-2 last:mb-0">{children}</p>
+                          ),
+                          code: ({ className, children }) => {
+                            const isInline = !className;
+                            return isInline ? (
+                              <code className="bg-gray-200 dark:bg-gray-800 px-1 py-0.5 rounded text-sm">
+                                {children}
+                              </code>
+                            ) : (
+                              <code className={className}>{children}</code>
+                            );
+                          },
+                        }}
+                      >
+                        {message.content}
+                      </ReactMarkdown>
+                    </div>
                     <p
                       className={`text-xs mt-2 ${
                         message.role === 'user'
