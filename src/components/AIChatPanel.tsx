@@ -49,15 +49,17 @@ interface ConversationSummary {
 const DAILY_CREDIT_LIMIT = 15;
 
 const createDefaultCredits = (): AICredits => {
-  const start = new Date();
-  const end = new Date(start);
-  end.setDate(end.getDate() + 1);
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(0, 0, 0, 0); // Midnight tomorrow
+
   return {
-    weekly_credits: DAILY_CREDIT_LIMIT,
+    daily_credits: DAILY_CREDIT_LIMIT,
     used_credits: 0,
     remaining_credits: DAILY_CREDIT_LIMIT,
-    week_start_date: start.toISOString(),
-    week_end_date: end.toISOString(),
+    day_date: today.toISOString().split('T')[0], // YYYY-MM-DD
+    resets_at: tomorrow.toISOString(),
   };
 };
 
@@ -287,10 +289,7 @@ export default function AIChatPanel() {
       if (errorData.code === 'PLAN_RESTRICTION') {
         setError('AI özelliği sadece Profesyonel ve Gelişmiş paket sahiplerine açıktır.');
       } else if (errorData.code === 'NO_CREDITS') {
-        const resetDate = errorData.weekEndDate
-          ? new Date(errorData.weekEndDate).toLocaleDateString('tr-TR')
-          : '24 saat';
-        setError(`Bugün için günlük AI limitinizi doldurdunuz. Krediler ${resetDate} tarihinde yenilenecek.`);
+        setError('Bugün için günlük AI limitinizi doldurdunuz. Krediler yarın yenilenecek.');
       } else {
         setError(errorData.error || 'Bir hata oluştu. Lütfen tekrar deneyin.');
       }
@@ -434,12 +433,11 @@ export default function AIChatPanel() {
                 <div className="flex items-center gap-2 bg-green-100 dark:bg-green-900 px-3 py-1.5 rounded-full">
                   <Sparkles className="w-4 h-4 text-green-600 dark:text-green-300" />
                   <span className="font-semibold text-green-700 dark:text-green-200">
-                    {credits.remaining_credits} / {credits.weekly_credits} Günlük Kredi
+                    {credits.remaining_credits} / {credits.daily_credits} Günlük Kredi
                   </span>
                 </div>
                 <span className="text-gray-600 dark:text-gray-400">
-                  Yenileme:{' '}
-                  {new Date(credits.week_end_date).toLocaleDateString('tr-TR')}
+                  Yenileme: Yarın gece yarısı
                 </span>
               </div>
             )}
