@@ -86,10 +86,17 @@ function App() {
   );
 
   const closeInstitutionModals = React.useCallback(() => {
-    const fallback = institutionModalReturnPathRef.current ?? '/';
     institutionModalReturnPathRef.current = null;
-    navigate(fallback, { replace: true });
-  }, [navigate]);
+
+    // Kullanıcı varsa kendi rolüne uygun dashboard'a yönlendir
+    // DashboardRoute zaten user.userType'a göre doğru yeri gösterecek
+    if (user) {
+      navigate('/dashboard', { replace: true });
+    } else {
+      // Kullanıcı yoksa ana sayfaya git
+      navigate('/', { replace: true });
+    }
+  }, [navigate, user]);
 
   React.useEffect(() => {
     if (!INSTITUTION_MODAL_PATHS.includes(location.pathname)) {
