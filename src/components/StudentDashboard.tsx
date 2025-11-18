@@ -7,6 +7,7 @@ import ExamForm from './ExamForm';
 import HomeworkForm from './HomeworkForm';
 import ExamTopicsSection from './ExamTopicsSection';
 import AIInsights from './AIInsights';
+import EnhancedAIAnalysis from './EnhancedAIAnalysis';
 import { useFeatureAccess } from '../hooks/useFeatureAccess';
 import ExamLimitBadge from './ExamLimitBadge';
 import FeatureGate from './FeatureGate';
@@ -48,9 +49,8 @@ type DashboardTab =
   | 'formulas'
   | 'maps'
   | 'notes'
-  | 'analysis'
+  | 'ai-analysis'
   | 'classes'
-  | 'smartplan'
   | 'subscription'
   | 'ai-chat';
 
@@ -65,9 +65,8 @@ const DASHBOARD_TABS: DashboardTab[] = [
   'formulas',
   'maps',
   'notes',
-  'analysis',
+  'ai-analysis',
   'classes',
-  'smartplan',
   'subscription',
   'ai-chat',
 ];
@@ -1131,12 +1130,15 @@ export default function StudentDashboard() {
     );
   }
 
-  const renderAnalysis = () => (
-    <div className="space-y-6">
-      <StudentExamPerformancePanel userId={user?.id} />
-      <AIInsights examResults={examResults} studentData={studentData} />
-    </div>
-  );
+  const renderAnalysis = () => {
+    if (!studentData) return null;
+    return (
+      <EnhancedAIAnalysis
+        studentId={studentData.id}
+        examResults={examResults}
+      />
+    );
+  };
 
   const renderInstitutionClasses = () => {
     if (institutionPortalLoading) {
@@ -1182,8 +1184,7 @@ export default function StudentDashboard() {
     { key: 'exams', label: 'Denemeler', icon: BookOpen },
     { key: 'homeworks', label: 'Ödevler', icon: Calendar },
     { key: 'classes', label: showInstitutionPortal ? 'Kurumlarım' : 'Sınıflarım', icon: Users },
-    { key: 'analysis', label: 'AI Analiz', icon: Target },
-    { key: 'smartplan', label: 'Akıllı Plan', icon: Brain },
+    { key: 'ai-analysis', label: 'AI Analiz & Akıllı Plan', icon: Brain },
     { key: 'ai-chat', label: 'Yapay Zekaya Sor', icon: Brain },
     { key: 'summaries', label: 'Konu Özetleri', icon: FileText },
     { key: 'formulas', label: 'Formül Kartları', icon: BookmarkCheck },
@@ -1272,7 +1273,7 @@ export default function StudentDashboard() {
 
         {activeTab === 'overview' && renderOverview()}
         {activeTab === 'exams' && renderExams()}
-        {activeTab === 'analysis' && renderAnalysis()}
+        {activeTab === 'ai-analysis' && renderAnalysis()}
         {activeTab === 'summaries' && (
           <FeatureGate
             feature="topic_summaries"
@@ -1299,9 +1300,6 @@ export default function StudentDashboard() {
           >
             <TopicSummariesSection />
           </FeatureGate>
-        )}
-        {activeTab === 'smartplan' && studentData && (
-          <AIRecommendations studentId={studentData.id} />
         )}
         {activeTab === 'ai-chat' && <AIChatPanel />}
         {activeTab === 'classes' && (
