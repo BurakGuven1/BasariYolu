@@ -559,12 +559,12 @@ export default function InstitutionQuestionBankPanel({ session }: InstitutionQue
         // Question text
         pdf.setFontSize(10);
         pdf.setFont('helvetica', 'bold');
-        const questionLines = pdf.splitTextToSize(q.text, contentWidth);
+        const questionLines = pdf.splitTextToSize(q.question_text, contentWidth);
         pdf.text(questionLines, margin, yPos);
         yPos += questionLines.length * 5 + 6;
 
         // Choices for multiple choice
-        if (q.type === 'multiple_choice' && q.choices && q.choices.length > 0) {
+        if (q.question_type === 'multiple_choice' && q.choices && q.choices.length > 0) {
           pdf.setFont('helvetica', 'normal');
           pdf.setFontSize(9);
 
