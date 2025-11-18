@@ -146,7 +146,6 @@ CREATE POLICY "Institution admins can manage schedule entries"
       WHERE institution_members.institution_id = institution_schedule_entries.institution_id
       AND institution_members.user_id = auth.uid()
       AND institution_members.role IN ('owner', 'manager')
-      AND institution_members.status = 'active'
     )
   );
 
@@ -160,7 +159,6 @@ CREATE POLICY "Teachers can view their institution schedule"
       WHERE institution_members.institution_id = institution_schedule_entries.institution_id
       AND institution_members.user_id = auth.uid()
       AND institution_members.role = 'teacher'
-      AND institution_members.status = 'active'
     )
   );
 
@@ -198,7 +196,6 @@ CREATE POLICY "Institution admins can view teacher schedules"
       WHERE institution_members.institution_id = teacher_personal_schedules.institution_id
       AND institution_members.user_id = auth.uid()
       AND institution_members.role IN ('owner', 'manager')
-      AND institution_members.status = 'active'
     )
   );
 
@@ -217,7 +214,6 @@ CREATE POLICY "Institution admins can manage classes"
       WHERE institution_members.institution_id = institution_classes.institution_id
       AND institution_members.user_id = auth.uid()
       AND institution_members.role IN ('owner', 'manager')
-      AND institution_members.status = 'active'
     )
   );
 
@@ -231,7 +227,6 @@ CREATE POLICY "Teachers can view institution classes"
       WHERE institution_members.institution_id = institution_classes.institution_id
       AND institution_members.user_id = auth.uid()
       AND institution_members.role = 'teacher'
-      AND institution_members.status = 'active'
     )
   );
 
