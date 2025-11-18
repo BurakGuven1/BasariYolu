@@ -253,19 +253,19 @@ export default function AIChatPanel() {
       // Update credits optimistically until fresh data loads
       setCredits((prev) => {
         const base = prev ?? createDefaultCredits();
-        const weekly = base.weekly_credits || DAILY_CREDIT_LIMIT;
+        const daily = base.daily_credits || DAILY_CREDIT_LIMIT;
         const reported =
           typeof response.remainingCredits === 'number'
             ? response.remainingCredits
             : null;
 
-        let remaining = base.remaining_credits ?? weekly;
+        let remaining = base.remaining_credits ?? daily;
 
         if (
           reported !== null &&
           reported <= remaining &&
           reported >= 0 &&
-          reported <= weekly
+          reported <= daily
         ) {
           remaining = reported;
         } else {
@@ -274,9 +274,9 @@ export default function AIChatPanel() {
 
         return {
           ...base,
-          weekly_credits: weekly,
+          daily_credits: daily,
           remaining_credits: remaining,
-          used_credits: weekly - remaining,
+          used_credits: daily - remaining,
         };
       });
 
