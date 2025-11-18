@@ -216,8 +216,9 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- Storage Bucket for AI Images
 -- =====================================================
 -- Create storage bucket for AI chat images (if not exists)
+-- Public bucket allows direct image access via public URLs
 INSERT INTO storage.buckets (id, name, public)
-VALUES ('ai-chat-images', 'ai-chat-images', false)
+VALUES ('ai-chat-images', 'ai-chat-images', true)
 ON CONFLICT (id) DO NOTHING;
 
 -- Storage policies for ai-chat-images bucket
