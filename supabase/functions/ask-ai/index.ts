@@ -138,8 +138,8 @@ serve(async (req) => {
             JSON.stringify({
               error: 'Bugün için AI kredi limitinize ulaştınız. Krediler her 24 saatte otomatik yenilenir.',
               code: 'NO_CREDITS',
-              weekStartDate: creditData.week_start_date,
-              weekEndDate: creditData.week_end_date,
+              dayDate: creditData.day_date,
+              resetsAt: creditData.resets_at,
             }),
             {
               status: 429,
