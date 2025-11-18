@@ -19,11 +19,15 @@ export interface AuthUser {
   institutionSession?: InstitutionSession;
 }
 
+interface LogoutOptions {
+  redirectTo?: string;
+}
+
 interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
   login: (user: AuthUser) => void;
-  logout: () => Promise<void>;
+  logout: (options?: LogoutOptions) => Promise<void>;
   refreshSession: () => Promise<void>;
 }
 
@@ -175,30 +179,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [saveSession]);
 
   // Logout function
-  const logout = useCallback(async () => {
+  const logout = useCallback(async (options?: LogoutOptions) => {
     try {
-      // Clear based on user type
-      if (user?.userType === 'student' || user?.userType === 'parent') {
-        await supabase.auth.signOut();
-      }
-
+      await supabase.auth.signOut();
       setUser(null);
       saveSession(null);
 
       // Clear legacy storage keys
       localStorage.removeItem('institutionSession');
       localStorage.removeItem('classViewerSession');
-
-      // Redirect to home
-      window.location.href = '/';
+      // Redirect to home or custom path
+      window.location.href = options?.redirectTo ?? '/';
     } catch (error) {
       console.error('Logout error:', error);
       // Force clear and redirect even if error
       setUser(null);
       saveSession(null);
-      window.location.href = '/';
+      window.location.href = options?.redirectTo ?? '/';
     }
-  }, [user?.userType, saveSession]);
+  }, [saveSession]);
 
   // Refresh session
   const refreshSession = useCallback(async () => {

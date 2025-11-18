@@ -206,13 +206,13 @@ export default function TeacherSection() {
           <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:justify-between sm:text-left">
             <div>
               <p className="text-sm font-semibold uppercase tracking-wide text-blue-600">
-                Kurum ve dershane cozumleri
+                Kurum ve dershane çözümleri
               </p>
               <h4 className="mt-2 text-xl font-bold text-gray-900">
-                Kurum panelini aktif etmek icin basvurun
+                Kurum panelini aktif etmek için başvurun
               </h4>
               <p className="mt-1 text-sm text-gray-600">
-                Kuruma ozel soru bankasi, sinav olusturma ve veli raporlari icin hizli kayit olusturun.
+                Kuruma özel soru bankası, sınav oluşturma ve veli raporları için hızlı kayıt oluşturun.
               </p>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row">

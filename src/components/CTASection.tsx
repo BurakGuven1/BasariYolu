@@ -34,7 +34,7 @@ export default function CTASection({ onGetStarted }: CTASectionProps) {
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-4xl mx-auto">
           {[
-            'Aylık / 3 Aylık / 9 Aylık paketler',
+            'Aylık / 6 Aylık / 9 Aylık paketler',
             'Yapay zekâ destekli programlar',
             'Net ve hedef takibi',
             'Çıkmış konulara göre çalışma'

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, User, Mail, Lock, Phone, School, GraduationCap, Users, Calculator } from 'lucide-react';
+import { X, User, Mail, Lock, Phone, School, GraduationCap, Calculator } from 'lucide-react';
 import { registerTeacher } from '../lib/teacherApi';
 import { PACKAGE_OPTIONS, calculateClassPrice } from '../types/teacher';
 import TeacherPaymentPage from './TeacherPaymentPage';
@@ -22,7 +22,7 @@ export default function TeacherRegistration({ isOpen, onClose, onSuccess }: Teac
     class_name: '',
     class_description: '',
     student_capacity: 30,
-    package_type: '9_months' as 'monthly' | '3_months' | '9_months'
+    package_type: '9_months' as 'monthly' | '6_months' | '9_months'
   });
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -507,7 +507,7 @@ export default function TeacherRegistration({ isOpen, onClose, onSuccess }: Teac
               <h4 className="font-semibold text-blue-800 mb-2">Öğretmen Sistemi Özellikleri:</h4>
               <ul className="text-sm text-blue-700 space-y-1">
                 <li>• Maksimum 40 öğrenci kapasiteli sınıflar</li>
-                <li>• Esnek fiyatlandırma (Aylık, 3 Aylık, Dönemlik)</li>
+                <li>• Esnek fiyatlandırma (Aylık, 6 Aylık, Dönemlik)</li>
                 <li>• Öğrenci performans takibi</li>
                 <li>• Davet kodu ile kolay öğrenci ekleme</li>
                 <li>• Detaylı raporlama ve analiz</li>

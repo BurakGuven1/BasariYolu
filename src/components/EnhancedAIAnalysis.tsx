@@ -425,7 +425,7 @@ export default function EnhancedAIAnalysis({ studentId, examResults }: EnhancedA
                         <Clock className="h-4 w-4" />
                         {topic.study_hours_needed}h
                       </div>
-                      <div className="text-xs text-purple-700">Tahmini Süre</div>
+                      <div className="text-xs text-purple-700">Tahmini Süre(Aylık)</div>
                     </div>
                   </div>
 

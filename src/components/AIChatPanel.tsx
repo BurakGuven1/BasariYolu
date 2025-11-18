@@ -455,7 +455,7 @@ export default function AIChatPanel() {
                   </span>
                 </div>
                 <span className="text-gray-600 dark:text-gray-400">
-                  Yenileme: Yarın gece yarısı
+                  Yenileme: 24 saat içinde. "Kredilerinizi boşa harcamayınız! Sorduğunuz her soru bir kredidir."
                 </span>
               </div>
             )}

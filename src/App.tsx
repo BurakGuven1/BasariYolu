@@ -327,7 +327,7 @@ function App() {
   };
 
   const handleInstitutionLogout = async () => {
-    await logout();
+    await logout({ redirectTo: '/institution/login' });
   };
 
   const handleInstitutionRefresh = React.useCallback(async () => {
