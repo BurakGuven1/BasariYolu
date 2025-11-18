@@ -61,6 +61,14 @@ serve(async (req) => {
     // Parse request body
     const { question, category, conversationId, messages, imageUrl, imageBase64 }: RequestBody = await req.json();
 
+    // Log request details for debugging
+    console.log('=== Request Received ===');
+    console.log('Question:', question);
+    console.log('ConversationId:', conversationId);
+    console.log('Messages count:', messages?.length || 0);
+    console.log('Has imageUrl:', !!imageUrl);
+    console.log('Has imageBase64:', !!imageBase64);
+
     if (!question || question.trim().length === 0) {
       throw new Error('Question is required');
     }
@@ -169,14 +177,36 @@ Görevlerin:
     // Add conversation history if provided
     if (messages && messages.length > 0) {
       // Add previous messages (excluding system messages from history)
-      openaiMessages.push(
-        ...messages
-          .filter((m) => m.role !== 'system')
-          .map((m) => ({
+      // Support both text-only and vision messages
+      const historyMessages = messages
+        .filter((m) => m.role !== 'system')
+        .map((m) => {
+          // If message has an image, use Vision API format
+          if (m.image_url) {
+            return {
+              role: m.role,
+              content: [
+                {
+                  type: 'text',
+                  text: m.content,
+                },
+                {
+                  type: 'image_url',
+                  image_url: {
+                    url: m.image_url,
+                  },
+                },
+              ],
+            };
+          }
+          // Otherwise, use text-only format
+          return {
             role: m.role,
             content: m.content,
-          }))
-      );
+          };
+        });
+
+      openaiMessages.push(...historyMessages);
     }
 
     // Add current user question
@@ -219,6 +249,12 @@ Görevlerin:
         content: question,
       });
     }
+
+    // Log the messages being sent to OpenAI for debugging
+    console.log('=== OpenAI Request ===');
+    console.log('Model:', model);
+    console.log('Messages count:', openaiMessages.length);
+    console.log('Messages:', JSON.stringify(openaiMessages, null, 2));
 
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
