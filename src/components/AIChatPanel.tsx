@@ -108,6 +108,23 @@ export default function AIChatPanel() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Load draft question from localStorage on mount
+  useEffect(() => {
+    const draftQuestion = localStorage.getItem('aiChatDraft');
+    if (draftQuestion) {
+      setQuestion(draftQuestion);
+    }
+  }, []);
+
+  // Save draft question to localStorage when it changes
+  useEffect(() => {
+    if (question) {
+      localStorage.setItem('aiChatDraft', question);
+    } else {
+      localStorage.removeItem('aiChatDraft');
+    }
+  }, [question]);
+
   // Load credits and conversations on mount
   useEffect(() => {
     if (user?.id && hasAIAccess) {
@@ -191,6 +208,7 @@ export default function AIChatPanel() {
     const imagePreviewUrl = imagePreview;
 
     setQuestion('');
+    localStorage.removeItem('aiChatDraft'); // Clear draft after submit
     setError(null);
 
     let uploadedImageUrl: string | null = null;
