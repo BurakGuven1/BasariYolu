@@ -1,5 +1,6 @@
--- Institution Schedule System
--- Esnek ders programı sistemi: kurum genel programı, öğretmen programları, öğrenci görünümü
+-- Institution Schedule System - FIXED VERSION
+-- Mevcut veritabanı yapısına uygun olarak düzeltildi
+-- institution_members tablosu kullanılarak RLS policies düzeltildi
 
 -- ==============================================================
 -- INSTITUTION SCHEDULE ENTRIES (Ders Programı Girdileri)
@@ -122,7 +123,7 @@ CREATE INDEX IF NOT EXISTS idx_institution_classes_active
   ON institution_classes(is_active) WHERE is_active = true;
 
 -- ==============================================================
--- RLS POLICIES
+-- RLS POLICIES - FIXED
 -- ==============================================================
 
 -- Enable RLS
@@ -135,29 +136,35 @@ DROP POLICY IF EXISTS "Institution admins can manage schedule entries" ON instit
 DROP POLICY IF EXISTS "Teachers can view their institution schedule" ON institution_schedule_entries;
 DROP POLICY IF EXISTS "Students can view their institution schedule" ON institution_schedule_entries;
 
+-- Kurum yöneticileri (owner/manager) tüm işlemleri yapabilir
 CREATE POLICY "Institution admins can manage schedule entries"
   ON institution_schedule_entries
   FOR ALL
   USING (
     EXISTS (
-      SELECT 1 FROM institutions
-      WHERE institutions.id = institution_schedule_entries.institution_id
-      AND institutions.admin_id = auth.uid()
+      SELECT 1 FROM institution_members
+      WHERE institution_members.institution_id = institution_schedule_entries.institution_id
+      AND institution_members.user_id = auth.uid()
+      AND institution_members.role IN ('owner', 'manager')
+      AND institution_members.status = 'active'
     )
   );
 
+-- Öğretmenler (teacher role) görüntüleyebilir
 CREATE POLICY "Teachers can view their institution schedule"
   ON institution_schedule_entries
   FOR SELECT
   USING (
     EXISTS (
-      SELECT 1 FROM institution_teachers
-      WHERE institution_teachers.institution_id = institution_schedule_entries.institution_id
-      AND institution_teachers.teacher_id = auth.uid()
-      AND institution_teachers.status = 'active'
+      SELECT 1 FROM institution_members
+      WHERE institution_members.institution_id = institution_schedule_entries.institution_id
+      AND institution_members.user_id = auth.uid()
+      AND institution_members.role = 'teacher'
+      AND institution_members.status = 'active'
     )
   );
 
+-- Öğrenciler görüntüleyebilir
 CREATE POLICY "Students can view their institution schedule"
   ON institution_schedule_entries
   FOR SELECT
@@ -174,20 +181,24 @@ CREATE POLICY "Students can view their institution schedule"
 DROP POLICY IF EXISTS "Teachers can manage their own schedules" ON teacher_personal_schedules;
 DROP POLICY IF EXISTS "Institution admins can view teacher schedules" ON teacher_personal_schedules;
 
+-- Öğretmenler kendi kişisel programlarını yönetebilir
 CREATE POLICY "Teachers can manage their own schedules"
   ON teacher_personal_schedules
   FOR ALL
   USING (teacher_id = auth.uid())
   WITH CHECK (teacher_id = auth.uid());
 
+-- Kurum yöneticileri öğretmen programlarını görüntüleyebilir
 CREATE POLICY "Institution admins can view teacher schedules"
   ON teacher_personal_schedules
   FOR SELECT
   USING (
     EXISTS (
-      SELECT 1 FROM institutions
-      WHERE institutions.id = teacher_personal_schedules.institution_id
-      AND institutions.admin_id = auth.uid()
+      SELECT 1 FROM institution_members
+      WHERE institution_members.institution_id = teacher_personal_schedules.institution_id
+      AND institution_members.user_id = auth.uid()
+      AND institution_members.role IN ('owner', 'manager')
+      AND institution_members.status = 'active'
     )
   );
 
@@ -196,29 +207,35 @@ DROP POLICY IF EXISTS "Institution admins can manage classes" ON institution_cla
 DROP POLICY IF EXISTS "Teachers can view institution classes" ON institution_classes;
 DROP POLICY IF EXISTS "Students can view institution classes" ON institution_classes;
 
+-- Kurum yöneticileri sınıf yönetimi yapabilir
 CREATE POLICY "Institution admins can manage classes"
   ON institution_classes
   FOR ALL
   USING (
     EXISTS (
-      SELECT 1 FROM institutions
-      WHERE institutions.id = institution_classes.institution_id
-      AND institutions.admin_id = auth.uid()
+      SELECT 1 FROM institution_members
+      WHERE institution_members.institution_id = institution_classes.institution_id
+      AND institution_members.user_id = auth.uid()
+      AND institution_members.role IN ('owner', 'manager')
+      AND institution_members.status = 'active'
     )
   );
 
+-- Öğretmenler sınıfları görüntüleyebilir
 CREATE POLICY "Teachers can view institution classes"
   ON institution_classes
   FOR SELECT
   USING (
     EXISTS (
-      SELECT 1 FROM institution_teachers
-      WHERE institution_teachers.institution_id = institution_classes.institution_id
-      AND institution_teachers.teacher_id = auth.uid()
-      AND institution_teachers.status = 'active'
+      SELECT 1 FROM institution_members
+      WHERE institution_members.institution_id = institution_classes.institution_id
+      AND institution_members.user_id = auth.uid()
+      AND institution_members.role = 'teacher'
+      AND institution_members.status = 'active'
     )
   );
 
+-- Öğrenciler sınıfları görüntüleyebilir
 CREATE POLICY "Students can view institution classes"
   ON institution_classes
   FOR SELECT
