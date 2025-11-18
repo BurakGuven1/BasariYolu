@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Users, Plus, BookOpen, Settings, LogOut, Copy, Eye, EyeOff, CreditCard as Edit, Building2, School, RefreshCw, Calendar } from 'lucide-react';
+import React, { useState, useEffect, useMemo, type ComponentType } from 'react';
+import { Users, Plus, BookOpen, Settings, LogOut, Copy, Eye, EyeOff, CreditCard as Edit, Building2, School, RefreshCw, Calendar, BarChart3, Home } from 'lucide-react';
 import { getTeacherClasses, createClass, getClassData } from '../lib/teacherApi';
 import { PACKAGE_OPTIONS, calculateClassPrice } from '../types/teacher';
 import ClassManagementPanel from './ClassManagementPanel';
@@ -42,7 +42,9 @@ export default function TeacherDashboard({ teacherUser, onLogout }: TeacherDashb
     package_type: '9_months' as 'monthly' | '3_months' | '9_months'
   });
   const [createLoading, setCreateLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'classes' | 'institutions'>('classes');
+
+  type PanelKey = 'overview' | 'classes' | 'institutions';
+  const [activePanel, setActivePanel] = useState<PanelKey>('overview');
   const [institutionMemberships, setInstitutionMemberships] = useState<TeacherInstitutionMembership[]>([]);
   const [institutionsLoading, setInstitutionsLoading] = useState(false);
   const [selectedMembershipId, setSelectedMembershipId] = useState<string | null>(null);
@@ -297,6 +299,50 @@ useEffect(() => {
     setShowManagement(true);
   };
 
+  // Panel configuration
+  type PanelItem = {
+    key: PanelKey;
+    label: string;
+    description: string;
+    icon: ComponentType<{ className?: string }>;
+    visible: boolean;
+  };
+
+  const showInstitutionTab = institutionMemberships.length > 0;
+
+  const panelItems = useMemo<PanelItem[]>(
+    () => [
+      {
+        key: 'overview',
+        label: 'Genel Bakış',
+        description: 'İstatistikler ve hızlı erişim',
+        icon: Home,
+        visible: true,
+      },
+      {
+        key: 'classes',
+        label: 'Sınıflarım',
+        description: 'Kendi sınıflarınız ve öğrencileriniz',
+        icon: BookOpen,
+        visible: true,
+      },
+      {
+        key: 'institutions',
+        label: 'Kurumlarım',
+        description: 'Bağlı olduğunuz kurumlar',
+        icon: Building2,
+        visible: showInstitutionTab,
+      },
+    ],
+    [showInstitutionTab],
+  );
+
+  const visiblePanels = panelItems.filter((item) => item.visible);
+  const resolvedPanel = visiblePanels.some((item) => item.key === activePanel)
+    ? activePanel
+    : visiblePanels[0]?.key ?? 'overview';
+  const currentPanelMeta = visiblePanels.find((item) => item.key === resolvedPanel);
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active': return 'bg-green-100 text-green-800';
@@ -364,7 +410,7 @@ useEffect(() => {
     );
   }
   
-  if (!loading && activeTab === 'institutions') {
+  if (!loading && resolvedPanel === 'institutions') {
     if (institutionsLoading) {
       return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -388,7 +434,7 @@ useEffect(() => {
             </div>
             <div className="flex flex-wrap gap-3">
               <button
-                onClick={() => setActiveTab('classes')}
+                onClick={() => setActivePanel('classes')}
                 className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:border-gray-300 hover:bg-white"
               >
                 Sınıflarıma dön
@@ -589,29 +635,146 @@ useEffect(() => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Öğretmen Paneli</h1>
-            <p className="text-gray-600">
-              Hoş geldiniz, {teacher?.full_name}! Sınıflarınızı yönetin.
-            </p>
-            {teacher?.school_name && (
-              <p className="text-sm text-gray-500">{teacher.school_name}</p>
-            )}
-          </div>
+    <div className="flex min-h-screen bg-gray-50">
+      {/* Sidebar */}
+      <aside className="hidden w-72 flex-col border-r border-gray-100 bg-white/95 p-6 shadow-sm lg:flex">
+        <div>
+          <p className="text-xs uppercase tracking-wide text-gray-500">Öğretmen</p>
+          <h2 className="mt-2 text-xl font-semibold text-gray-900">{teacher?.full_name || 'Panel'}</h2>
+          {teacher?.school_name && (
+            <p className="mt-2 text-xs text-gray-500">{teacher.school_name}</p>
+          )}
+        </div>
+        <nav className="mt-8 space-y-2">
+          {visiblePanels.map((item) => {
+            const Icon = item.icon;
+            const isActive = item.key === resolvedPanel;
+            return (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => setActivePanel(item.key)}
+                className={`flex w-full items-start gap-3 rounded-xl px-4 py-3 text-left text-sm font-medium transition ${
+                  isActive ? 'bg-green-600 text-white shadow' : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <Icon className="mt-0.5 h-4 w-4" />
+                <div>
+                  <p>{item.label}</p>
+                  <p className={`text-xs ${isActive ? 'text-white/80' : 'text-gray-500'}`}>{item.description}</p>
+                </div>
+              </button>
+            );
+          })}
+        </nav>
+        <div className="mt-auto pt-8">
           <button
             onClick={handleLogout}
-            className="flex items-center space-x-2 bg-red-100 text-red-700 px-4 py-2 rounded-lg hover:bg-red-200 transition-colors"
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-gray-300 hover:bg-gray-100"
           >
             <LogOut className="h-4 w-4" />
-            <span>Çıkış Yap</span>
+            Çıkış Yap
           </button>
         </div>
+      </aside>
 
-        {showInstitutionTab && (
+      {/* Main Content */}
+      <div className="flex flex-1 flex-col">
+        <header className="sticky top-0 z-10 border-b border-gray-200 bg-white/90 px-4 py-4 backdrop-blur lg:px-8">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-gray-500">Öğretmen Paneli</p>
+              <h1 className="text-2xl font-semibold text-gray-900">{currentPanelMeta?.label ?? 'Panel'}</h1>
+              <p className="text-sm text-gray-500">{currentPanelMeta?.description ?? ''}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleLogout}
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 transition hover:border-gray-300 hover:bg-gray-100 lg:hidden"
+              >
+                <LogOut className="h-4 w-4" />
+                Çıkış
+              </button>
+            </div>
+          </div>
+          <div className="mt-4 flex gap-2 overflow-x-auto lg:hidden">
+            {visiblePanels.map((item) => {
+              const Icon = item.icon;
+              const isActive = item.key === resolvedPanel;
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => setActivePanel(item.key)}
+                  className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold ${
+                    isActive ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600'
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
+        </header>
+
+        <main className="flex-1 overflow-y-auto bg-gray-50 p-4 lg:p-8">
+          {resolvedPanel === 'overview' && (
+            <div className="space-y-6">
+              {/* Stats */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="bg-white rounded-lg p-6 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-600 text-sm">Toplam Sınıf</p>
+                      <p className="text-2xl font-bold text-blue-600">{classes.length}</p>
+                    </div>
+                    <BookOpen className="h-8 w-8 text-blue-600" />
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-lg p-6 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-600 text-sm">Toplam Öğrenci</p>
+                      <p className="text-2xl font-bold text-green-600">
+                        {classes.reduce((sum, cls) => sum + (cls.current_students || 0), 0)}
+                      </p>
+                    </div>
+                    <Users className="h-8 w-8 text-green-600" />
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-lg p-6 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-600 text-sm">Aktif Sınıf</p>
+                      <p className="text-2xl font-bold text-purple-600">
+                        {classes.filter(cls => cls.status === 'active').length}
+                      </p>
+                    </div>
+                    <Settings className="h-8 w-8 text-purple-600" />
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-lg p-6 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-600 text-sm">Kurumlar</p>
+                      <p className="text-2xl font-bold text-orange-600">
+                        {institutionMemberships.length}
+                      </p>
+                    </div>
+                    <Building2 className="h-8 w-8 text-orange-600" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {resolvedPanel === 'classes' && (
+            <div className="space-y-6">
+              {showInstitutionTab && (
           <div className="mb-8 flex flex-col gap-3 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="font-semibold text-blue-900">Kurumsal görevleriniz var</p>
@@ -621,7 +784,7 @@ useEffect(() => {
               </p>
             </div>
             <button
-              onClick={() => setActiveTab('institutions')}
+              onClick={() => setActivePanel('institutions')}
               className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-white px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50"
             >
               <Building2 className="h-4 w-4" />
@@ -1049,6 +1212,10 @@ useEffect(() => {
           </div>
         </div>
       )}
+            </div>
+          )}
+        </main>
+      </div>
     </div>
   );
 }
