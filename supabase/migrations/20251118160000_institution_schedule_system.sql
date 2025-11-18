@@ -1,6 +1,6 @@
--- Institution Schedule System - FIXED VERSION
--- Mevcut veritabanı yapısına uygun olarak düzeltildi
--- institution_members tablosu kullanılarak RLS policies düzeltildi
+-- Institution Schedule System - FINAL FIXED VERSION
+-- Mevcut veritabanı yapısına TAM UYUMLU
+-- Son kontroller yapılarak düzeltildi
 
 -- ==============================================================
 -- INSTITUTION SCHEDULE ENTRIES (Ders Programı Girdileri)
@@ -123,7 +123,7 @@ CREATE INDEX IF NOT EXISTS idx_institution_classes_active
   ON institution_classes(is_active) WHERE is_active = true;
 
 -- ==============================================================
--- RLS POLICIES - FIXED
+-- RLS POLICIES - FINAL FIXED
 -- ==============================================================
 
 -- Enable RLS
@@ -137,6 +137,7 @@ DROP POLICY IF EXISTS "Teachers can view their institution schedule" ON institut
 DROP POLICY IF EXISTS "Students can view their institution schedule" ON institution_schedule_entries;
 
 -- Kurum yöneticileri (owner/manager) tüm işlemleri yapabilir
+-- institution_members: id, institution_id, user_id, role
 CREATE POLICY "Institution admins can manage schedule entries"
   ON institution_schedule_entries
   FOR ALL
@@ -163,6 +164,7 @@ CREATE POLICY "Teachers can view their institution schedule"
   );
 
 -- Öğrenciler görüntüleyebilir
+-- institution_student_requests: id, institution_id, user_id, status, ...
 CREATE POLICY "Students can view their institution schedule"
   ON institution_schedule_entries
   FOR SELECT
@@ -170,7 +172,7 @@ CREATE POLICY "Students can view their institution schedule"
     EXISTS (
       SELECT 1 FROM institution_student_requests
       WHERE institution_student_requests.institution_id = institution_schedule_entries.institution_id
-      AND institution_student_requests.student_id = auth.uid()
+      AND institution_student_requests.user_id = auth.uid()
       AND institution_student_requests.status = 'approved'
     )
   );
@@ -238,7 +240,7 @@ CREATE POLICY "Students can view institution classes"
     EXISTS (
       SELECT 1 FROM institution_student_requests
       WHERE institution_student_requests.institution_id = institution_classes.institution_id
-      AND institution_student_requests.student_id = auth.uid()
+      AND institution_student_requests.user_id = auth.uid()
       AND institution_student_requests.status = 'approved'
     )
   );
