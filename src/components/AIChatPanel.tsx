@@ -8,6 +8,9 @@ import {
   Loader2,
   Brain,
   MessageSquare,
+  Image as ImageIcon,
+  X,
+  Camera,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useFeatureAccess } from '../hooks/useFeatureAccess';
@@ -16,9 +19,13 @@ import {
   askAI,
   getAIHistory,
   formatAIDate,
+  uploadAIImage,
+  getConversations,
+  getConversationMessages,
   type AICredits,
   type AIQuestion,
   type AskAIError,
+  type Message as APIMessage,
 } from '../lib/aiApi';
 
 interface Message {
@@ -26,6 +33,7 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  imageUrl?: string;
 }
 
 export default function AIChatPanel() {
@@ -38,7 +46,12 @@ export default function AIChatPanel() {
   const [loading, setLoading] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -65,14 +78,68 @@ export default function AIChatPanel() {
     setHistory(data);
   };
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setError('Lütfen geçerli bir görsel dosyası seçin');
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      setError('Görsel dosyası 10MB\'dan küçük olmalıdır');
+      return;
+    }
+
+    setSelectedImage(file);
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const clearImage = () => {
+    setSelectedImage(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const handleAskQuestion = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!question.trim() || loading) return;
 
     const userQuestion = question.trim();
+    const imageFile = selectedImage;
+    const imagePreviewUrl = imagePreview;
+
     setQuestion('');
     setError(null);
+
+    let uploadedImageUrl: string | null = null;
+
+    // Upload image if present
+    if (imageFile && user?.id) {
+      setUploadingImage(true);
+      uploadedImageUrl = await uploadAIImage(imageFile, user.id);
+      setUploadingImage(false);
+
+      if (!uploadedImageUrl) {
+        setError('Görsel yüklenirken hata oluştu. Lütfen tekrar deneyin.');
+        return;
+      }
+
+      // Clear image after upload
+      clearImage();
+    }
 
     // Add user message
     const userMessage: Message = {
@@ -80,12 +147,30 @@ export default function AIChatPanel() {
       role: 'user',
       content: userQuestion,
       timestamp: new Date(),
+      imageUrl: uploadedImageUrl || imagePreviewUrl || undefined,
     };
     setMessages((prev) => [...prev, userMessage]);
     setLoading(true);
 
     try {
-      const response = await askAI(userQuestion);
+      // Build conversation history for API
+      const conversationHistory: APIMessage[] = messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+        image_url: m.imageUrl,
+      }));
+
+      const response = await askAI(userQuestion, {
+        conversationId: conversationId || undefined,
+        messages: conversationHistory,
+        imageUrl: uploadedImageUrl || undefined,
+        imageBase64: !uploadedImageUrl && imagePreviewUrl ? imagePreviewUrl : undefined,
+      });
+
+      // Update conversation ID if new
+      if (response.conversationId && !conversationId) {
+        setConversationId(response.conversationId);
+      }
 
       // Add assistant message
       const assistantMessage: Message = {
@@ -113,7 +198,7 @@ export default function AIChatPanel() {
       const errorData = err as AskAIError;
 
       if (errorData.code === 'PLAN_RESTRICTION') {
-        setError('AI özelliği sadece Profesyonel paket sahiplerine açıktır.');
+        setError('AI özelliği sadece Profesyonel ve Gelişmiş paket sahiplerine açıktır.');
       } else if (errorData.code === 'NO_CREDITS') {
         setError(
           `Bu hafta için AI krediniz bitti. Yeni krediler ${new Date(
@@ -149,8 +234,10 @@ export default function AIChatPanel() {
     setShowHistory(false);
   };
 
-  // Check if user has professional plan
-  if (planName !== 'professional') {
+  // Check if user has professional or advanced plan
+  const hasAIAccess = planName === 'professional' || planName === 'advanced';
+
+  if (!hasAIAccess) {
     return (
       <div className="max-w-4xl mx-auto p-6">
         <div className="bg-gradient-to-br from-purple-50 to-blue-50 dark:from-gray-800 dark:to-gray-700 rounded-2xl p-8 text-center">
@@ -161,7 +248,7 @@ export default function AIChatPanel() {
             Yapay Zeka Asistanı
           </h2>
           <p className="text-gray-600 dark:text-gray-300 mb-6">
-            AI özelliği sadece <strong>Profesyonel Paket</strong> sahiplerine açıktır.
+            AI özelliği sadece <strong>Profesyonel ve Gelişmiş Paket</strong> sahiplerine açıktır.
           </p>
           <div className="bg-white dark:bg-gray-800 rounded-lg p-4 mb-6">
             <h3 className="font-semibold text-gray-900 dark:text-white mb-3">
@@ -174,11 +261,19 @@ export default function AIChatPanel() {
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                <span>Fotoğraf çekerek soru sorun, AI analiz edip çözsün</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
                 <span>Konuları detaylı şekilde öğrenin</span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
                 <span>Çalışma teknikleri ve motivasyon alın</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                <span>Sohbet geçmişi - Konuşmalarınızı hatırlıyor</span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
@@ -271,6 +366,13 @@ export default function AIChatPanel() {
                         : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
                     }`}
                   >
+                    {message.imageUrl && (
+                      <img
+                        src={message.imageUrl}
+                        alt="Uploaded"
+                        className="rounded-lg mb-2 max-w-full max-h-64 object-contain"
+                      />
+                    )}
                     <p className="whitespace-pre-wrap">{message.content}</p>
                     <p
                       className={`text-xs mt-2 ${
@@ -308,21 +410,62 @@ export default function AIChatPanel() {
 
           {/* Input Area */}
           <form onSubmit={handleAskQuestion} className="p-6 border-t border-gray-200 dark:border-gray-700">
+            {/* Image Preview */}
+            {imagePreview && (
+              <div className="mb-3 relative inline-block">
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  className="max-h-32 rounded-lg border-2 border-blue-500"
+                />
+                <button
+                  type="button"
+                  onClick={clearImage}
+                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
             <div className="flex gap-3">
               <input
                 type="text"
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
-                placeholder="Sorunuzu buraya yazın..."
-                disabled={loading || (credits !== null && credits.remaining_credits <= 0)}
+                placeholder="Sorunuzu buraya yazın veya fotoğraf yükleyin..."
+                disabled={loading || uploadingImage || (credits !== null && credits.remaining_credits <= 0)}
                 className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
               />
+
+              {/* Image Upload Button */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageSelect}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={loading || uploadingImage}
+                className="px-4 py-3 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                title="Fotoğraf Yükle"
+              >
+                {uploadingImage ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Camera className="w-5 h-5" />
+                )}
+              </button>
+
               <button
                 type="submit"
-                disabled={loading || !question.trim() || (credits !== null && credits.remaining_credits <= 0)}
+                disabled={loading || uploadingImage || !question.trim() || (credits !== null && credits.remaining_credits <= 0)}
                 className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg font-semibold hover:from-blue-600 hover:to-purple-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                {loading ? (
+                {loading || uploadingImage ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (
                   <Send className="w-5 h-5" />
