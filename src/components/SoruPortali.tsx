@@ -40,6 +40,11 @@ export default function SoruPortali() {
   const [currentUserId, setCurrentUserId] = useState<string>('');
 
   useEffect(() => {
+    // DEBUG: Test insert
+    import('../lib/studentQuestionPortalApi').then(module => {
+      module.testInsertQuestion();
+    });
+
     loadQuestions();
     getCurrentUserId();
   }, []);
