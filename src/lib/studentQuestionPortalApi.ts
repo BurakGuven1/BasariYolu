@@ -1,5 +1,71 @@
 import { supabase } from './supabase';
 
+// Debug fonksiyonu - kullanıcı bilgilerini kontrol et
+export async function debugAuth() {
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+  console.log('=== AUTH DEBUG ===');
+  console.log('Session:', session);
+  console.log('Session Error:', sessionError);
+  console.log('User:', user);
+  console.log('User Error:', userError);
+  console.log('User ID:', user?.id);
+  console.log('User Email:', user?.email);
+  console.log('==================');
+
+  return { session, user, sessionError, userError };
+}
+
+// Test insert fonksiyonu - detaylı hata mesajı
+export async function testInsertQuestion() {
+  console.log('=== TEST INSERT ===');
+
+  // Önce auth kontrol
+  const authDebug = await debugAuth();
+
+  if (!authDebug.user) {
+    console.error('❌ Kullanıcı oturum açmamış!');
+    return;
+  }
+
+  console.log('✅ Kullanıcı oturum açmış:', authDebug.user.id);
+
+  // Test insert
+  const testData = {
+    student_id: authDebug.user.id,
+    title: 'DEBUG TEST SORUSU',
+    description: 'Bu bir debug test sorusu'
+  };
+
+  console.log('Insert data:', testData);
+
+  const { data, error } = await supabase
+    .from('student_questions')
+    .insert(testData)
+    .select();
+
+  if (error) {
+    console.error('❌ INSERT HATASI:');
+    console.error('Error Code:', error.code);
+    console.error('Error Message:', error.message);
+    console.error('Error Details:', error.details);
+    console.error('Error Hint:', error.hint);
+    console.error('Full Error:', error);
+  } else {
+    console.log('✅ INSERT BAŞARILI:', data);
+
+    // Sil
+    await supabase
+      .from('student_questions')
+      .delete()
+      .eq('id', data[0].id);
+    console.log('✅ Test verisi silindi');
+  }
+
+  console.log('==================');
+}
+
 // Types
 export interface StudentQuestion {
   id: string;
@@ -105,24 +171,42 @@ export async function getQuestionById(questionId: string, currentUserId?: string
 }
 
 export async function createQuestion(data: CreateQuestionData): Promise<StudentQuestion> {
+  console.log('=== createQuestion called ===');
+
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Kullanıcı oturumu bulunamadı');
 
+  console.log('User ID:', user.id);
+  console.log('Question data:', data);
+
+  const insertData = {
+    student_id: user.id,
+    title: data.title,
+    description: data.description,
+    subject: data.subject || null,
+    topic: data.topic || null,
+    difficulty: data.difficulty || null,
+    image_url: data.image_url || null
+  };
+
+  console.log('Insert data:', insertData);
+
   const { data: question, error } = await supabase
     .from('student_questions')
-    .insert({
-      student_id: user.id,
-      title: data.title,
-      description: data.description,
-      subject: data.subject || null,
-      topic: data.topic || null,
-      difficulty: data.difficulty || null,
-      image_url: data.image_url || null
-    })
+    .insert(insertData)
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error('❌ CREATE QUESTION ERROR:');
+    console.error('Code:', error.code);
+    console.error('Message:', error.message);
+    console.error('Details:', error.details);
+    console.error('Hint:', error.hint);
+    throw error;
+  }
+
+  console.log('✅ Question created:', question);
   return question;
 }
 
