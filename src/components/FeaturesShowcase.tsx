@@ -21,8 +21,8 @@ import {
   Heart,
   BarChart3,
   CheckCircle2,
-  ArrowRight,
-  Play,
+  TrainFront,
+  HandCoins,
 } from 'lucide-react';
 
 // Hero Section - Apple style
@@ -97,29 +97,13 @@ function HeroSection() {
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.8 }}
-          className="flex flex-col sm:flex-row gap-4 justify-center items-center"
-        >
-          <button className="group px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-full text-lg font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 flex items-center gap-2">
-            Ücretsiz Başla
-            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-          </button>
-          <button className="group px-8 py-4 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-2 border-gray-200 dark:border-gray-700 hover:border-indigo-600 dark:hover:border-indigo-400 text-gray-900 dark:text-white rounded-full text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2">
-            <Play className="w-5 h-5" />
-            Tanıtımı İzle
-          </button>
-        </motion.div>
-
-        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 1, delay: 1.2 }}
           className="mt-20"
         >
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-            20.000+ öğrenci, 500+ öğretmen tarafından güvenle kullanılıyor
+            10.000+ öğrenci, 300+ öğretmen tarafından güvenle kullanılıyor
           </p>
         </motion.div>
       </div>
@@ -193,6 +177,7 @@ function PlatformOverview() {
       description: 'Kişiselleştirilmiş öğrenme deneyimi ile hedeflerine ulaş',
       color: 'from-blue-500 to-indigo-600',
       features: [
+        'Yapamadığınız soruyu Yapay Zeka Asistanına sorun',
         'Yapay zeka destekli konu analizi',
         'Pomodoro tekniği ile verimli çalışma',
         'Gerçek zamanlı performans takibi',
@@ -206,11 +191,12 @@ function PlatformOverview() {
       description: 'Tüm eğitim süreçlerinizi tek platformdan yönetin',
       color: 'from-purple-500 to-pink-600',
       features: [
+        'Diğer kurumlardan farklı olun',
         'Kapsamlı soru bankası yönetimi',
         'Öğrenci ve öğretmen takibi',
         'Detaylı performans raporları',
         'Özel sınav hazırlama araçları',
-        'Çoklu kampüs desteği',
+        'Kurumunuzu takip edin ve dijitalleştirin'  
       ],
     },
     {
@@ -224,6 +210,8 @@ function PlatformOverview() {
         'Öğrenci gelişim raporları',
         'İletişim ve duyuru sistemi',
         'Ders planı ve materyal paylaşımı',
+        'Soru Bankası',
+        'Ödev verin, sınav sonuçlarını açıklayın'
       ],
     },
     {
@@ -232,11 +220,12 @@ function PlatformOverview() {
       description: 'Çocuğunuzun eğitim sürecini yakından takip edin',
       color: 'from-orange-500 to-red-600',
       features: [
+        'Velilere ücretsiz takip paneli',
         'Gerçek zamanlı başarı takibi',
-        'Öğretmen ile doğrudan iletişim',
         'Detaylı çalışma raporları',
         'Günlük aktivite özeti',
         'Hedef belirleme ve izleme',
+        'Öğrencinizin ödevlerini ve denemelerini takip edin',
       ],
     },
   ];
@@ -422,12 +411,9 @@ function CTASection() {
               Bugün Başlayın
             </span>
           </h2>
-          <p className="text-xl text-gray-600 dark:text-gray-400 mb-12 max-w-2xl mx-auto">
-            14 gün ücretsiz deneyin. Kredi kartı gerekmez. İstediğiniz zaman iptal edebilirsiniz.
-          </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button className="px-10 py-5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-full text-lg font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
-              Ücretsiz Dene
+              Haydi Sen de Başla
             </button>
             <button className="px-10 py-5 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 hover:border-indigo-600 dark:hover:border-indigo-400 text-gray-900 dark:text-white rounded-full text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300">
               Satış Ekibiyle Görüş
@@ -455,6 +441,11 @@ export default function FeaturesShowcase() {
         animationData={student}
         features={[
           {
+            icon: <TrainFront className="w-6 h-6 text-white" />,
+            title: 'Çözülemeyen ve anlaşılmayan sorular için Yapay Zeka Asistanı',
+            text: 'Yapamadığınız soruları ve anlamadığınız konuları anında sorun, detaylı açıklamalar alın',
+          },
+          {
             icon: <Brain className="w-6 h-6 text-white" />,
             title: 'Akıllı Konu Analizi',
             text: 'Hangi konularda zorlandığınızı tespit eder ve özel çalışma planı oluşturur',
@@ -462,13 +453,14 @@ export default function FeaturesShowcase() {
           {
             icon: <Target className="w-6 h-6 text-white" />,
             title: 'Hedef Odaklı Çalışma',
-            text: 'TYT, AYT veya özel hedefleriniz için optimize edilmiş içerik',
+            text: 'TYT, AYT, LGS veya özel hedefleriniz için optimize edilmiş içerik',
           },
           {
             icon: <TrendingUp className="w-6 h-6 text-white" />,
             title: 'Gerçek Zamanlı İlerleme',
             text: 'Her çalışmanızın etkisini anında görün, motivasyonunuzu koruyun',
           },
+          
         ]}
       />
 
@@ -493,8 +485,8 @@ export default function FeaturesShowcase() {
           },
           {
             icon: <Zap className="w-6 h-6 text-white" />,
-            title: 'Hızlı Entegrasyon',
-            text: 'Mevcut sisteminizle kolay entegrasyon, hızlı kurulum',
+            title: 'Hiç bir entegrasyon sorunu yaşamayın',
+            text: 'Web sitemiz üzerinden kurum panelinize kolayca erişin ve yönetin',
           },
         ]}
       />
@@ -519,8 +511,8 @@ export default function FeaturesShowcase() {
           },
           {
             icon: <Sparkles className="w-6 h-6 text-white" />,
-            title: 'İnteraktif İçerik',
-            text: 'Multimedya destekli dersler ve ödevler oluşturun',
+            title: 'Sınav-quiz sonuçları ve ödev yönetimi',
+            text: 'Sınav-quiz sonuçlarınızı açıklayın ve ödevler oluşturun',
           },
         ]}
       />
@@ -535,6 +527,11 @@ export default function FeaturesShowcase() {
         animationData={learning}
         features={[
           {
+            icon: <HandCoins className="w-6 h-6 text-white" />,
+            title: 'Ücretsiz',
+            text: 'Velilere özel ücretsiz takip paneli',
+          },
+          {
             icon: <Heart className="w-6 h-6 text-white" />,
             title: 'Huzur Veren Takip',
             text: 'Çocuğunuzun çalışma saatlerini, başarılarını anında görün',
@@ -546,8 +543,8 @@ export default function FeaturesShowcase() {
           },
           {
             icon: <CheckCircle2 className="w-6 h-6 text-white" />,
-            title: 'Öğretmen İletişimi',
-            text: 'Öğretmenlerle doğrudan mesajlaşın, toplantı planlayın',
+            title: 'Çocuk-Ebeveyn İletişimi',
+            text: 'Sınav sürecinde öğrencilerinize doğru veli rehberliği sağlayın',
           },
         ]}
       />
