@@ -14,11 +14,6 @@ export interface StudentQuestion {
   view_count: number;
   created_at: string;
   updated_at: string;
-  student?: {
-    id: string;
-    name: string;
-    email: string;
-  };
   answer_count?: number;
   like_count?: number;
   user_has_liked?: boolean;
@@ -33,11 +28,6 @@ export interface StudentAnswer {
   is_accepted: boolean;
   created_at: string;
   updated_at: string;
-  student?: {
-    id: string;
-    name: string;
-    email: string;
-  };
   like_count?: number;
   user_has_liked?: boolean;
 }
@@ -61,10 +51,7 @@ export interface CreateAnswerData {
 export async function getAllQuestions(currentUserId?: string): Promise<StudentQuestion[]> {
   const { data, error } = await supabase
     .from('student_questions')
-    .select(`
-      *,
-      student:student_id (id, name, email)
-    `)
+    .select('*')
     .order('created_at', { ascending: false });
 
   if (error) throw error;
@@ -93,10 +80,7 @@ export async function getAllQuestions(currentUserId?: string): Promise<StudentQu
 export async function getQuestionById(questionId: string, currentUserId?: string): Promise<StudentQuestion | null> {
   const { data, error } = await supabase
     .from('student_questions')
-    .select(`
-      *,
-      student:student_id (id, name, email)
-    `)
+    .select('*')
     .eq('id', questionId)
     .single();
 
@@ -176,10 +160,7 @@ export async function markQuestionAsSolved(questionId: string, solved: boolean):
 export async function getAnswersForQuestion(questionId: string, currentUserId?: string): Promise<StudentAnswer[]> {
   const { data, error } = await supabase
     .from('student_answers')
-    .select(`
-      *,
-      student:student_id (id, name, email)
-    `)
+    .select('*')
     .eq('question_id', questionId)
     .order('is_accepted', { ascending: false })
     .order('created_at', { ascending: true });

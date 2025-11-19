@@ -336,6 +336,7 @@ export default function SoruPortali() {
                         key={answer.id}
                         answer={answer}
                         onLike={() => handleLikeAnswer(answer.id)}
+                        currentUserId={currentUserId}
                       />
                     ))
                   )}
@@ -449,20 +450,24 @@ function QuestionCard({
 // Answer Card Component
 function AnswerCard({
   answer,
-  onLike
+  onLike,
+  currentUserId
 }: {
   answer: StudentAnswer;
   onLike: () => void;
+  currentUserId: string;
 }) {
+  const isOwnAnswer = answer.student_id === currentUserId;
+
   return (
     <div className="bg-gray-50 rounded-lg p-4">
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2">
           <div className="h-8 w-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-sm font-medium">
-            {answer.student?.name?.charAt(0) || '?'}
+            {isOwnAnswer ? 'Sen' : 'Ö'}
           </div>
           <div>
-            <p className="font-medium text-gray-900 text-sm">{answer.student?.name || 'Anonim'}</p>
+            <p className="font-medium text-gray-900 text-sm">{isOwnAnswer ? 'Sen' : 'Öğrenci'}</p>
             <p className="text-xs text-gray-500">
               {new Date(answer.created_at).toLocaleDateString('tr-TR')}
             </p>
