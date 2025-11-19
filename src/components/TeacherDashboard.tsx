@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, type ComponentType } from 'react';
-import { Users, Plus, BookOpen, Settings, LogOut, Copy, Eye, EyeOff, CreditCard as Edit, Building2, School, RefreshCw, Calendar, BarChart3, Home } from 'lucide-react';
+import { Users, Plus, BookOpen, Settings, LogOut, Copy, Eye, EyeOff, CreditCard as Edit, Building2, School, RefreshCw, Home } from 'lucide-react';
 import { getTeacherClasses, createClass, getClassData } from '../lib/teacherApi';
 import { PACKAGE_OPTIONS, calculateClassPrice } from '../types/teacher';
 import ClassManagementPanel from './ClassManagementPanel';
@@ -39,7 +39,7 @@ export default function TeacherDashboard({ teacherUser, onLogout }: TeacherDashb
     class_name: '',
     description: '',
     student_capacity: 30,
-    package_type: '9_months' as 'monthly' | '3_months' | '9_months'
+    package_type: '9_months' as 'monthly' | '6_months' | '9_months'
   });
   const [createLoading, setCreateLoading] = useState(false);
 
