@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect } from 'react';
-import { BookOpen, StickyNote, MapIcon, BookmarkCheck, Plus, TrendingUp, Calendar, Target, Award, Clock, CheckCircle, AlertCircle, LogOut, CreditCard as Edit, Trash2, MoreVertical, Users, X, Brain, Crown, Trophy, Timer, FileText } from 'lucide-react';
+import { BookOpen, StickyNote, MapIcon, BookmarkCheck, Plus, TrendingUp, Calendar, Target, Award, Clock, CheckCircle, AlertCircle, LogOut, CreditCard as Edit, Trash2, MoreVertical, Users, X, Brain, Crown, Trophy, Timer, FileText, MessageSquare } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuth } from '../hooks/useAuth';
 import { useStudentData } from '../hooks/useStudentData';
@@ -27,6 +27,7 @@ import StudentWeeklySchedule from './StudentWeeklySchedule';
 import SelfStudyPlanner from './SelfStudyPlanner';
 import TopicSummariesSection from './TopicSummariesSection';
 import InstitutionStudentPortal from './InstitutionStudentPortal';
+import SoruPortali from './SoruPortali';
 import StudentExamPerformancePanel from './StudentExamPerformancePanel';
 import AIChatPanel from './AIChatPanel';
 import type { InstitutionExamBlueprint } from '../lib/institutionQuestionApi';
@@ -52,7 +53,8 @@ type DashboardTab =
   | 'ai-analysis'
   | 'classes'
   | 'subscription'
-  | 'ai-chat';
+  | 'ai-chat'
+  | 'soru-portali';
 
 const DASHBOARD_TAB_KEY = 'studentDashboardActiveTab';
 const DASHBOARD_TABS: DashboardTab[] = [
@@ -69,6 +71,7 @@ const DASHBOARD_TABS: DashboardTab[] = [
   'classes',
   'subscription',
   'ai-chat',
+  'soru-portali',
 ];
 
 const getCurrentWeekRange = () => {
@@ -1184,6 +1187,7 @@ export default function StudentDashboard() {
     { key: 'exams', label: 'Denemeler', icon: BookOpen },
     { key: 'homeworks', label: 'Ödevler', icon: Calendar },
     { key: 'classes', label: showInstitutionPortal ? 'Kurumlarım' : 'Sınıflarım', icon: Users },
+    { key: 'soru-portali', label: 'Soru Portalı', icon: MessageSquare },
     { key: 'ai-analysis', label: 'AI Analiz & Akıllı Plan', icon: Brain },
     { key: 'ai-chat', label: 'Yapay Zekaya Sor', icon: Brain },
     { key: 'summaries', label: 'Konu Özetleri', icon: FileText },
@@ -1302,6 +1306,7 @@ export default function StudentDashboard() {
           </FeatureGate>
         )}
         {activeTab === 'ai-chat' && <AIChatPanel />}
+        {activeTab === 'soru-portali' && <SoruPortali />}
         {activeTab === 'classes' && (
           showInstitutionPortal ? (
             <div className="bg-white rounded-lg p-6 shadow-sm">
