@@ -24,7 +24,8 @@ import {
   uploadQuestionImage,
   StudentQuestion,
   StudentAnswer,
-  CreateQuestionData
+  CreateQuestionData,
+  GradeLevel
 } from '../lib/studentQuestionPortalApi';
 
 export default function SoruPortali() {
@@ -39,6 +40,7 @@ export default function SoruPortali() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDifficulty, setFilterDifficulty] = useState<string>('all');
   const [filterSolved, setFilterSolved] = useState<string>('all');
+  const [filterGradeLevel, setFilterGradeLevel] = useState<GradeLevel | 'all'>('all');
   const [currentUserId, setCurrentUserId] = useState<string>('');
 
   useEffect(() => {
@@ -193,7 +195,8 @@ export default function SoruPortali() {
       filterSolved === 'all' ||
       (filterSolved === 'solved' && q.is_solved) ||
       (filterSolved === 'unsolved' && !q.is_solved);
-    return matchesSearch && matchesDifficulty && matchesSolved;
+    const matchesGradeLevel = filterGradeLevel === 'all' || q.grade_level === filterGradeLevel;
+    return matchesSearch && matchesDifficulty && matchesSolved && matchesGradeLevel;
   });
 
   if (loading) {
@@ -220,6 +223,49 @@ export default function SoruPortali() {
             <Plus className="h-5 w-5" />
             Soru Paylaş
           </button>
+        </div>
+
+        {/* Grade Level Categories */}
+        <div className="mb-4">
+          <h3 className="text-sm font-medium text-gray-700 mb-2">Sınıf Seviyesi</h3>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setFilterGradeLevel('all')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                filterGradeLevel === 'all'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Tümü
+            </button>
+            {['5', '6', '7', '8', '9', '10', '11', '12'].map((grade) => (
+              <button
+                key={grade}
+                onClick={() => setFilterGradeLevel(grade as GradeLevel)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  filterGradeLevel === grade
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {grade}. Sınıf
+              </button>
+            ))}
+            {['LGS', 'TYT', 'AYT'].map((exam) => (
+              <button
+                key={exam}
+                onClick={() => setFilterGradeLevel(exam as GradeLevel)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  filterGradeLevel === exam
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-purple-100 text-purple-700 hover:bg-purple-200'
+                }`}
+              >
+                {exam}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Search and Filters */}
@@ -473,7 +519,18 @@ function QuestionCard({
       }`}
     >
       <div className="flex items-start justify-between mb-2">
-        <h3 className="font-semibold text-gray-900 flex-1 line-clamp-2">{question.title}</h3>
+        <div className="flex-1">
+          <h3 className="font-semibold text-gray-900 line-clamp-2">{question.title}</h3>
+          <span className={`inline-block mt-1 px-2 py-0.5 rounded text-xs font-medium ${
+            ['LGS', 'TYT', 'AYT'].includes(question.grade_level)
+              ? 'bg-purple-100 text-purple-700'
+              : 'bg-blue-100 text-blue-700'
+          }`}>
+            {['LGS', 'TYT', 'AYT'].includes(question.grade_level)
+              ? question.grade_level
+              : `${question.grade_level}. Sınıf`}
+          </span>
+        </div>
         {question.is_solved && <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 ml-2" />}
       </div>
       <p className="text-gray-600 text-sm line-clamp-2 mb-3">{question.description}</p>
@@ -571,6 +628,7 @@ function CreateQuestionModal({
   const [formData, setFormData] = useState<CreateQuestionData>({
     title: '',
     description: '',
+    grade_level: '9', // Varsayılan 9. sınıf
     subject: '',
     topic: '',
     difficulty: undefined
@@ -686,6 +744,41 @@ function CreateQuestionModal({
                 placeholder="Örn: Türev"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Sınıf Seviyesi <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={formData.grade_level}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  grade_level: e.target.value as GradeLevel
+                })
+              }
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              required
+            >
+              <optgroup label="İlköğretim">
+                <option value="5">5. Sınıf</option>
+                <option value="6">6. Sınıf</option>
+                <option value="7">7. Sınıf</option>
+                <option value="8">8. Sınıf</option>
+              </optgroup>
+              <optgroup label="Lise">
+                <option value="9">9. Sınıf</option>
+                <option value="10">10. Sınıf</option>
+                <option value="11">11. Sınıf</option>
+                <option value="12">12. Sınıf</option>
+              </optgroup>
+              <optgroup label="Sınav Hazırlık">
+                <option value="LGS">LGS (Lise Giriş Sınavı)</option>
+                <option value="TYT">TYT (Temel Yeterlilik Testi)</option>
+                <option value="AYT">AYT (Alan Yeterlilik Testi)</option>
+              </optgroup>
+            </select>
           </div>
 
           <div>

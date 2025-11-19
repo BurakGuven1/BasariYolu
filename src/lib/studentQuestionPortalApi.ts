@@ -1,6 +1,8 @@
 import { supabase } from './supabase';
 
 // Types
+export type GradeLevel = '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | 'LGS' | 'TYT' | 'AYT';
+
 export interface StudentQuestion {
   id: string;
   student_id: string;
@@ -9,6 +11,7 @@ export interface StudentQuestion {
   subject: string | null;
   topic: string | null;
   difficulty: 'easy' | 'medium' | 'hard' | null;
+  grade_level: GradeLevel;
   image_url: string | null;
   is_solved: boolean;
   view_count: number;
@@ -35,6 +38,7 @@ export interface StudentAnswer {
 export interface CreateQuestionData {
   title: string;
   description: string;
+  grade_level: GradeLevel;
   subject?: string;
   topic?: string;
   difficulty?: 'easy' | 'medium' | 'hard';
@@ -114,6 +118,7 @@ export async function createQuestion(data: CreateQuestionData): Promise<StudentQ
       student_id: user.id,
       title: data.title,
       description: data.description,
+      grade_level: data.grade_level,
       subject: data.subject || null,
       topic: data.topic || null,
       difficulty: data.difficulty || null,
