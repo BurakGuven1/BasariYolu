@@ -34,17 +34,14 @@ export default function SoruPortali() {
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [answerText, setAnswerText] = useState('');
+  const [answerImageFile, setAnswerImageFile] = useState<File | null>(null);
+  const [answerImagePreview, setAnswerImagePreview] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDifficulty, setFilterDifficulty] = useState<string>('all');
   const [filterSolved, setFilterSolved] = useState<string>('all');
   const [currentUserId, setCurrentUserId] = useState<string>('');
 
   useEffect(() => {
-    // DEBUG: Test insert
-    import('../lib/studentQuestionPortalApi').then(module => {
-      module.testInsertQuestion();
-    });
-
     loadQuestions();
     getCurrentUserId();
   }, []);
@@ -137,15 +134,41 @@ export default function SoruPortali() {
     if (!selectedQuestion || !answerText.trim()) return;
 
     try {
+      let imageUrl = '';
+
+      // Eğer görsel seçildiyse yükle
+      if (answerImageFile) {
+        const { uploadQuestionImage } = await import('../lib/studentQuestionPortalApi');
+        imageUrl = await uploadQuestionImage(answerImageFile, currentUserId);
+      }
+
       await createAnswer({
         question_id: selectedQuestion.id,
-        answer_text: answerText
+        answer_text: answerText,
+        image_url: imageUrl || undefined
       });
+
+      // Form'u temizle
       setAnswerText('');
+      setAnswerImageFile(null);
+      setAnswerImagePreview('');
+
       await loadAnswers(selectedQuestion.id);
       await loadQuestions(); // Refresh to update answer count
     } catch (error) {
       console.error('Error submitting answer:', error);
+    }
+  };
+
+  const handleAnswerImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setAnswerImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAnswerImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -356,7 +379,43 @@ export default function SoruPortali() {
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
                     rows={3}
                   />
-                  <div className="flex justify-end mt-2">
+
+                  {/* Image Upload */}
+                  <div className="mt-3">
+                    <label className="flex items-center gap-2 w-fit px-3 py-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                      <ImageIcon className="h-4 w-4 text-gray-600" />
+                      <span className="text-sm text-gray-600">Görsel Ekle (opsiyonel)</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleAnswerImageChange}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+
+                  {/* Image Preview */}
+                  {answerImagePreview && (
+                    <div className="mt-3 relative">
+                      <img
+                        src={answerImagePreview}
+                        alt="Yanıt görseli önizleme"
+                        className="rounded-lg max-w-full h-auto max-h-48 object-contain"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAnswerImageFile(null);
+                          setAnswerImagePreview('');
+                        }}
+                        className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 transition-colors"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end mt-3">
                     <button
                       type="submit"
                       disabled={!answerText.trim()}
