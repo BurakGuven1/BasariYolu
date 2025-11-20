@@ -1,232 +1,244 @@
-# BasariYolu Mobile App 📱
+# BasariYolu Mobile App
 
-React Native mobil uygulama - Yapay Zeka Destekli Sınav Hazırlık Platformu
+React Native mobil uygulaması - Expo ile geliştirilmiştir.
 
-## 🎯 Özellikler
+## 🚀 Özellikler
 
-- ✅ **React Native + Expo** - Cross-platform (iOS + Android)
-- ✅ **Supabase Auth** - Güvenli kimlik doğrulama
-- ✅ **React Navigation** - Native navigation
-- ✅ **In-App Purchase (IAP)** - Google Play Billing entegrasyonu
-- ✅ **%15 Vergi Avantajı** - Türkiye GVK 20/6 madde avantajı
+- ✅ **Öğrenci Paneli**: Sınav takibi, ödev yönetimi, ilerleme analizi
+- ✅ **Veli Paneli**: Çocuk takibi, sınav sonuçları görüntüleme
+- ✅ **Supabase Entegrasyonu**: Real-time database ve authentication
+- ✅ **Dark Mode**: Otomatik tema desteği
+- ✅ **Offline Ready**: AsyncStorage ile local data persistence
+- ✅ **Modern UI**: NativeWind (Tailwind CSS) ile responsive tasarım
 
-## 📦 Kurulum
+## 📦 Gereksinimler
+
+- Node.js 18+
+- npm veya yarn
+- Expo CLI
+- EAS CLI (Play Store build için)
+- Android Studio (Android build için) veya Xcode (iOS build için)
+
+## 🛠️ Kurulum
+
+### 1. Bağımlılıkları Yükleyin
 
 ```bash
-# Paketleri kur
+cd mobile
 npm install
-
-# Environment variables'ı ayarla
-cp .env.example .env
-# .env dosyasını düzenle ve Supabase credential'larını ekle
 ```
 
-## 🚀 Çalıştırma
+### 2. Environment Variables Ayarlayın
 
-```bash
-# Development server başlat
-npx expo start
-
-# Android emulator'de çalıştır
-npx expo run:android
-
-# iOS simulator'de çalıştır (macOS gerekli)
-npx expo run:ios
-```
-
-## 📱 Build (Production)
-
-### EAS Build ile (Önerilen)
-
-```bash
-# EAS CLI kur
-npm install -g eas-cli
-
-# EAS'a giriş yap
-eas login
-
-# EAS projesini yapılandır
-eas build:configure
-
-# Android APK build et
-eas build --platform android --profile preview
-
-# Production AAB build et (Google Play için)
-eas build --platform android --profile production
-
-# iOS build et (Apple Developer hesabı gerekli)
-eas build --platform ios --profile production
-```
-
-### Local Build
-
-```bash
-# Android APK (Development)
-npx expo run:android --variant release
-
-# Production build için android/ klasöründe:
-cd android
-./gradlew assembleRelease
-```
-
-## 🔑 Environment Variables
-
-`.env` dosyasında gerekli değişkenler:
+`.env` dosyası zaten oluşturulmuştur. Supabase URL ve Anon Key değerlerini kontrol edin:
 
 ```env
-# Supabase
-EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-
-# Google Play IAP Product IDs
-EXPO_PUBLIC_IAP_BASIC_MONTHLY=basariyolu_basic_monthly
-EXPO_PUBLIC_IAP_BASIC_YEARLY=basariyolu_basic_yearly
-EXPO_PUBLIC_IAP_PREMIUM_MONTHLY=basariyolu_premium_monthly
-EXPO_PUBLIC_IAP_PREMIUM_YEARLY=basariyolu_premium_yearly
+EXPO_PUBLIC_SUPABASE_URL=https://xsgbtofqgcmbtncinyzn.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=eyJhbGci...
 ```
 
-## 💰 In-App Purchase Setup
+## 🏃 Geliştirme Modu
 
-### 1. Google Play Console'da Ürün Oluşturma
+### Expo Go ile Test (En Hızlı)
 
-1. [Google Play Console](https://play.google.com/console)'a giriş yap
-2. Uygulamanı seç > **Monetization** > **In-app products**
-3. **Create product** tıkla
-4. Product ID'leri gir:
-   - `basariyolu_basic_monthly`
-   - `basariyolu_basic_yearly`
-   - `basariyolu_premium_monthly`
-   - `basariyolu_premium_yearly`
+1. **Expo Go** uygulamasını telefonunuza indirin:
+   - [Android](https://play.google.com/store/apps/details?id=host.exp.exponent)
+   - [iOS](https://apps.apple.com/app/expo-go/id982107779)
 
-5. Her ürün için:
-   - Name: "BasariYolu Basic Aylık"
-   - Description: "Temel özellikler, aylık erişim"
-   - Price: Fiyatı TL olarak belirle
-   - Status: **Active** yap
-
-### 2. Test Kullanıcıları Ekleme
-
-1. Google Play Console > **Setup** > **License testing**
-2. Test e-postalarını ekle
-3. Test response: **PURCHASED** seç
-
-### 3. App Bundle Upload
+2. Development server'ı başlatın:
 
 ```bash
-# Production AAB build et
-eas build --platform android --profile production
-
-# Build tamamlandığında download linki gelecek
-# Bu .aab dosyasını Google Play Console'a yükle:
-# Play Console > Production > Create new release > Upload
+npx expo start
 ```
 
-## 📊 Proje Yapısı
+3. QR kodu telefonunuzda Expo Go ile taratın
+
+### Android Emulator ile Test
+
+1. Android Studio'yu açın ve bir emulator başlatın
+
+2. Development server'ı başlatın ve 'a' tuşuna basın:
+
+```bash
+npx expo start
+# Sonra 'a' tuşuna basın
+```
+
+### iOS Simulator ile Test (Sadece macOS)
+
+1. Xcode'u açın
+
+2. Development server'ı başlatın ve 'i' tuşuna basın:
+
+```bash
+npx expo start
+# Sonra 'i' tuşuna basın
+```
+
+## 📱 Build Alma (Play Store için)
+
+### 1. EAS CLI ile Giriş Yapın
+
+```bash
+eas login
+```
+
+### 2. Preview Build (APK - Internal Testing)
+
+Hızlı test için APK oluşturun:
+
+```bash
+eas build --profile preview --platform android
+```
+
+Bu komut:
+- APK dosyası oluşturur
+- EAS'a yükler
+- Download linki verir
+- APK'yı telefonunuza indirip yükleyebilirsiniz
+
+### 3. Production Build (AAB - Play Store)
+
+Play Store'a yüklemek için AAB oluşturun:
+
+```bash
+eas build --profile production --platform android
+```
+
+### 4. Play Store'a Yükleme
+
+#### A. Manuel Yükleme
+
+1. Build tamamlandıkında EAS'tan AAB dosyasını indirin
+2. [Google Play Console](https://play.google.com/console)'a gidin
+3. "Create app" ile yeni uygulama oluşturun
+4. "Production" > "Create new release"
+5. AAB dosyasını yükleyin
+6. App details, screenshots vb. ekleyin
+7. Review'a gönderin
+
+#### B. EAS Submit ile Otomatik (Gelecekte)
+
+İlk yüklemeden sonra otomatik yükleme için:
+
+1. Google Play Service Account oluşturun
+2. `google-service-account.json` dosyasını mobile klasörüne ekleyin
+3. Otomatik submit:
+
+```bash
+eas submit --platform android
+```
+
+## 🧪 Test Kullanıcıları
+
+Uygulamayı test etmek için web versiyonundan hesap oluşturabilir veya:
+
+**Öğrenci:**
+- Email: test@student.com
+- Password: test123
+
+**Veli:**
+- Email: test@parent.com
+- Password: test123
+
+## 📂 Proje Yapısı
 
 ```
 mobile/
-├── App.tsx                 # Ana uygulama entry point
-├── contexts/
-│   └── AuthContext.tsx     # Authentication context
-├── lib/
-│   └── supabase.ts         # Supabase client config
-├── navigation/
-│   └── index.tsx           # Navigation yapısı
-├── screens/
-│   ├── LoginScreen.tsx     # Giriş ekranı
-│   ├── RegisterScreen.tsx  # Kayıt ekranı
-│   ├── DashboardScreen.tsx # Ana dashboard
-│   ├── ProfileScreen.tsx   # Profil ekranı
-│   └── SubscriptionScreen.tsx  # Abonelik + IAP
-├── app.json                # Expo config
-├── package.json            # Dependencies
-└── .env                    # Environment variables (gitignore'da)
+├── src/
+│   ├── components/       # Reusable components
+│   ├── contexts/         # React contexts (Auth, Theme, etc.)
+│   ├── hooks/            # Custom hooks
+│   ├── lib/              # Supabase client, utilities
+│   ├── navigation/       # Navigation setup
+│   ├── screens/          # Screen components
+│   ├── types/            # TypeScript types
+│   └── utils/            # Helper functions
+├── assets/               # Images, fonts, etc.
+├── App.tsx               # App entry point
+├── app.json              # Expo config
+├── eas.json              # EAS Build config
+├── .env                  # Environment variables
+└── package.json          # Dependencies
 ```
 
-## 🔒 Güvenlik
+## 🎨 Ekran Yapısı
 
-- ✅ Supabase RLS (Row Level Security) aktif
-- ✅ Environment variables `.env` dosyasında
-- ✅ API keys asla hardcoded değil
-- ✅ IAP receipt validation yapılıyor
+### Auth Stack (Giriş yapmamış kullanıcılar)
+- `HomeScreen`: Landing page
+- `LoginScreen`: Giriş ekranı
+- `RegisterScreen`: Kayıt ekranı
 
-## 🎨 UI/UX
+### Main Stack (Giriş yapmış kullanıcılar)
 
-- **Design System**: Custom StyleSheet (Tailwind benzeri renkler)
-- **Colors**:
-  - Primary: `#2563eb` (Blue 600)
-  - Success: `#10b981` (Green 500)
-  - Error: `#ef4444` (Red 500)
-  - Gray scale: `#f9fafb` → `#1f2937`
+#### Öğrenci:
+- `StudentDashboardScreen` (Tab Navigator):
+  - Anasayfa: İstatistikler, son sınavlar
+  - Sınavlar: Tüm sınavlar, filtreleme
+  - Ödevler: Ödev listesi, tamamlama
+  - Profil: Kullanıcı bilgileri
+- `ExamFormScreen`: Sınav ekleme/düzenleme
+- `HomeworkFormScreen`: Ödev ekleme/düzenleme
 
-## 📈 Vergi Avantajı
+#### Veli:
+- `ParentDashboardScreen`:
+  - Çocuk seçimi
+  - İstatistikler
+  - Sınav sonuçları
+  - Ödev takibi
 
-Türkiye'de mobil uygulama geliştiricilere özel vergi avantajı:
+## 🔧 Sorun Giderme
 
-- **Web ödemesi**: %15-40 gelir vergisi
-- **Mobil IAP ödemesi**: %15 sabit gelir vergisi (GVK 20/6)
-- **Fark**: %25 vergi tasarrufu!
+### Build Hataları
 
-## 🚀 Deployment Checklist
-
-### Google Play Store
-
-- [ ] `app.json` > `android.package` değiştir
-- [ ] `app.json` > `android.versionCode` artır
-- [ ] Signing key oluştur (EAS otomatik yapıyor)
-- [ ] Production AAB build et
-- [ ] Play Console'a yükle
-- [ ] IAP ürünlerini aktif et
-- [ ] Internal/Closed testing başlat
-- [ ] Open testing/Production'a al
-
-### iOS App Store (İsteğe bağlı)
-
-- [ ] Apple Developer hesabı ($99/yıl)
-- [ ] `app.json` > `ios.bundleIdentifier` değiştir
-- [ ] `app.json` > `ios.buildNumber` artır
-- [ ] iOS build et
-- [ ] App Store Connect'e yükle
-- [ ] IAP ürünlerini aktif et
-- [ ] TestFlight ile test et
-- [ ] Review'a gönder
-
-## 🛠️ Troubleshooting
-
-### IAP çalışmıyor
-
+**"Metro bundler hatası"**
 ```bash
-# IAP modülünü yeniden kur
-npm uninstall react-native-iap
-npm install react-native-iap --legacy-peer-deps
-
-# Android'de prebuild yap
-npx expo prebuild --clean
-```
-
-### Build hatası
-
-```bash
-# Cache temizle
 npx expo start --clear
-
-# node_modules'u sil ve yeniden kur
-rm -rf node_modules
-npm install --legacy-peer-deps
 ```
 
-### Supabase bağlantı hatası
+**"Dependencies hatası"**
+```bash
+rm -rf node_modules package-lock.json
+npm install
+```
 
-- `.env` dosyasında `EXPO_PUBLIC_` prefix'i var mı kontrol et
-- Supabase URL ve Key doğru mu?
-- Internet bağlantısı var mı?
+**"EAS build hatası"**
+```bash
+eas build:configure
+```
+
+### Supabase Bağlantı Hatası
+
+1. `.env` dosyasının doğru konumda olduğundan emin olun
+2. Environment variables'ı kontrol edin
+3. Supabase projesinin aktif olduğunu doğrulayın
+
+### Navigation Hatası
+
+NavigationContainer içinde `useNavigation` kullandığınızdan emin olun.
+
+## 📝 Notlar
+
+- **Bundle Identifier**: `com.basariyolu.app`
+- **App Name**: BasariYolu
+- **Minimum Android Version**: API 21 (Android 5.0)
+- **Target Android Version**: API 34 (Android 14)
+
+## 🚦 Sonraki Adımlar
+
+1. ✅ Proje oluşturuldu
+2. ✅ Temel ekranlar hazır
+3. ✅ Supabase entegrasyonu tamam
+4. ⏳ Play Store'da test etme
+5. ⏳ Icon ve splash screen güncelleme
+6. ⏳ Screenshots hazırlama
+7. ⏳ Store listing hazırlama
+8. ⏳ Production release
 
 ## 📞 Destek
 
-Sorularınız için:
-- Email: destek@basariyolum.com
-- GitHub Issues: [BasariYolu/mobile](https://github.com/BurakGuven1/BasariYolu)
+Sorularınız için: [GitHub Issues](https://github.com/BurakGuven1/BasariYolu/issues)
 
-## 📝 Lisans
+## 📄 Lisans
 
 Tüm hakları saklıdır © 2025 BasariYolu
