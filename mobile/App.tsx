@@ -1,5 +1,4 @@
 import React from 'react';
-import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -16,7 +15,6 @@ export default function App() {
         <ParentSessionProvider>
           <ThemeProvider>
             <AuthProvider>
-              <StatusBar style="auto" />
               <AppNavigator />
             </AuthProvider>
           </ThemeProvider>
