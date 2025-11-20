@@ -5,9 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "NODE_OPTIONS='--max-old-space-size=4096' vite build",
+    "build:mobile": "NODE_OPTIONS='--max-old-space-size=4096' vite build --mode production",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "analyze": "NODE_OPTIONS='--max-old-space-size=4096' vite build --mode production && npx vite-bundle-visualizer"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.8",

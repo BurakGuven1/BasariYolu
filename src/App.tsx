@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { BookOpenCheck } from 'lucide-react';
@@ -6,31 +6,6 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { useAuthContext } from './contexts/AuthContext';
 import { packages } from './data/packages';
 import Navbar from './components/Navbar';
-import PricingSection from './components/PricingSection';
-import TeacherSection from './components/TeacherSection';
-import SiteFooter from './components/SiteFooter';
-import LoginModal from './components/LoginModal';
-import StudentDashboard from './components/StudentDashboard';
-import ParentDashboard from './components/ParentDashboard';
-import ExamTopicsSection from './components/ExamTopicsSection';
-import TeacherLogin from './components/TeacherLogin';
-import TeacherDashboard from './components/TeacherDashboard';
-import HeroV2 from './components/HeroV2';
-import ProblemSection from './components/ProblemSection';
-import VisionSection from './components/VisionSection';
-import ProductShowcase from './components/ProductShowcase';
-import CTASection from './components/CTASection';
-import UpgradeModal from './components/UpgradeModal';
-import BlogList from './components/BlogList';
-import BlogDetail from './components/BlogDetail';
-import TermsOfService from './pages/TermsOfService';
-import PrivacyPolicy from './pages/PrivacyPolicy';
-import RefundPolicy from './pages/RefundPolicy';
-import QuestionBankPage from './pages/QuestionBankPage';
-import InstitutionRegisterModal from './components/InstitutionRegisterModal';
-import InstitutionLoginModal from './components/InstitutionLoginModal';
-import InstitutionDashboard from './components/InstitutionDashboard';
-import InstitutionStudentAccessModal from './components/InstitutionStudentAccessModal';
 import { InstitutionSession } from './lib/institutionApi';
 import { supabase } from './lib/supabase';
 import { blogPosts } from './data/blogPosts';
@@ -40,13 +15,49 @@ import {
   getBlogPostStructuredData,
   getOrganizationStructuredData,
 } from './lib/seo';
-import ProtectedRoute from './components/ProtectedRoute';
 
 import { PomodoroProvider } from './contexts/PomodoroContext';
-import NotFoundPage from './pages/NotFoundPage';
-import FeaturesShowcase from './components/FeaturesShowcase';
-import LiveStats from './components/LiveStats';
-import Testimonials from './components/Testimonials';
+
+// Loading component for Suspense fallbacks
+const LoadingSpinner = () => (
+  <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+    <div className="text-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+      <p className="text-gray-600 dark:text-gray-300">Yükleniyor...</p>
+    </div>
+  </div>
+);
+
+// Lazy load heavy/route-specific components
+const PricingSection = lazy(() => import('./components/PricingSection'));
+const TeacherSection = lazy(() => import('./components/TeacherSection'));
+const SiteFooter = lazy(() => import('./components/SiteFooter'));
+const LoginModal = lazy(() => import('./components/LoginModal'));
+const StudentDashboard = lazy(() => import('./components/StudentDashboard'));
+const ParentDashboard = lazy(() => import('./components/ParentDashboard'));
+const ExamTopicsSection = lazy(() => import('./components/ExamTopicsSection'));
+const TeacherLogin = lazy(() => import('./components/TeacherLogin'));
+const TeacherDashboard = lazy(() => import('./components/TeacherDashboard'));
+const HeroV2 = lazy(() => import('./components/HeroV2'));
+const ProblemSection = lazy(() => import('./components/ProblemSection'));
+const VisionSection = lazy(() => import('./components/VisionSection'));
+const ProductShowcase = lazy(() => import('./components/ProductShowcase'));
+const CTASection = lazy(() => import('./components/CTASection'));
+const UpgradeModal = lazy(() => import('./components/UpgradeModal'));
+const BlogList = lazy(() => import('./components/BlogList'));
+const BlogDetail = lazy(() => import('./components/BlogDetail'));
+const TermsOfService = lazy(() => import('./pages/TermsOfService'));
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
+const RefundPolicy = lazy(() => import('./pages/RefundPolicy'));
+const QuestionBankPage = lazy(() => import('./pages/QuestionBankPage'));
+const InstitutionRegisterModal = lazy(() => import('./components/InstitutionRegisterModal'));
+const InstitutionLoginModal = lazy(() => import('./components/InstitutionLoginModal'));
+const InstitutionDashboard = lazy(() => import('./components/InstitutionDashboard'));
+const InstitutionStudentAccessModal = lazy(() => import('./components/InstitutionStudentAccessModal'));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
+const FeaturesShowcase = lazy(() => import('./components/FeaturesShowcase'));
+const LiveStats = lazy(() => import('./components/LiveStats'));
+const Testimonials = lazy(() => import('./components/Testimonials'));
 
 const INSTITUTION_MODAL_PATHS = ['/institution/login', '/institution/register'];
 
@@ -408,15 +419,15 @@ function App() {
       return <Navigate to="/" replace />;
     }
 
-    if (user.userType === 'teacher') {
-      return <TeacherDashboard teacherUser={user.teacherData} onLogout={handleLogout} />;
-    }
-
-    if (user.userType === 'parent' || user.isParentLogin) {
-      return <ParentDashboard />;
-    }
-
-    return <StudentDashboard />;
+    return (
+      <Suspense fallback={<LoadingSpinner />}>
+        {user.userType === 'teacher' && (
+          <TeacherDashboard teacherUser={user.teacherData} onLogout={handleLogout} />
+        )}
+        {(user.userType === 'parent' || user.isParentLogin) && <ParentDashboard />}
+        {user.userType === 'student' && <StudentDashboard />}
+      </Suspense>
+    );
   };
 
   const InstitutionDashboardRoute = () => {
@@ -425,37 +436,41 @@ function App() {
     }
 
     return (
-      <InstitutionDashboard
-        session={user.institutionSession}
-        onLogout={handleInstitutionLogout}
-        onRefresh={handleInstitutionRefresh}
-      />
+      <Suspense fallback={<LoadingSpinner />}>
+        <InstitutionDashboard
+          session={user.institutionSession}
+          onLogout={handleInstitutionLogout}
+          onRefresh={handleInstitutionRefresh}
+        />
+      </Suspense>
     );
   };
 
   const renderHomePage = () => (
-    <div className="min-h-screen bg-white dark:bg-gray-900">
-      <HeroV2 onGetStarted={handleGetStarted} />
-      <LiveStats />
-      <ProblemSection />
-      <VisionSection />
-      <ProductShowcase />
-      <Testimonials />
-      <PricingSection onSelectPackage={handleSelectPackage} />
-      <ExamTopicsSection
-        user={user}
-        hasClassViewerSession={hasClassViewerSession}
-        onUpgrade={() => setShowStudentParentLoginModal(true)}
-      />
-      <TeacherSection />
-      <CTASection onGetStarted={handleGetStarted} />
-      <SiteFooter
-        onNavigateToBlog={handleNavigateToBlog}
-        onNavigateToTerms={handleNavigateToTerms}
-        onNavigateToPrivacy={handleNavigateToPrivacy}
-        onNavigateToRefund={handleNavigateToRefund}
-      />
-    </div>
+    <Suspense fallback={<LoadingSpinner />}>
+      <div className="min-h-screen bg-white dark:bg-gray-900">
+        <HeroV2 onGetStarted={handleGetStarted} />
+        <LiveStats />
+        <ProblemSection />
+        <VisionSection />
+        <ProductShowcase />
+        <Testimonials />
+        <PricingSection onSelectPackage={handleSelectPackage} />
+        <ExamTopicsSection
+          user={user}
+          hasClassViewerSession={hasClassViewerSession}
+          onUpgrade={() => setShowStudentParentLoginModal(true)}
+        />
+        <TeacherSection />
+        <CTASection onGetStarted={handleGetStarted} />
+        <SiteFooter
+          onNavigateToBlog={handleNavigateToBlog}
+          onNavigateToTerms={handleNavigateToTerms}
+          onNavigateToPrivacy={handleNavigateToPrivacy}
+          onNavigateToRefund={handleNavigateToRefund}
+        />
+      </div>
+    </Suspense>
   );
 
   const HomePageContent = () => renderHomePage();
@@ -483,23 +498,23 @@ function App() {
       <Route path="/" element={<HomePageContent />} />
       <Route path="/institution/login" element={<HomePageContent />} />
       <Route path="/institution/register" element={<HomePageContent />} />
-      <Route path="/blog" element={<BlogList onNavigateToDetail={handleNavigateToBlogDetail} />} />
-      <Route path="/blog/:slug" element={<BlogDetailRoute />} />
-      <Route path="/terms-of-service" element={<TermsOfService />} />
+      <Route path="/blog" element={<Suspense fallback={<LoadingSpinner />}><BlogList onNavigateToDetail={handleNavigateToBlogDetail} /></Suspense>} />
+      <Route path="/blog/:slug" element={<Suspense fallback={<LoadingSpinner />}><BlogDetailRoute /></Suspense>} />
+      <Route path="/terms-of-service" element={<Suspense fallback={<LoadingSpinner />}><TermsOfService /></Suspense>} />
       <Route path="/sartlar-ve-kosullar" element={<Navigate to="/terms-of-service" replace />} />
-      <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+      <Route path="/privacy-policy" element={<Suspense fallback={<LoadingSpinner />}><PrivacyPolicy /></Suspense>} />
       <Route path="/gizlilik-politikasi" element={<Navigate to="/privacy-policy" replace />} />
-      <Route path="/refund-policy" element={<RefundPolicy />} />
+      <Route path="/refund-policy" element={<Suspense fallback={<LoadingSpinner />}><RefundPolicy /></Suspense>} />
       <Route path="/iade-politikasi" element={<Navigate to="/refund-policy" replace />} />
-      <Route path="/features" element={<FeaturesShowcase />} />
+      <Route path="/features" element={<Suspense fallback={<LoadingSpinner />}><FeaturesShowcase /></Suspense>} />
       <Route path="/ozellikler" element={<Navigate to="/features" replace />} />
       <Route
         path="/question-bank"
-        element={isQuestionBankAllowed ? <QuestionBankPage /> : <Navigate to="/" replace />}
+        element={isQuestionBankAllowed ? <Suspense fallback={<LoadingSpinner />}><QuestionBankPage /></Suspense> : <Navigate to="/" replace />}
       />
       <Route path="/dashboard" element={<DashboardRoute />} />
       <Route path="/institution" element={<InstitutionDashboardRoute />} />
-      <Route path="*" element={<NotFoundPage onNavigateHome={handleNavigateHome} />} />
+      <Route path="*" element={<Suspense fallback={<LoadingSpinner />}><NotFoundPage onNavigateHome={handleNavigateHome} /></Suspense>} />
     </Routes>
   );
 
@@ -525,67 +540,69 @@ function App() {
 
       {routes}
 
-      <LoginModal
-        isOpen={showStudentParentLoginModal}
-        onClose={() => setShowStudentParentLoginModal(false)}
-        onLogin={handleLogin}
-      />
+      <Suspense fallback={null}>
+        <LoginModal
+          isOpen={showStudentParentLoginModal}
+          onClose={() => setShowStudentParentLoginModal(false)}
+          onLogin={handleLogin}
+        />
 
-      <TeacherLogin
-        isOpen={showTeacherLoginModal}
-        onClose={() => setShowTeacherLoginModal(false)}
-        onSuccess={(teacher) => {
-          setShowTeacherLoginModal(false);
-          // Use AuthContext login
-          login({
-            id: teacher.id,
-            email: teacher.email || '',
-            userType: 'teacher',
-            teacherData: teacher,
-          });
-          navigate('/dashboard');
-          console.log('Teacher login success, navigating to dashboard');
-        }}
-      />
-
-      <InstitutionRegisterModal
-        isOpen={institutionRegisterModalOpen}
-        onClose={closeInstitutionModals}
-        onSuccess={handleInstitutionRegisterSuccess}
-        onSwitchToLogin={() => openInstitutionAuthRoute('/institution/login')}
-      />
-
-      <InstitutionLoginModal
-        isOpen={institutionLoginModalOpen}
-        onClose={closeInstitutionModals}
-        onSuccess={handleInstitutionLoginSuccess}
-        onSwitchToRegister={() => openInstitutionAuthRoute('/institution/register')}
-      />
-
-      <InstitutionStudentAccessModal
-        open={showInstitutionStudentModal}
-        onClose={() => setShowInstitutionStudentModal(false)}
-      />
-
-      {showUpgradeModal && targetUpgradePlan && (
-        <UpgradeModal
-          isOpen={showUpgradeModal}
-          onClose={() => {
-            setShowUpgradeModal(false);
-            setTargetUpgradePlan(null);
-          }}
-          targetPlanId={targetUpgradePlan.id}
-          targetPlanName={targetUpgradePlan.name}
-          targetPlanPrice={{
-            monthly: targetUpgradePlan.monthlyPrice,
-            yearly: targetUpgradePlan.yearlyPrice
-          }}
-          currentBillingCycle={targetUpgradePlan.billingCycle || 'monthly'}
-          onSuccess={() => {
-            window.location.reload();
+        <TeacherLogin
+          isOpen={showTeacherLoginModal}
+          onClose={() => setShowTeacherLoginModal(false)}
+          onSuccess={(teacher) => {
+            setShowTeacherLoginModal(false);
+            // Use AuthContext login
+            login({
+              id: teacher.id,
+              email: teacher.email || '',
+              userType: 'teacher',
+              teacherData: teacher,
+            });
+            navigate('/dashboard');
+            console.log('Teacher login success, navigating to dashboard');
           }}
         />
-      )}
+
+        <InstitutionRegisterModal
+          isOpen={institutionRegisterModalOpen}
+          onClose={closeInstitutionModals}
+          onSuccess={handleInstitutionRegisterSuccess}
+          onSwitchToLogin={() => openInstitutionAuthRoute('/institution/login')}
+        />
+
+        <InstitutionLoginModal
+          isOpen={institutionLoginModalOpen}
+          onClose={closeInstitutionModals}
+          onSuccess={handleInstitutionLoginSuccess}
+          onSwitchToRegister={() => openInstitutionAuthRoute('/institution/register')}
+        />
+
+        <InstitutionStudentAccessModal
+          open={showInstitutionStudentModal}
+          onClose={() => setShowInstitutionStudentModal(false)}
+        />
+
+        {showUpgradeModal && targetUpgradePlan && (
+          <UpgradeModal
+            isOpen={showUpgradeModal}
+            onClose={() => {
+              setShowUpgradeModal(false);
+              setTargetUpgradePlan(null);
+            }}
+            targetPlanId={targetUpgradePlan.id}
+            targetPlanName={targetUpgradePlan.name}
+            targetPlanPrice={{
+              monthly: targetUpgradePlan.monthlyPrice,
+              yearly: targetUpgradePlan.yearlyPrice
+            }}
+            currentBillingCycle={targetUpgradePlan.billingCycle || 'monthly'}
+            onSuccess={() => {
+              window.location.reload();
+            }}
+          />
+        )}
+      </Suspense>
 
       {isQuestionBankAllowed && location.pathname !== '/question-bank' && (
         <button
