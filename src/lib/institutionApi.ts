@@ -494,7 +494,7 @@ export const loginInstitutionAccount = async (email: string, password: string): 
 
   if (!data.user) {
     console.error('[Institution] login: user not returned from auth');
-    throw new Error('Kullanici bulunamadi.');
+    throw new Error('Kullanıcı bulunamadı.');
   }
 
   console.log('[Institution] login auth user:', data.user.id);
@@ -504,7 +504,7 @@ export const loginInstitutionAccount = async (email: string, password: string): 
   if (!context) {
     console.warn('[Institution] login: no institution context found');
     await supabase.auth.signOut();
-    throw new Error('Bu kullaniciya bagli bir kurum kaydi bulunamadi.');
+    throw new Error('Bu kullanıcıya bağlı bir kurum kaydı bulunamadı.');
   }
 
   console.log('[Institution] login context:', context);

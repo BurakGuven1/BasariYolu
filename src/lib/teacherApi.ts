@@ -202,7 +202,7 @@ export const createClass = async (classData: {
   class_name: string;
   description?: string;
   student_capacity: number;
-  package_type: 'monthly' | '3_months' | '9_months';
+  package_type: 'monthly' | '6_months' | '9_months';
 }) => {
   // Validate class name
   if (classData.class_name.length < 3 || classData.class_name.length > 50) {

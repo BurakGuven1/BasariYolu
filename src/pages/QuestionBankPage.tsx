@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BookOpenCheck, Download, Filter, Loader2, Printer, RefreshCw } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { BookOpenCheck, Download, Filter, Loader2, Printer, RefreshCw, ArrowLeft, Image as ImageIcon, X } from 'lucide-react';
 import {
   fetchQuestionSets,
   fetchQuestions,
@@ -12,8 +13,9 @@ import {
 } from '../lib/questionBank';
 import { useAuth } from '../hooks/useAuth';
 import { InstitutionSession, refreshInstitutionSession } from '../lib/institutionApi';
+import { sanitizeHTML } from '../utils/security';
 
-const SUBJECTS = ['Matematik', 'Turkce', 'Fen', 'Sosyal', 'Ingilizce'];
+const SUBJECTS = ['Matematik', 'Türkçe', 'Fen Bilimleri', 'Sosyal Bilimler', 'İngilizce'];
 
 const DIFFICULTIES = [
   { label: 'Kolay', value: 'easy' },
@@ -44,23 +46,23 @@ const EXAM_PRESETS = {
     description: '20 Türkçe • 20 Matematik • 20 Fen • 10 Tarih • 10 Din • 10 İngilizce',
     level: '8sinif',
     slots: [
-      { subject: 'Turkce', count: 20 },
+      { subject: 'Türkçe', count: 20 },
       { subject: 'Matematik', count: 20 },
-      { subject: 'Fen', count: 20 },
-      { subject: 'Tarih', count: 10 },
-      { subject: 'Din', count: 10 },
-      { subject: 'Ingilizce', count: 10 },
+      { subject: 'Fen Bilimleri', count: 20 },
+      { subject: 'T.C. İnkılap Tarihi ve Atatürkçülük', count: 10 },
+      { subject: 'Din Kültürü ve Ahlak Bilgisi', count: 10 },
+      { subject: 'İngilizce', count: 10 },
     ],
   },
   tyt: {
     label: 'TYT Denemesi',
-    description: '40 Türkçe • 20 Sosyal • 40 Matematik • 20 Fen',
+    description: '40 Türkçe • 40 Matematik • 20 Fen • 20 Sosyal (120 soru)',
     level: 'tyt',
     slots: [
-      { subject: 'Turkce', count: 40 },
-      { subject: 'Sosyal', count: 20 },
+      { subject: 'Türkçe', count: 40 },
       { subject: 'Matematik', count: 40 },
-      { subject: 'Fen', count: 20 },
+      { subject: 'Fen Bilimleri', count: 20 },
+      { subject: 'Sosyal Bilimler', count: 20 },
     ],
   },
   aytSay: {
@@ -140,6 +142,7 @@ const createAggregate = (): QuestionAggregate => ({
 
 export default function QuestionBankPage() {
   useAuth();
+  const navigate = useNavigate();
   const [institutionSession, setInstitutionSession] = useState<InstitutionSession | null>(null);
   const [filters, setFilters] = useState({
     subject: '',
@@ -161,6 +164,7 @@ export default function QuestionBankPage() {
   const [availableTopics, setAvailableTopics] = useState<string[]>([]);
   const [topicsLoading, setTopicsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [imageModalUrl, setImageModalUrl] = useState<string | null>(null);
 
   useEffect(() => {
     refreshInstitutionSession()
@@ -394,6 +398,8 @@ export default function QuestionBankPage() {
     try {
       const aggregated: QuestionRecord[] = [];
       const baseLevels = preset.level ? [preset.level] : filters.level ? [filters.level] : undefined;
+      const missingSubjects: string[] = [];
+      const insufficientSubjects: Array<{ subject: string; needed: number; found: number }> = [];
 
       for (const slot of preset.slots) {
         const slotQuestions = await fetchWeightedSubjectQuestions(
@@ -404,8 +410,43 @@ export default function QuestionBankPage() {
             levels: baseLevels,
           },
         );
+
+        // Yetersiz soru kontrolü
+        if (slotQuestions.length === 0) {
+          missingSubjects.push(`${slot.subject} (0/${slot.count} soru)`);
+        } else if (slotQuestions.length < slot.count) {
+          insufficientSubjects.push({
+            subject: slot.subject,
+            needed: slot.count,
+            found: slotQuestions.length,
+          });
+        }
+
         aggregated.push(...slotQuestions);
       }
+
+      // Hata mesajları
+      if (missingSubjects.length > 0 || insufficientSubjects.length > 0) {
+        let errorMsg = '⚠️ Deneme oluşturuldu ancak eksiklikler var:\n\n';
+
+        if (missingSubjects.length > 0) {
+          errorMsg += `❌ Hiç soru bulunamayan dersler: ${missingSubjects.join(', ')}\n\n`;
+        }
+
+        if (insufficientSubjects.length > 0) {
+          errorMsg += '⚠️ Yetersiz soru olan dersler:\n';
+          insufficientSubjects.forEach(({ subject, needed, found }) => {
+            errorMsg += `  • ${subject}: ${found}/${needed} soru bulundu\n`;
+          });
+          errorMsg += '\n';
+        }
+
+        errorMsg += `✅ Toplam ${aggregated.length}/${preset.slots.reduce((sum, s) => sum + s.count, 0)} soru oluşturuldu.\n\n`;
+        errorMsg += '💡 İpucu: Daha fazla soru eklemek için Kurum Dashboard\'dan soru yükleyin.';
+
+        setError(errorMsg);
+      }
+
       setQuestions(aggregated);
       setAnswers({});
       setResults(null);
@@ -572,6 +613,20 @@ export default function QuestionBankPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-10">
       <div className="mx-auto max-w-6xl px-4 space-y-8">
+        {/* Geri Dönüş Butonu */}
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => navigate(-1)}
+            className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 hover:border-gray-300"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Geri Dön
+          </button>
+          <div className="text-sm text-gray-500">
+            Dashboard'a veya bir önceki sayfaya dön
+          </div>
+        </div>
+
         <header className="rounded-3xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 p-8 text-white shadow-xl">
           <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
             <div>
@@ -800,7 +855,7 @@ export default function QuestionBankPage() {
             </button>
           </div>
           {error && (
-            <p className="mt-4 rounded-xl bg-red-50 px-4 py-2 text-sm text-red-600">
+            <p className="mt-4 rounded-xl bg-red-50 px-4 py-2 text-sm text-red-600 whitespace-pre-line">
               {error}
             </p>
           )}
@@ -873,8 +928,30 @@ export default function QuestionBankPage() {
                     </div>
                     <div
                       className="prose prose-sm mt-4 max-w-none text-gray-900"
-                      dangerouslySetInnerHTML={{ __html: question.content?.stem ?? '' }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeHTML(question.content?.stem ?? '') }}
                     />
+                    {question.page_image_url && (
+                      <div className="mt-4">
+                        <button
+                          onClick={() => setImageModalUrl(question.page_image_url!)}
+                          className="group relative overflow-hidden rounded-xl border-2 border-gray-200 bg-white p-2 transition hover:border-indigo-400 hover:shadow-xl"
+                        >
+                          <img
+                            src={question.page_image_url}
+                            alt={`Soru ${index + 1} görseli`}
+                            className="max-h-64 w-full object-contain transition group-hover:scale-[1.02]"
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition group-hover:bg-black/10 group-hover:opacity-100">
+                            <div className="rounded-full bg-white/90 p-3 shadow-lg">
+                              <ImageIcon className="h-6 w-6 text-indigo-600" />
+                            </div>
+                          </div>
+                        </button>
+                        <p className="mt-2 text-xs text-center text-gray-600 font-medium">
+                          📸 Tam soru görseli • Tıklayarak büyütün
+                        </p>
+                      </div>
+                    )}
                     {question.content?.options?.length ? (
                       <div className="mt-4 space-y-2">
                         {question.content.options.map((option) => {
@@ -1017,6 +1094,29 @@ export default function QuestionBankPage() {
           )}
         </section>
       </div>
+
+      {/* Image Modal */}
+      {imageModalUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          onClick={() => setImageModalUrl(null)}
+        >
+          <div className="relative max-h-[90vh] max-w-[90vw]">
+            <button
+              onClick={() => setImageModalUrl(null)}
+              className="absolute -right-4 -top-4 rounded-full bg-white p-2 shadow-lg transition hover:bg-gray-100"
+            >
+              <X className="h-6 w-6 text-gray-700" />
+            </button>
+            <img
+              src={imageModalUrl}
+              alt="Soru görseli"
+              className="max-h-[90vh] max-w-full rounded-lg shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
