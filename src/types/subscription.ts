@@ -57,7 +57,7 @@ export interface TeacherBilling {
   id: string;
   teacher_id: string;
   class_id: string;
-  billing_cycle: 'monthly' | '3_months' | '9_months';
+  billing_cycle: 'monthly' | '6_months' | '9_months';
   price_per_student: number;
   current_students: number;
   student_capacity: number;

@@ -16,8 +16,21 @@ const sanitizePlainText = (value: string) =>
 const sanitizeMarkdown = (value: string) =>
   sanitize(value, { USE_PROFILES: { html: true } }).trim();
 
+/**
+ * Sanitize HTML content to prevent XSS attacks
+ * Allows safe HTML tags and attributes for rich text content
+ */
+export const sanitizeHTML = (value: string) => {
+  if (!value) return '';
+  return sanitize(value, {
+    ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'a', 'blockquote', 'code', 'pre', 'span', 'div', 'img'],
+    ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'src', 'alt', 'title', 'width', 'height'],
+    ALLOW_DATA_ATTR: false,
+  });
+};
+
 const sanitizeTag = (value: string) =>
-  sanitizePlainText(value).replace(/[^\\p{L}0-9-_\\s]/gu, '').trim();
+  sanitizePlainText(value).replace(/[^\p{L}0-9-_\s]/gu, '').trim();
 
 export interface RawNoteData {
   title: string;

@@ -54,7 +54,7 @@ export default function StudentExamPerformancePanel({ userId }: StudentExamPerfo
       setMetrics([]);
       setSummary(null);
       setLoading(false);
-      setError('Geçerli bir öðrenci bilgisi bulunamadý. Lütfen tekrar giriþ yapýn.');
+      setError('GeÃ§erli bir Ã¶ÄŸrenci bilgisi bulunamadÄ±. LÃ¼tfen tekrar giriÅŸ yapÄ±n.');
       return;
     }
 
@@ -72,7 +72,7 @@ export default function StudentExamPerformancePanel({ userId }: StudentExamPerfo
         setSummary(summaryPayload);
       } catch (error) {
         console.error('StudentExamPerformancePanel error:', error);
-        setError(getErrorMessage(error, 'Performans verileri alýnamadý.'));
+        setError(getErrorMessage(error, 'Performans verileri alÄ±namadÄ±.'));
       } finally {
         setLoading(false);
       }
@@ -89,7 +89,7 @@ export default function StudentExamPerformancePanel({ userId }: StudentExamPerfo
       .slice(0, 10)
       .reverse()
       .map((item, index) => ({
-        label: item.examName || `Sýnav ${index + 1}`,
+        label: item.examName || `SÄ±nav ${index + 1}`,
         score: item.score ?? null,
       }));
   }, [summary?.last_scores]);
@@ -99,7 +99,7 @@ export default function StudentExamPerformancePanel({ userId }: StudentExamPerfo
       return;
     }
 
-    const safeScore = (score: number | null | undefined) => (score ? `${Math.round(score)}%` : '—');
+    const safeScore = (score: number | null | undefined) => (score ? `${Math.round(score)}%` : 'â€¢');
     const chartBars = chartData
       .map((entry) => {
         const width = entry.score ? Math.min(Math.max(entry.score, 0), 100) : 0;
@@ -107,7 +107,7 @@ export default function StudentExamPerformancePanel({ userId }: StudentExamPerfo
           <div class="chart-row">
             <span>${entry.label}</span>
             <div class="track"><div class="fill" style="width:${width}%"></div></div>
-            <span>${entry.score ? Math.round(entry.score) : '–'}%</span>
+            <span>${entry.score ? Math.round(entry.score) : 'â€¢'}%</span>
           </div>
         `;
       })
@@ -121,7 +121,7 @@ export default function StudentExamPerformancePanel({ userId }: StudentExamPerfo
           <td>${metric.exam_name}</td>
           <td>${metric.source}</td>
           <td>${safeScore(metric.score)}</td>
-          <td>${metric.correct_count ?? '–'}/${metric.wrong_count ?? '–'}/${metric.blank_count ?? '–'}</td>
+          <td>${metric.correct_count ?? 'â€¢'}/${metric.wrong_count ?? 'â€¢'}/${metric.blank_count ?? 'â€¢'}</td>
         </tr>
       `,
       )
@@ -133,7 +133,7 @@ export default function StudentExamPerformancePanel({ userId }: StudentExamPerfo
         (artifact) => `
         <li>
           <strong>${artifact.exam_name}</strong>
-          <span>${new Date(artifact.created_at).toLocaleDateString('tr-TR')} · ${artifact.file_type.toUpperCase()}</span>
+          <span>${new Date(artifact.created_at).toLocaleDateString('tr-TR')} - ${artifact.file_type.toUpperCase()}</span>
         </li>
       `,
       )
@@ -144,7 +144,7 @@ export default function StudentExamPerformancePanel({ userId }: StudentExamPerfo
         (item) => `
         <li>
           <span>${item.source || 'Belirsiz'}</span>
-          <strong>${item.count} kayýt</strong>
+          <strong>${item.count} kayÄ±t</strong>
           <em>${item.average ? `%${Math.round(item.average)}` : 'Skor yok'}</em>
         </li>
       `,
@@ -178,34 +178,34 @@ export default function StudentExamPerformancePanel({ userId }: StudentExamPerfo
 </head>
 <body>
   <section>
-    <h1>Öðrenci Performans Raporu</h1>
+    <h1>Ã–ÄŸrenci Performans Raporu</h1>
     <p>${new Date().toLocaleString('tr-TR')}</p>
     <div class="stats">
-      <div class="card"><span>Toplam Sýnav</span><strong>${summary.total_exams}</strong></div>
+      <div class="card"><span>Toplam SÄ±nav</span><strong>${summary.total_exams}</strong></div>
       <div class="card"><span>Ortalama Skor</span><strong>${safeScore(summary.average_score)}</strong></div>
-      <div class="card"><span>En Ýyi Skor</span><strong>${safeScore(summary.best_score)}</strong></div>
+      <div class="card"><span>En Ä°yi Skor</span><strong>${safeScore(summary.best_score)}</strong></div>
     </div>
   </section>
   <section>
     <h2>Skor Trendi</h2>
-    ${chartBars || '<p>Grafik verisi bulunamadý.</p>'}
+    ${chartBars || '<p>Grafik verisi bulunamadÄ±.</p>'}
   </section>
   <section>
-    <h2>Kaynak Daðýlýmý</h2>
-    <ul>${breakdownItems || '<li>Veri bulunamadý.</li>'}</ul>
+    <h2>Kaynak DaÄŸÄ±lÄ±mÄ±</h2>
+    <ul>${breakdownItems || '<li>Veri bulunamadÄ±.</li>'}</ul>
   </section>
   <section>
-    <h2>Öne Çýkan Metrikler</h2>
+    <h2>Ã–ne Ã‡Ä±kan Metrikler</h2>
     <table>
       <thead>
-        <tr><th>Sýnav</th><th>Kaynak</th><th>Skor</th><th>D/Y/B</th></tr>
+        <tr><th>SÄ±nav</th><th>Kaynak</th><th>Skor</th><th>D/Y/B</th></tr>
       </thead>
       <tbody>${metricRows || '<tr><td colspan="4">Veri yok</td></tr>'}</tbody>
     </table>
   </section>
   <section>
-    <h2>Yüklenen Belgeler</h2>
-    <ul>${artifactRows || '<li>Henüz belge yüklenmemiþ.</li>'}</ul>
+    <h2>YÃ¼klenen Belgeler</h2>
+    <ul>${artifactRows || '<li>HenÃ¼z belge yÃ¼klenmemiÅŸ.</li>'}</ul>
   </section>
 </body>
 </html>`;
@@ -226,7 +226,7 @@ export default function StudentExamPerformancePanel({ userId }: StudentExamPerfo
   if (loading) {
     return (
       <section className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-        <p className="text-sm text-gray-500">Performans verileri yükleniyor...</p>
+        <p className="text-sm text-gray-500">Performans verileri yÃ¼kleniyor...</p>
       </section>
     );
   }
@@ -243,8 +243,8 @@ export default function StudentExamPerformancePanel({ userId }: StudentExamPerfo
     <section className="space-y-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-wide text-gray-500">Kurum Deneme Performansý</p>
-          <h3 className="text-lg font-semibold text-gray-900">Sonuçlarým ve Belgelerim</h3>
+          <p className="text-xs uppercase tracking-wide text-gray-500">Kurum Deneme PerformansÄ±</p>
+          <h3 className="text-lg font-semibold text-gray-900">SonuÃ§larÄ±m ve Belgelerim</h3>
         </div>
         <button
           type="button"
@@ -258,16 +258,16 @@ export default function StudentExamPerformancePanel({ userId }: StudentExamPerfo
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Toplam Sýnav" value={summary?.total_exams ? String(summary.total_exams) : '0'} icon={Activity} />
-        <StatCard label="Ortalama Skor" value={formatScore(summary?.average_score) ? `%${formatScore(summary?.average_score)}` : '–'} icon={TrendingUp} />
-        <StatCard label="En Ýyi Skor" value={formatScore(summary?.best_score) ? `%${formatScore(summary?.best_score)}` : '–'} icon={FileText} />
+        <StatCard label="Toplam SÄ±nav" value={summary?.total_exams ? String(summary.total_exams) : '0'} icon={Activity} />
+        <StatCard label="Ortalama Skor" value={formatScore(summary?.average_score) ? `%${formatScore(summary?.average_score)}` : 'â€¢'} icon={TrendingUp} />
+        <StatCard label="En Ä°yi Skor" value={formatScore(summary?.best_score) ? `%${formatScore(summary?.best_score)}` : 'â€¢'} icon={FileText} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
         <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
-          <p className="text-xs uppercase tracking-wide text-gray-500">Skor grafiði</p>
+          <p className="text-xs uppercase tracking-wide text-gray-500">Skor grafiÄŸi</p>
           {chartData.length === 0 ? (
-            <p className="mt-3 text-sm text-gray-500">Henüz skor kaydý bulunmuyor.</p>
+            <p className="mt-3 text-sm text-gray-500">HenÃ¼z skor kaydÄ± bulunmuyor.</p>
           ) : (
             <div className="mt-3 h-48">
               <ResponsiveContainer width="100%" height="100%">
@@ -283,20 +283,20 @@ export default function StudentExamPerformancePanel({ userId }: StudentExamPerfo
         </div>
 
         <div className="rounded-2xl border border-gray-100 bg-white p-4">
-          <p className="text-xs uppercase tracking-wide text-gray-500">Kaynak daðýlýmý</p>
+          <p className="text-xs uppercase tracking-wide text-gray-500">Kaynak daÄŸÄ±lÄ±mÄ±</p>
           {summary?.source_breakdown?.length ? (
             <ul className="mt-3 space-y-2 text-sm text-gray-700">
               {summary.source_breakdown.map((item) => (
                 <li key={`${item.source}-${item.count}`} className="flex items-center justify-between text-xs">
                   <span>{item.source || 'Bilinmiyor'}</span>
                   <span>
-                    {item.count} sýnav · {item.average ? `%${Math.round(item.average)}` : 'skor yok'}
+                    {item.count} sÄ±nav â€¢ {item.average ? `%${Math.round(item.average)}` : 'skor yok'}
                   </span>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="mt-3 text-sm text-gray-500">Kaynak detaylarý henüz yok.</p>
+            <p className="mt-3 text-sm text-gray-500">Kaynak detaylarÄ± henÃ¼z yok.</p>
           )}
         </div>
       </div>
@@ -308,7 +308,7 @@ export default function StudentExamPerformancePanel({ userId }: StudentExamPerfo
             <ImageIcon className="h-4 w-4 text-gray-400" />
           </div>
           {artifacts.length === 0 ? (
-            <p className="mt-2 text-sm text-gray-500">Henüz kurum tarafýndan paylaþýlmýþ belge yok.</p>
+            <p className="mt-2 text-sm text-gray-500">HenÃ¼z kurum tarafÄ±ndan paylaÅŸÄ±lmÄ±ÅŸ belge yok.</p>
           ) : (
             <ul className="mt-3 space-y-3 text-sm text-gray-700">
               {artifacts.slice(0, 4).map((artifact) => (
@@ -316,7 +316,7 @@ export default function StudentExamPerformancePanel({ userId }: StudentExamPerfo
                   <div>
                     <p className="font-semibold text-gray-900">{artifact.exam_name}</p>
                     <p className="text-xs text-gray-500">
-                      {new Date(artifact.created_at).toLocaleString('tr-TR')} · {artifact.file_type === 'pdf' ? 'PDF' : 'Görsel'}
+                      {new Date(artifact.created_at).toLocaleString('tr-TR')} â€¢ {artifact.file_type === 'pdf' ? 'PDF' : 'GÃ¶rsel'}
                     </p>
                   </div>
                   <a
@@ -325,7 +325,7 @@ export default function StudentExamPerformancePanel({ userId }: StudentExamPerfo
                     rel="noreferrer"
                     className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700"
                   >
-                    Görüntüle
+                    GÃ¶rÃ¼ntÃ¼le
                   </a>
                 </li>
               ))}
@@ -339,12 +339,12 @@ export default function StudentExamPerformancePanel({ userId }: StudentExamPerfo
             <TrendingUp className="h-4 w-4 text-gray-400" />
           </div>
           {metrics.length === 0 ? (
-            <p className="mt-2 text-sm text-gray-500">Henüz metrik kaydý bulunmuyor.</p>
+            <p className="mt-2 text-sm text-gray-500">HenÃ¼z metrik kaydÄ± bulunmuyor.</p>
           ) : (
             <table className="mt-3 w-full text-xs text-gray-600">
               <thead>
                 <tr>
-                  <th className="pb-2 text-left font-semibold">Sýnav</th>
+                  <th className="pb-2 text-left font-semibold">SÄ±nav</th>
                   <th className="pb-2 text-left font-semibold">Kaynak</th>
                   <th className="pb-2 text-left font-semibold">Skor</th>
                   <th className="pb-2 text-left font-semibold">D/Y/B</th>
@@ -355,9 +355,9 @@ export default function StudentExamPerformancePanel({ userId }: StudentExamPerfo
                   <tr key={metric.id} className="border-t border-gray-100">
                     <td className="py-2 font-semibold text-gray-900">{metric.exam_name}</td>
                     <td className="py-2">{metric.source}</td>
-                    <td className="py-2">{formatScore(metric.score) ? `%${formatScore(metric.score)}` : '–'}</td>
+                    <td className="py-2">{formatScore(metric.score) ? `%${formatScore(metric.score)}` : 'â€¢'}</td>
                     <td className="py-2">
-                      {metric.correct_count ?? '-'} / {metric.wrong_count ?? '-'} / {metric.blank_count ?? '-'}
+                      {metric.correct_count ?? 'â€¢'} / {metric.wrong_count ?? 'â€¢'} / {metric.blank_count ?? 'â€¢'}
                     </td>
                   </tr>
                 ))}
