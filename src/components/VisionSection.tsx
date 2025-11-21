@@ -13,10 +13,10 @@ export default function VisionSection() {
     {
       icon: Link2,
       title: 'Bağlantılı Ekosistem',
-      description: 'Öğretmen → Öğrenci → Veli. Herkes aynı platformda. Şeffaf. Gerçek zamanlı.',
+      description: 'Kurum → Öğretmen → Öğrenci → Veli . Herkes aynı platformda. Şeffaf. Gerçek zamanlı.',
       highlight: 'Kimse karanlıkta kalmıyor.',
       color: 'from-blue-500 to-cyan-500',
-      stats: '3 taraf tek platformda'
+      stats: '4 taraf tek platformda'
     },
     {
       icon: Database,

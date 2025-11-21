@@ -102,9 +102,7 @@ const generateRecommendationText = (
     return `🔥 ACIL! "${topic}" konusu hem çok sık çıkıyor hem de sizin en zayıf olduğunuz konulardan. Bu konuya hemen odaklanın!`;
   } else if (weakness > 70) {
     return `⚠️ "${topic}" konusunda %${weakness.toFixed(0)} oranında yanlış yapıyorsunuz. Bu konuyu mutlaka çalışmalısınız.`;
-  } else if (frequency > 70) {
-    return `⭐ "${topic}" sınavlarda çok sık çıkıyor (ortalama ${(frequency / 12.5).toFixed(1)} soru/yıl). Bu konuyu pekiştirin.`;
-  } else if (weakness > 50) {
+  }  else if (weakness > 50) {
     return `📌 "${topic}" konusunda orta seviye bir zayıflığınız var. Birkaç günlük çalışma ile geliştirebilirsiniz.`;
   } else {
     return `✅ "${topic}" konusunda iyisiniz ama tekrar yapmakta fayda var.`;

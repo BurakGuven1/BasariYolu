@@ -11,7 +11,9 @@ import {
   Megaphone,
   NotebookPen,
   Play,
+  Calendar,
 } from 'lucide-react';
+import StudentScheduleView from './StudentScheduleView';
 import type {
   InstitutionExamAnswerRecord,
   InstitutionAnnouncement,
@@ -443,6 +445,13 @@ export default function InstitutionStudentPortal({
             </div>
           )}
         </div>
+      </section>
+
+      <section>
+        <StudentScheduleView
+          institutionId={request.institution_id}
+          studentClassName={request.class_name}
+        />
       </section>
 
       <section className="rounded-2xl border border-gray-200 bg-white p-5">

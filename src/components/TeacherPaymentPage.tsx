@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, CreditCard, Shield, Check, Calendar, Calculator } from 'lucide-react';
+import { ArrowLeft, CreditCard, Shield, Calendar } from 'lucide-react';
 import { PACKAGE_OPTIONS } from '../types/teacher';
 
 interface TeacherPaymentPageProps {
@@ -11,7 +11,7 @@ interface TeacherPaymentPageProps {
     class_name: string;
     class_description: string;
     student_capacity: number;
-    package_type: 'monthly' | '3_months' | '9_months';
+    package_type: 'monthly' | '6_months' | '9_months';
   };
   pricing: {
     monthlyPrice: number;

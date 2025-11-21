@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
-import { Plus, FileText, BookOpen, Bell, Trophy, ArrowLeft, CreditCard as Edit, Trash2, X, BarChart3, Save, Calendar, User, MessageSquare, Download } from 'lucide-react';
+import { Plus, FileText, BookOpen, Bell, Trophy, ArrowLeft, CreditCard as Edit, Trash2, X, BarChart3, Save, Calendar, User, MessageSquare, Download, Clock } from 'lucide-react';
 import { 
   addClassAssignment, 
   addClassAnnouncement, 
@@ -55,6 +55,8 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh, onA
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [exams, setExams] = useState<any[]>([]);
   const [schedules, setSchedules] = useState<any[]>([]);
+  const [pastSchedules, setPastSchedules] = useState<any[]>([]);
+  const [showPastSchedules, setShowPastSchedules] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
   
   // Modal states
@@ -113,9 +115,33 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh, onA
       setAnnouncements(announcementsRes.data || []);
       setExams(examsRes.data || []);
       
-      // Filter schedules for this class
+      // Filter schedules for this class and split active/past
       const classSchedules = (schedulesRes.data || []).filter((s: any) => s.class_id === classData.id);
-      setSchedules(classSchedules);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const active = classSchedules
+        .filter((schedule: any) => {
+          const endDate = new Date(schedule.week_end_date);
+          endDate.setHours(23, 59, 59, 999);
+          return endDate >= today;
+        })
+        .sort(
+          (a: any, b: any) => new Date(b.week_start_date).getTime() - new Date(a.week_start_date).getTime()
+        );
+
+      const past = classSchedules
+        .filter((schedule: any) => {
+          const endDate = new Date(schedule.week_end_date);
+          endDate.setHours(23, 59, 59, 999);
+          return endDate < today;
+        })
+        .sort(
+          (a: any, b: any) => new Date(b.week_start_date).getTime() - new Date(a.week_start_date).getTime()
+        );
+
+      setSchedules(active);
+      setPastSchedules(past);
     } catch (error) {
       console.error('Error loading class content:', error);
     } finally {
@@ -739,79 +765,138 @@ export default function ClassManagementPanel({ classData, onBack, onRefresh, onA
                 )
               )}
 
+
               {activeTab === 'schedules' && (
-                schedules.length === 0 ? (
-                  <div className="text-center py-12 text-gray-500">
-                    <Calendar className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                    <p>Henüz çalışma programı oluşturulmamış</p>
-                    <p className="text-sm mt-2">Öğrencileriniz için haftalık çalışma programı oluşturun</p>
-                  </div>
-                ) : (
-                  <div className="grid gap-4">
-                    {schedules.map((schedule) => (
-                      <div
-                        key={schedule.id}
-                        className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/70 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-lg text-gray-900 dark:text-white">
-                              {schedule.title}
-                            </h4>
-                            {schedule.description && (
-                              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                {schedule.description}
-                              </p>
-                            )}
-                            <div className="flex flex-wrap items-center gap-3 mt-3 text-sm text-gray-600 dark:text-gray-300">
-                              <div className="flex items-center space-x-1">
-                                <Calendar className="w-4 h-4 text-blue-500" />
-                                <span>
-                                  {new Date(schedule.week_start_date).toLocaleDateString('tr-TR')} - {new Date(schedule.week_end_date).toLocaleDateString('tr-TR')}
-                                </span>
+                <>
+                  {schedules.length === 0 ? (
+                    <div className="text-center py-12 text-gray-500">
+                      <Calendar className="h-16 w-16 mx-auto mb-4 text-gray-300" />
+                      <p>Bu sınıf için aktif çalışma programı bulunmuyor</p>
+                      <p className="text-sm mt-2">Öğrencileriniz için haftalık çalışma programı oluşturun</p>
+                    </div>
+                  ) : (
+                    <div className="grid gap-4">
+                      {schedules.map((schedule) => (
+                        <div
+                          key={schedule.id}
+                          className="border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/70 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-lg text-gray-900 dark:text-white">
+                                {schedule.title}
+                              </h4>
+                              {schedule.description && (
+                                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                  {schedule.description}
+                                </p>
+                              )}
+                              <div className="flex flex-wrap items-center gap-3 mt-3 text-sm text-gray-600 dark:text-gray-300">
+                                <div className="flex items-center space-x-1">
+                                  <Calendar className="w-4 h-4 text-blue-500" />
+                                  <span>
+                                    {new Date(schedule.week_start_date).toLocaleDateString('tr-TR')} - {new Date(schedule.week_end_date).toLocaleDateString('tr-TR')}
+                                  </span>
+                                </div>
+                                {schedule.class?.class_name && (
+                                  <div className="flex items-center space-x-1">
+                                    <BookOpen className="w-4 h-4 text-indigo-500" />
+                                    <span>{schedule.class.class_name}</span>
+                                  </div>
+                                )}
+                                {schedule.student?.profile?.full_name && (
+                                  <div className="flex items-center space-x-1">
+                                    <User className="w-4 h-4 text-emerald-500" />
+                                    <span>{schedule.student.profile.full_name}</span>
+                                  </div>
+                                )}
+                                {schedule.study_schedule_items && (
+                                  <span className="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/60 text-blue-700 dark:text-blue-200 text-xs font-medium rounded-full">
+                                    {schedule.study_schedule_items.length} çalışma saati
+                                  </span>
+                                )}
                               </div>
-                              {schedule.class?.class_name && (
-                                <div className="flex items-center space-x-1">
-                                  <BookOpen className="w-4 h-4 text-indigo-500" />
-                                  <span>{schedule.class.class_name}</span>
-                                </div>
-                              )}
-                              {schedule.student?.profile?.full_name && (
-                                <div className="flex items-center space-x-1">
-                                  <User className="w-4 h-4 text-emerald-500" />
-                                  <span>{schedule.student.profile.full_name}</span>
-                                </div>
-                              )}
-                              {schedule.study_schedule_items && (
-                                <span className="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/60 text-blue-700 dark:text-blue-200 text-xs font-medium rounded-full">
-                                  {schedule.study_schedule_items.length} çalışma saati
-                                </span>
-                              )}
                             </div>
-                          <div className="ml-4 flex items-start flex-wrap gap-2">
-                            <button
-                              onClick={() => handleExportSchedule(schedule)}
-                              disabled={exportingScheduleId === schedule.id}
-                              className="inline-flex items-center gap-2 rounded-full border border-emerald-200 px-3 py-1 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 disabled:opacity-60 dark:border-emerald-700 dark:text-emerald-200 dark:hover:bg-emerald-900/30"
-                            >
-                              <Download className="h-4 w-4" />
-                              {exportingScheduleId === schedule.id ? 'Hazırlanıyor...' : 'PDF indir'}
-                            </button>
-                            <button
-                              onClick={() => openScheduleFeedbackModal(schedule)}
-                              className="inline-flex items-center gap-2 rounded-full border border-blue-200 px-3 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-200 dark:hover:bg-blue-900/30"
-                            >
-                              <MessageSquare className="h-4 w-4" />
-                              Geri bildirimler
-                            </button>
-                          </div>
+                            <div className="ml-4 flex items-start flex-wrap gap-2">
+                              <button
+                                onClick={() => handleExportSchedule(schedule)}
+                                disabled={exportingScheduleId === schedule.id}
+                                className="inline-flex items-center gap-2 rounded-full border border-emerald-200 px-3 py-1 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 disabled:opacity-60 dark:border-emerald-700 dark:text-emerald-200 dark:hover:bg-emerald-900/30"
+                              >
+                                <Download className="h-4 w-4" />
+                                {exportingScheduleId === schedule.id ? 'Hazırlanıyor...' : 'PDF indir'}
+                              </button>
+                              <button
+                                onClick={() => openScheduleFeedbackModal(schedule)}
+                                className="inline-flex items-center gap-2 rounded-full border border-blue-200 px-3 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-200 dark:hover:bg-blue-900/30"
+                              >
+                                <MessageSquare className="h-4 w-4" />
+                                Geri bildirimler
+                              </button>
+                            </div>
                           </div>
                         </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {pastSchedules.length > 0 && (
+                    <div className="mt-6 rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800/70">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Geçmiş Programlar</h4>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Süresi tamamlanan planlar burada saklanır.</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowPastSchedules(prev => !prev)}
+                          className="inline-flex items-center gap-2 rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-900/40"
+                        >
+                          <Clock className="h-4 w-4" />
+                          {showPastSchedules ? 'Geçmişi gizle' : 'Geçmiş programları göster'} ({pastSchedules.length})
+                        </button>
                       </div>
-                    ))}
-                  </div>
-                )
+                      {showPastSchedules && (
+                        <div className="mt-4 space-y-3">
+                          {pastSchedules.map(schedule => (
+                            <div
+                              key={schedule.id}
+                              className="rounded-lg border border-gray-200 p-4 dark:border-gray-700 dark:bg-gray-900/40"
+                            >
+                              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                  <h5 className="font-semibold text-gray-900 dark:text-white">{schedule.title}</h5>
+                                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                                    {new Date(schedule.week_start_date).toLocaleDateString('tr-TR')} - {new Date(schedule.week_end_date).toLocaleDateString('tr-TR')}
+                                  </p>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                  <button
+                                    onClick={() => handleExportSchedule(schedule)}
+                                    disabled={exportingScheduleId === schedule.id}
+                                    className="inline-flex items-center gap-2 rounded-full border border-emerald-200 px-3 py-1 text-xs font-semibold text-emerald-600 hover:bg-emerald-50 disabled:opacity-60 dark:border-emerald-800 dark:text-emerald-200 dark:hover:bg-emerald-900/40"
+                                  >
+                                    <Download className="h-4 w-4" />
+                                    {exportingScheduleId === schedule.id ? 'Hazırlanıyor...' : 'PDF indir'}
+                                  </button>
+                                  <button
+                                    onClick={() => openScheduleFeedbackModal(schedule)}
+                                    className="inline-flex items-center gap-2 rounded-full border border-blue-200 px-3 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-200 dark:hover:bg-blue-900/30"
+                                  >
+                                    <MessageSquare className="h-4 w-4" />
+                                    Geri bildirimler
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
+
             </div>
           )}
         </div>
