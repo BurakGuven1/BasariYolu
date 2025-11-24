@@ -54,7 +54,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({ studentId }) => {
           *,
           study_schedule_items (*),
           teacher:teacher_id (
-            profiles:profiles!students_profile_id_fkey (
+            profile_id (
               full_name
             )
           )
@@ -158,10 +158,10 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({ studentId }) => {
             {new Date(schedule.week_end_date).toLocaleDateString('tr-TR')}
           </Text>
 
-          {schedule.teacher?.profiles?.full_name && (
+          {schedule.teacher?.profile_id?.full_name && (
             <View style={styles.teacherInfo}>
               <Text style={styles.teacherLabel}>👨‍🏫 Öğretmen</Text>
-              <Text style={styles.teacherName}>{schedule.teacher.profiles.full_name}</Text>
+              <Text style={styles.teacherName}>{schedule.teacher.profile_id.full_name}</Text>
             </View>
           )}
 
