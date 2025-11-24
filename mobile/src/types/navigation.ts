@@ -6,4 +6,7 @@ export type RootStackParamList = {
   Parent: undefined;
   Teacher: undefined;
   Institution: undefined;
+  QuestionList: undefined;
+  QuestionDetail: { questionId: string };
+  CreateQuestion: undefined;
 };
