@@ -12,6 +12,7 @@ import { ExamsTab } from './ExamsTab';
 import { HomeworksTab } from './HomeworksTab';
 import { PomodoroTab } from './PomodoroTab';
 import { GoalsTab } from './GoalsTab';
+import { ScheduleTab } from './ScheduleTab';
 
 type DashboardProps = NativeStackScreenProps<RootStackParamList, 'Dashboard'>;
 
@@ -120,6 +121,12 @@ export const StudentDashboard: React.FC<DashboardProps> = ({ navigation }) => {
           options={{ title: 'Hedefler' }}
         >
           {() => <GoalsTab studentId={student.id} />}
+        </Tab.Screen>
+        <Tab.Screen
+          name="Schedule"
+          options={{ title: 'Program' }}
+        >
+          {() => <ScheduleTab studentId={student.id} />}
         </Tab.Screen>
       </Tab.Navigator>
     </SafeAreaView>
