@@ -6,9 +6,10 @@ import { AuthScreen } from './src/screens/AuthScreen';
 import {
   InstitutionDashboard,
   ParentDashboard,
-  StudentDashboard,
   TeacherDashboard,
 } from './src/screens/RoleDashboards';
+import { StudentDashboard } from './src/screens/StudentDashboard';
+import { QuestionListScreen } from './src/screens/QuestionPortal/QuestionListScreen';
 import { RootStackParamList } from './src/types/navigation';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -56,6 +57,11 @@ function AppNavigator() {
         <Stack.Screen name="Parent" component={ParentDashboard} />
         <Stack.Screen name="Teacher" component={TeacherDashboard} />
         <Stack.Screen name="Institution" component={InstitutionDashboard} />
+        <Stack.Screen
+          name="QuestionList"
+          component={QuestionListScreen}
+          options={{ headerShown: true, title: 'Soru Portali' }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );
