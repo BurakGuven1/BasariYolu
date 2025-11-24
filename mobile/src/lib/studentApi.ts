@@ -232,11 +232,12 @@ export const getWeeklyStudySessions = async (studentId: string, startDate: strin
 
 export const savePomodoroSession = async (sessionData: {
   student_id: string;
-  session_date: string;
+  started_at: string;
   duration_minutes: number;
   subject?: string;
   notes?: string;
   completed: boolean;
+  session_type?: 'focus' | 'shortBreak' | 'longBreak';
 }) => {
   const { data, error } = await supabase
     .from('pomodoro_sessions')
@@ -248,12 +249,13 @@ export const savePomodoroSession = async (sessionData: {
 };
 
 export const getTodayPomodoroStats = async (studentId: string) => {
-  const today = isoDate(new Date());
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
   const { data, error } = await supabase
     .from('pomodoro_sessions')
     .select('duration_minutes, completed')
     .eq('student_id', studentId)
-    .eq('session_date', today);
+    .gte('started_at', today.toISOString());
 
   if (error) throw error;
 
@@ -275,13 +277,13 @@ export const getPomodoroSessions = async (studentId: string, startDate?: string,
     .from('pomodoro_sessions')
     .select('*')
     .eq('student_id', studentId)
-    .order('session_date', { ascending: false });
+    .order('started_at', { ascending: false });
 
   if (startDate) {
-    query = query.gte('session_date', startDate);
+    query = query.gte('started_at', startDate);
   }
   if (endDate) {
-    query = query.lte('session_date', endDate);
+    query = query.lte('started_at', endDate);
   }
 
   const { data, error } = await query;

@@ -71,7 +71,7 @@ export const GoalsTab: React.FC<GoalsTabProps> = ({ studentId }) => {
       const dayData = new Array(7).fill(0);
 
       sessions.forEach((session: any) => {
-        const sessionDate = new Date(session.session_date);
+        const sessionDate = new Date(session.started_at);
         const dayIndex = (sessionDate.getDay() + 6) % 7; // Monday = 0
         dayData[dayIndex] += session.duration_hours ?? 0;
       });

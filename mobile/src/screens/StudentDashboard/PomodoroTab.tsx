@@ -77,11 +77,12 @@ export const PomodoroTab: React.FC<PomodoroTabProps> = ({ studentId }) => {
       try {
         await savePomodoroSession({
           student_id: studentId,
-          session_date: new Date().toISOString().split('T')[0],
+          started_at: new Date().toISOString(),
           duration_minutes: durationMinutes,
           subject: subject || undefined,
           notes: notes || undefined,
           completed: true,
+          session_type: 'focus',
         });
         Alert.alert(
           'Tebrikler!',
@@ -187,7 +188,14 @@ export const PomodoroTab: React.FC<PomodoroTabProps> = ({ studentId }) => {
         <Card title="Son Seanslar (7 Gün)">
           {recentSessions.map((session, index) => (
             <View key={index} style={styles.sessionRow}>
-              <Text style={styles.sessionDate}>{session.session_date}</Text>
+              <Text style={styles.sessionDate}>
+                {new Date(session.started_at).toLocaleDateString('tr-TR', {
+                  day: 'numeric',
+                  month: 'short',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </Text>
               <Text style={styles.sessionDuration}>{session.duration_minutes} dk</Text>
               {session.completed && <Text style={styles.sessionCompleted}>✓</Text>}
             </View>
