@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from 'react-native';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
 import {
   savePomodoroSession,
   getTodayPomodoroStats,
@@ -16,6 +17,8 @@ export const PomodoroTab: React.FC<PomodoroTabProps> = ({ studentId }) => {
   const [timer, setTimer] = useState(25 * 60); // 25 minutes in seconds
   const [isRunning, setIsRunning] = useState(false);
   const [isBreak, setIsBreak] = useState(false);
+  const [subject, setSubject] = useState('');
+  const [notes, setNotes] = useState('');
   const [todayStats, setTodayStats] = useState({
     totalSessions: 0,
     completedSessions: 0,
@@ -76,6 +79,8 @@ export const PomodoroTab: React.FC<PomodoroTabProps> = ({ studentId }) => {
           student_id: studentId,
           session_date: new Date().toISOString().split('T')[0],
           duration_minutes: durationMinutes,
+          subject: subject || undefined,
+          notes: notes || undefined,
           completed: true,
         });
         Alert.alert(
@@ -83,6 +88,8 @@ export const PomodoroTab: React.FC<PomodoroTabProps> = ({ studentId }) => {
           'Pomodoro seansı tamamlandı! 5 dakika mola verin.',
           [{ text: 'Tamam' }]
         );
+        setSubject('');
+        setNotes('');
         loadStats();
         loadRecentSessions();
       } catch (e: any) {
@@ -120,6 +127,26 @@ export const PomodoroTab: React.FC<PomodoroTabProps> = ({ studentId }) => {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Card title="Pomodoro Zamanlayıcı">
+        {/* Subject and Notes Inputs */}
+        {!isRunning && !isBreak && (
+          <View style={styles.inputsContainer}>
+            <Text style={styles.inputLabel}>Ders/Konu (Opsiyonel)</Text>
+            <Input
+              placeholder="Örn: Matematik"
+              value={subject}
+              onChangeText={setSubject}
+            />
+            <Text style={styles.inputLabel}>Notlar (Opsiyonel)</Text>
+            <Input
+              placeholder="Bu seansla ilgili notlar..."
+              value={notes}
+              onChangeText={setNotes}
+              multiline
+              numberOfLines={2}
+            />
+          </View>
+        )}
+
         <View style={styles.timerContainer}>
           <View style={[styles.timerCircle, isBreak && styles.timerCircleBreak]}>
             <Text style={styles.timerText}>{formatTime(timer)}</Text>
@@ -178,6 +205,16 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
+  },
+  inputsContainer: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0F172A',
+    marginBottom: 6,
+    marginTop: 8,
   },
   timerContainer: {
     alignItems: 'center',
