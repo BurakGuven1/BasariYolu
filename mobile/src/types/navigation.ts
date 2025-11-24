@@ -9,4 +9,5 @@ export type RootStackParamList = {
   QuestionList: undefined;
   QuestionDetail: { questionId: string };
   CreateQuestion: undefined;
+  AnswerQuestion: { questionId: string };
 };

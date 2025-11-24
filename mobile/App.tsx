@@ -10,6 +10,9 @@ import {
 } from './src/screens/RoleDashboards';
 import { StudentDashboard } from './src/screens/StudentDashboard';
 import { QuestionListScreen } from './src/screens/QuestionPortal/QuestionListScreen';
+import { QuestionDetailScreen } from './src/screens/QuestionPortal/QuestionDetailScreen';
+import { CreateQuestionScreen } from './src/screens/QuestionPortal/CreateQuestionScreen';
+import { AnswerQuestionScreen } from './src/screens/QuestionPortal/AnswerQuestionScreen';
 import { RootStackParamList } from './src/types/navigation';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -61,6 +64,21 @@ function AppNavigator() {
           name="QuestionList"
           component={QuestionListScreen}
           options={{ headerShown: true, title: 'Soru Portali' }}
+        />
+        <Stack.Screen
+          name="QuestionDetail"
+          component={QuestionDetailScreen}
+          options={{ headerShown: true, title: 'Soru Detayı' }}
+        />
+        <Stack.Screen
+          name="CreateQuestion"
+          component={CreateQuestionScreen}
+          options={{ headerShown: true, title: 'Soru Oluştur' }}
+        />
+        <Stack.Screen
+          name="AnswerQuestion"
+          component={AnswerQuestionScreen}
+          options={{ headerShown: true, title: 'Cevap Yaz' }}
         />
       </Stack.Navigator>
     </NavigationContainer>
