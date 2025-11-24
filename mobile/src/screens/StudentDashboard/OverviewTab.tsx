@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Pressable, Alert } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Card } from '../../components/ui/Card';
 import { CustomLineChart } from '../../components/ui/Chart';
 import {
@@ -9,6 +10,10 @@ import {
   fetchQuestionPlan,
   getWeeklyStudySessions,
 } from '../../lib/studentApi';
+import { generatePerformanceInsights, generateDailyChallenge, generateMotivationalMessage } from '../../lib/ai';
+import { getStudentPoints, completeChallenge, isChallengeCompletedToday } from '../../lib/pointsSystem';
+import type { PerformanceInsight, DailyChallenge } from '../../lib/ai';
+import type { StudentPoints } from '../../lib/pointsSystem';
 
 interface OverviewTabProps {
   student: any;
@@ -46,55 +51,93 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ student, profile }) =>
     lastExamScore: null as number | null,
   });
   const [weeklyData, setWeeklyData] = useState<any>(null);
+  const [insights, setInsights] = useState<PerformanceInsight[]>([]);
+  const [dailyChallenge, setDailyChallenge] = useState<DailyChallenge | null>(null);
+  const [motivationMessage, setMotivationMessage] = useState<string>('');
+  const [points, setPoints] = useState<StudentPoints | null>(null);
+  const [badges, setBadges] = useState<string[]>(['🎯 İlk Adım', '📚 Çalışkan']);
+
+  const loadOverviewData = async () => {
+    if (!student?.id) return;
+    setLoading(true);
+    try {
+      const { startDate, endDate } = getCurrentWeekRange();
+
+      const [exams, homeworks, weeklyGoal, questionPlan, studySessions, studentPoints] = await Promise.all([
+        fetchExamResults(student.id),
+        fetchHomeworks(student.id),
+        fetchWeeklyGoal(student.id),
+        fetchQuestionPlan(student.id),
+        getWeeklyStudySessions(student.id, startDate, endDate),
+        getStudentPoints(student.id),
+      ]);
+
+      const totalStudyHours = studySessions.reduce((sum, session) => sum + (session.duration_minutes ?? 0) / 60, 0);
+      const lastExam = exams.length > 0 ? exams[0] : null;
+
+      setStats({
+        totalExams: exams.length,
+        pendingHomeworks: homeworks.filter((h: any) => !h.completed).length,
+        weeklyStudyHours: totalStudyHours,
+        weeklyGoalHours: weeklyGoal?.weekly_hours_target ?? 0,
+        questionTarget: questionPlan?.question_target ?? 0,
+        questionsCompleted: questionPlan?.questions_completed ?? 0,
+        lastExamScore: lastExam?.score ?? null,
+      });
+
+      // AI Insights
+      const studentData = {
+        examResults: exams,
+        studySessions,
+      };
+      const performanceInsights = generatePerformanceInsights(studentData);
+      setInsights(performanceInsights);
+
+      // Daily Challenge
+      const challenge = generateDailyChallenge(studentData);
+      setDailyChallenge(challenge);
+
+      // Motivation
+      const motivation = generateMotivationalMessage(exams);
+      setMotivationMessage(motivation);
+
+      // Points
+      setPoints(studentPoints);
+
+      // Badges - add based on performance
+      const newBadges = ['🎯 İlk Adım'];
+      if (exams.length >= 5) newBadges.push('📝 Deneme Ustası');
+      if (totalStudyHours >= 10) newBadges.push('🔥 Çalışkan');
+      if (exams.length >= 2) {
+        const sorted = exams.sort((a, b) => new Date(b.exam_date).getTime() - new Date(a.exam_date).getTime());
+        if (sorted[0].total_score > sorted[1].total_score) {
+          newBadges.push('📈 Yükseliş Trendi');
+        }
+      }
+      setBadges(newBadges);
+
+      // Prepare chart data for last 7 exams
+      if (exams.length > 0) {
+        const recentExams = exams.slice(0, 7).reverse();
+        setWeeklyData({
+          labels: recentExams.map((e: any) => e.exam_name?.substring(0, 8) ?? 'Deneme'),
+          datasets: [
+            {
+              data: recentExams.map((e: any) => e.total_score ?? 0),
+              color: (opacity = 1) => `rgba(99, 102, 241, ${opacity})`,
+              strokeWidth: 2,
+            },
+          ],
+        });
+      }
+    } catch (e: any) {
+      console.error('Overview data load error:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const loadOverviewData = async () => {
-      if (!student?.id) return;
-      setLoading(true);
-      try {
-        const { startDate, endDate } = getCurrentWeekRange();
-
-        const [exams, homeworks, weeklyGoal, questionPlan, studySessions] = await Promise.all([
-          fetchExamResults(student.id),
-          fetchHomeworks(student.id),
-          fetchWeeklyGoal(student.id),
-          fetchQuestionPlan(student.id),
-          getWeeklyStudySessions(student.id, startDate, endDate),
-        ]);
-
-        const totalStudyHours = studySessions.reduce((sum, session) => sum + (session.duration_hours ?? 0), 0);
-        const lastExam = exams.length > 0 ? exams[0] : null;
-
-        setStats({
-          totalExams: exams.length,
-          pendingHomeworks: homeworks.filter((h: any) => !h.completed).length,
-          weeklyStudyHours: totalStudyHours,
-          weeklyGoalHours: weeklyGoal?.weekly_hours_target ?? 0,
-          questionTarget: questionPlan?.question_target ?? 0,
-          questionsCompleted: questionPlan?.questions_completed ?? 0,
-          lastExamScore: lastExam?.score ?? null,
-        });
-
-        // Prepare chart data for last 7 exams
-        if (exams.length > 0) {
-          const recentExams = exams.slice(0, 7).reverse();
-          setWeeklyData({
-            labels: recentExams.map((e: any) => e.exam_name?.substring(0, 8) ?? 'Deneme'),
-            datasets: [
-              {
-                data: recentExams.map((e: any) => e.score ?? 0),
-                color: (opacity = 1) => `rgba(99, 102, 241, ${opacity})`,
-                strokeWidth: 2,
-              },
-            ],
-          });
-        }
-      } catch (e: any) {
-        console.error('Overview data load error:', e);
-      } finally {
-        setLoading(false);
-      }
-    };
     loadOverviewData();
   }, [student?.id]);
 
@@ -106,8 +149,163 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ student, profile }) =>
     );
   }
 
+  const handleCompleteChallenge = async () => {
+    if (!dailyChallenge || !student?.id) return;
+
+    try {
+      const alreadyCompleted = await isChallengeCompletedToday(student.id, dailyChallenge.id);
+
+      if (alreadyCompleted) {
+        Alert.alert('Tamamlandı', 'Bu görevi bugün zaten tamamladınız!');
+        return;
+      }
+
+      const result = await completeChallenge(
+        student.id,
+        dailyChallenge.id,
+        dailyChallenge.points,
+        dailyChallenge.title
+      );
+
+      if (result.success) {
+        Alert.alert('Tebrikler!', `Görev tamamlandı! +${dailyChallenge.points} puan kazandınız!`);
+        loadOverviewData(); // Reload to update points
+      } else {
+        Alert.alert('Hata', result.error || 'Görev tamamlanamadı');
+      }
+    } catch (error) {
+      Alert.alert('Hata', 'Bir sorun oluştu');
+    }
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {/* Motivation Message */}
+      {motivationMessage && (
+        <Card style={styles.motivationCard}>
+          <Text style={styles.motivationText}>{motivationMessage}</Text>
+        </Card>
+      )}
+
+      {/* Points Display */}
+      {points && (
+        <Card style={styles.pointsCard}>
+          <View style={styles.pointsRow}>
+            <View>
+              <Text style={styles.pointsLabel}>Toplam Puanın</Text>
+              <Text style={styles.pointsValue}>{points.total_points}</Text>
+            </View>
+            <View style={styles.levelBadge}>
+              <Text style={styles.levelText}>Seviye {points.level}</Text>
+            </View>
+          </View>
+        </Card>
+      )}
+
+      {/* AI Insights */}
+      {insights.length > 0 && (
+        <Card title="🧠 AI Önerileri">
+          {insights.map((insight, idx) => (
+            <View
+              key={idx}
+              style={[
+                styles.insightBox,
+                insight.type === 'success' && styles.insightSuccess,
+                insight.type === 'warning' && styles.insightWarning,
+                insight.type === 'danger' && styles.insightDanger,
+                insight.type === 'info' && styles.insightInfo,
+              ]}
+            >
+              <Text style={styles.insightIcon}>{insight.icon}</Text>
+              <View style={styles.insightContent}>
+                <Text style={styles.insightTitle}>{insight.title}</Text>
+                <Text style={styles.insightMessage}>{insight.message}</Text>
+                <Text style={styles.insightAction}>{insight.action}</Text>
+              </View>
+            </View>
+          ))}
+        </Card>
+      )}
+
+      {/* Daily Challenge */}
+      {dailyChallenge && (
+        <View style={styles.challengeContainer}>
+          <LinearGradient
+            colors={['#9333EA', '#EC4899']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.challengeCard}
+          >
+            <Text style={styles.challengeHeader}>🏆 Günün Görevi</Text>
+            <Text style={styles.challengeTitle}>{dailyChallenge.title}</Text>
+            <Text style={styles.challengeDescription}>{dailyChallenge.description}</Text>
+            <View style={styles.challengeFooter}>
+              <View style={styles.challengeTags}>
+                <View style={styles.challengeTag}>
+                  <Text style={styles.challengeTagText}>
+                    {dailyChallenge.difficulty === 'easy' ? '✓ Kolay' :
+                     dailyChallenge.difficulty === 'medium' ? '✓ Orta' : '✓ Zor'}
+                  </Text>
+                </View>
+                <View style={styles.challengeTag}>
+                  <Text style={styles.challengeTagText}>+{dailyChallenge.points} puan</Text>
+                </View>
+              </View>
+              <Pressable style={styles.challengeButton} onPress={handleCompleteChallenge}>
+                <Text style={styles.challengeButtonText}>Tamamla</Text>
+              </Pressable>
+            </View>
+          </LinearGradient>
+        </View>
+      )}
+
+      {/* Badges */}
+      {badges.length > 0 && (
+        <Card title="🏅 Rozetlerim">
+          <View style={styles.badgesContainer}>
+            {badges.map((badge, idx) => (
+              <View key={idx} style={styles.badge}>
+                <Text style={styles.badgeText}>{badge}</Text>
+              </View>
+            ))}
+          </View>
+        </Card>
+      )}
+
+      {/* Stats Grid */}
+      <Card title="İstatistikler">
+        <View style={styles.statsGrid}>
+          <View style={styles.statBox}>
+            <Text style={styles.statValue}>{stats.totalExams}</Text>
+            <Text style={styles.statLabel}>Toplam Deneme</Text>
+          </View>
+          <View style={styles.statBox}>
+            <Text style={styles.statValue}>{stats.pendingHomeworks}</Text>
+            <Text style={styles.statLabel}>Bekleyen Ödev</Text>
+          </View>
+          <View style={styles.statBox}>
+            <Text style={styles.statValue}>
+              {stats.weeklyStudyHours.toFixed(1)}/{stats.weeklyGoalHours}
+            </Text>
+            <Text style={styles.statLabel}>Haftalık Saat</Text>
+          </View>
+          <View style={styles.statBox}>
+            <Text style={styles.statValue}>
+              {stats.questionsCompleted}/{stats.questionTarget}
+            </Text>
+            <Text style={styles.statLabel}>Soru Hedefi</Text>
+          </View>
+        </View>
+      </Card>
+
+      {/* Performance Chart */}
+      {weeklyData && (
+        <Card title="📊 Deneme Performansı (Son 7)">
+          <CustomLineChart data={weeklyData} height={200} />
+        </Card>
+      )}
+
+      {/* Profile Info */}
       <Card title="Profil Bilgileri">
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Ad Soyad:</Text>
@@ -127,53 +325,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({ student, profile }) =>
             <Text style={[styles.infoValue, styles.inviteCode]}>{student.invite_code}</Text>
           </View>
         )}
-        {profile?.package_type && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Paket:</Text>
-            <Text style={styles.infoValue}>{profile.package_type}</Text>
-          </View>
-        )}
       </Card>
-
-      <Card title="İstatistikler">
-        <View style={styles.statsGrid}>
-          <View style={styles.statBox}>
-            <Text style={styles.statValue}>{stats.totalExams}</Text>
-            <Text style={styles.statLabel}>Toplam Deneme</Text>
-          </View>
-          <View style={styles.statBox}>
-            <Text style={styles.statValue}>{stats.pendingHomeworks}</Text>
-            <Text style={styles.statLabel}>Bekleyen Ödev</Text>
-          </View>
-          <View style={styles.statBox}>
-            <Text style={styles.statValue}>
-              {stats.weeklyStudyHours.toFixed(1)} / {stats.weeklyGoalHours}
-            </Text>
-            <Text style={styles.statLabel}>Haftalık Saat</Text>
-          </View>
-          <View style={styles.statBox}>
-            <Text style={styles.statValue}>
-              {stats.questionsCompleted} / {stats.questionTarget}
-            </Text>
-            <Text style={styles.statLabel}>Soru Hedefi</Text>
-          </View>
-        </View>
-      </Card>
-
-      {stats.lastExamScore !== null && (
-        <Card title="Son Deneme Puanı">
-          <View style={styles.scoreBox}>
-            <Text style={styles.scoreValue}>{stats.lastExamScore}</Text>
-            <Text style={styles.scoreLabel}>Puan</Text>
-          </View>
-        </Card>
-      )}
-
-      {weeklyData && (
-        <Card title="Deneme Performansı (Son 7)">
-          <CustomLineChart data={weeklyData} height={200} />
-        </Card>
-      )}
     </ScrollView>
   );
 };
@@ -185,32 +337,178 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
+    paddingBottom: 40,
   },
   centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  infoRow: {
+  motivationCard: {
+    backgroundColor: '#EEF2FF',
+    borderColor: '#C7D2FE',
+  },
+  motivationText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#4338CA',
+    textAlign: 'center',
+  },
+  pointsCard: {
+    backgroundColor: '#FFFBEB',
+    borderColor: '#FCD34D',
+  },
+  pointsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    alignItems: 'center',
   },
-  infoLabel: {
+  pointsLabel: {
     fontSize: 14,
-    color: '#6B7280',
+    color: '#92400E',
     fontWeight: '500',
   },
-  infoValue: {
+  pointsValue: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#F59E0B',
+  },
+  levelBadge: {
+    backgroundColor: '#FEF3C7',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: '#FBBF24',
+  },
+  levelText: {
     fontSize: 14,
+    fontWeight: '700',
+    color: '#92400E',
+  },
+  insightBox: {
+    flexDirection: 'row',
+    padding: 12,
+    borderRadius: 10,
+    borderLeftWidth: 4,
+    marginBottom: 12,
+    gap: 12,
+  },
+  insightSuccess: {
+    backgroundColor: '#ECFDF5',
+    borderLeftColor: '#10B981',
+  },
+  insightWarning: {
+    backgroundColor: '#FFFBEB',
+    borderLeftColor: '#F59E0B',
+  },
+  insightDanger: {
+    backgroundColor: '#FEF2F2',
+    borderLeftColor: '#EF4444',
+  },
+  insightInfo: {
+    backgroundColor: '#EFF6FF',
+    borderLeftColor: '#3B82F6',
+  },
+  insightIcon: {
+    fontSize: 24,
+  },
+  insightContent: {
+    flex: 1,
+  },
+  insightTitle: {
+    fontSize: 15,
+    fontWeight: '700',
     color: '#0F172A',
+    marginBottom: 4,
+  },
+  insightMessage: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginBottom: 6,
+  },
+  insightAction: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6366F1',
+  },
+  challengeContainer: {
+    marginVertical: 8,
+  },
+  challengeCard: {
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  challengeHeader: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 8,
+  },
+  challengeTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginBottom: 8,
+  },
+  challengeDescription: {
+    fontSize: 15,
+    color: '#F3E8FF',
+    marginBottom: 16,
+  },
+  challengeFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  challengeTags: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  challengeTag: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+  },
+  challengeTagText: {
+    color: '#FFFFFF',
+    fontSize: 12,
     fontWeight: '600',
   },
-  inviteCode: {
-    color: '#6366F1',
-    fontFamily: 'monospace',
+  challengeButton: {
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+  },
+  challengeButtonText: {
+    color: '#9333EA',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  badgesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  badge: {
+    backgroundColor: '#EEF2FF',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+  },
+  badgeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#4338CA',
   },
   statsGrid: {
     flexDirection: 'row',
@@ -238,20 +536,25 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
   },
-  scoreBox: {
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#EEF2FF',
-    borderRadius: 12,
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
-  scoreValue: {
-    fontSize: 48,
-    fontWeight: '800',
+  infoLabel: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  infoValue: {
+    fontSize: 14,
+    color: '#0F172A',
+    fontWeight: '600',
+  },
+  inviteCode: {
     color: '#6366F1',
-  },
-  scoreLabel: {
-    fontSize: 16,
-    color: '#4338CA',
-    marginTop: 8,
+    fontFamily: 'monospace',
   },
 });
