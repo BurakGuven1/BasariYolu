@@ -117,7 +117,7 @@ export const getQuestionById = async (questionId: string, currentUserId?: string
   if (error) throw error;
 
   // Increment view count
-  await supabase.rpc('increment_question_views', { question_id: questionId });
+  await supabase.rpc('increment_question_view_count', { question_uuid: questionId });
 
   // Get like info
   const { data: likes } = await supabase
@@ -128,25 +128,43 @@ export const getQuestionById = async (questionId: string, currentUserId?: string
   const likeCount = likes?.length ?? 0;
   const userHasLiked = currentUserId ? likes?.some(l => l.student_id === currentUserId) ?? false : false;
 
+  const { count: answerCount } = await supabase
+    .from('student_answers')
+    .select('id', { count: 'exact', head: true })
+    .eq('question_id', questionId);
+
   return {
     ...data,
     like_count: likeCount,
     user_has_liked: userHasLiked,
+    answer_count: answerCount ?? 0,
   };
 };
 
-export const createQuestion = async (data: {
+type QuestionInsert = {
   student_id: string;
   title: string;
   description: string;
-  subject?: string;
-  topic?: string;
-  difficulty?: string;
-  image_url?: string;
-}) => {
+  subject?: string | null;
+  topic?: string | null;
+  difficulty?: string | null;
+  image_url?: string | null;
+};
+
+export const createQuestion = async (data: QuestionInsert) => {
+  const payload: QuestionInsert = {
+    student_id: data.student_id,
+    title: data.title,
+    description: data.description,
+    subject: data.subject ?? null,
+    topic: data.topic ?? null,
+    difficulty: data.difficulty ?? null,
+    image_url: data.image_url ?? null,
+  };
+
   const { data: result, error } = await supabase
     .from('student_questions')
-    .insert([data])
+    .insert([payload])
     .select()
     .single();
 
@@ -239,11 +257,18 @@ export const createAnswer = async (data: {
   question_id: string;
   student_id: string;
   answer_text: string;
-  image_url?: string;
+  image_url?: string | null;
 }) => {
+  const payload = {
+    question_id: data.question_id,
+    student_id: data.student_id,
+    answer_text: data.answer_text,
+    image_url: data.image_url ?? null,
+  };
+
   const { data: result, error } = await supabase
     .from('student_answers')
-    .insert([data])
+    .insert([payload])
     .select()
     .single();
 

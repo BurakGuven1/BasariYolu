@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, ActivityIndicator, Pressable } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ActivityIndicator, Pressable } from 'react-native';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { useAuth } from '../../contexts/AuthContext';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -13,6 +13,8 @@ import { HomeworksTab } from './HomeworksTab';
 import { PomodoroTab } from './PomodoroTab';
 import { GoalsTab } from './GoalsTab';
 import { ScheduleTab } from './ScheduleTab';
+import { AIChatScreen } from '../AIChatScreen';
+import { QuestionListScreen } from '../QuestionPortal/QuestionListScreen';
 
 type DashboardProps = NativeStackScreenProps<RootStackParamList, 'Dashboard'>;
 
@@ -92,40 +94,28 @@ export const StudentDashboard: React.FC<DashboardProps> = ({ navigation }) => {
           tabBarScrollEnabled: true,
         }}
       >
-        <Tab.Screen
-          name="Overview"
-          options={{ title: 'Özet' }}
-        >
+        <Tab.Screen name="Overview" options={{ title: 'Özet' }}>
           {() => <OverviewTab student={student} profile={profile} />}
         </Tab.Screen>
-        <Tab.Screen
-          name="Exams"
-          options={{ title: 'Denemeler' }}
-        >
+        <Tab.Screen name="AIChatTab" options={{ title: 'Yapay Zeka' }}>
+          {() => <AIChatScreen />}
+        </Tab.Screen>
+        <Tab.Screen name="QuestionPortalTab" options={{ title: 'Soru Portalı' }}>
+          {() => <QuestionListScreen />}
+        </Tab.Screen>
+        <Tab.Screen name="Exams" options={{ title: 'Denemeler' }}>
           {() => <ExamsTab studentId={student.id} />}
         </Tab.Screen>
-        <Tab.Screen
-          name="Homeworks"
-          options={{ title: 'Ödevler' }}
-        >
+        <Tab.Screen name="Homeworks" options={{ title: 'Ödevler' }}>
           {() => <HomeworksTab studentId={student.id} />}
         </Tab.Screen>
-        <Tab.Screen
-          name="Pomodoro"
-          options={{ title: 'Pomodoro' }}
-        >
+        <Tab.Screen name="Pomodoro" options={{ title: 'Pomodoro' }}>
           {() => <PomodoroTab studentId={student.id} />}
         </Tab.Screen>
-        <Tab.Screen
-          name="Goals"
-          options={{ title: 'Hedefler' }}
-        >
+        <Tab.Screen name="Goals" options={{ title: 'Hedefler' }}>
           {() => <GoalsTab studentId={student.id} />}
         </Tab.Screen>
-        <Tab.Screen
-          name="Schedule"
-          options={{ title: 'Program' }}
-        >
+        <Tab.Screen name="Schedule" options={{ title: 'Program' }}>
           {() => <ScheduleTab studentId={student.id} />}
         </Tab.Screen>
       </Tab.Navigator>

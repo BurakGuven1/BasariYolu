@@ -13,6 +13,7 @@ import { QuestionListScreen } from './src/screens/QuestionPortal/QuestionListScr
 import { QuestionDetailScreen } from './src/screens/QuestionPortal/QuestionDetailScreen';
 import { CreateQuestionScreen } from './src/screens/QuestionPortal/CreateQuestionScreen';
 import { AnswerQuestionScreen } from './src/screens/QuestionPortal/AnswerQuestionScreen';
+import { AIChatScreen } from './src/screens/AIChatScreen';
 import { RootStackParamList } from './src/types/navigation';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -29,9 +30,8 @@ const navTheme = {
 };
 
 function AppNavigator() {
-  const { user, loading } = useAuth();
+  const { user } = useAuth();
 
-  // If authenticated, direct user to role-specific screen name
   const initialRoute = user
     ? user.userType === 'parent'
       ? 'Parent'
@@ -61,9 +61,15 @@ function AppNavigator() {
         <Stack.Screen name="Teacher" component={TeacherDashboard} />
         <Stack.Screen name="Institution" component={InstitutionDashboard} />
         <Stack.Screen
+          name="QuestionPortal"
+          component={QuestionListScreen}
+          options={{ headerShown: true, title: 'Soru Portalı' }}
+        />
+        <Stack.Screen name="AIChat" component={AIChatScreen} />
+        <Stack.Screen
           name="QuestionList"
           component={QuestionListScreen}
-          options={{ headerShown: true, title: 'Soru Portali' }}
+          options={{ headerShown: true, title: 'Soru Portalı' }}
         />
         <Stack.Screen
           name="QuestionDetail"

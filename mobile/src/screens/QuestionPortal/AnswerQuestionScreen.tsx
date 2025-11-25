@@ -6,18 +6,23 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Image,
+  TextInput,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import * as ImagePicker from 'expo-image-picker';
 import { RootStackParamList } from '../../types/navigation';
 import { Card } from '../../components/ui/Card';
-import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { createAnswer, getQuestionById } from '../../lib/questionPortalApi';
 import { supabase } from '../../lib/supabase';
 
 type AnswerQuestionScreenRouteProp = RouteProp<RootStackParamList, 'AnswerQuestion'>;
-type AnswerQuestionScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'AnswerQuestion'>;
+type AnswerQuestionScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'AnswerQuestion'
+>;
 
 export const AnswerQuestionScreen: React.FC = () => {
   const route = useRoute<AnswerQuestionScreenRouteProp>();
@@ -29,6 +34,11 @@ export const AnswerQuestionScreen: React.FC = () => {
   const [studentId, setStudentId] = useState<string | null>(null);
   const [question, setQuestion] = useState<any>(null);
   const [answerContent, setAnswerContent] = useState('');
+  const [image, setImage] = useState<{
+    uri: string;
+    base64?: string;
+    mimeType?: string;
+  } | null>(null);
 
   useEffect(() => {
     loadData();
@@ -37,14 +47,15 @@ export const AnswerQuestionScreen: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         Alert.alert('Hata', 'Kullanıcı bulunamadı');
         navigation.goBack();
         return;
       }
 
-      // Get student record
       const { data: studentData, error: studentError } = await supabase
         .from('students')
         .select('id')
@@ -59,7 +70,6 @@ export const AnswerQuestionScreen: React.FC = () => {
 
       setStudentId(studentData.id);
 
-      // Load question
       const questionData = await getQuestionById(questionId, user.id);
       setQuestion(questionData);
     } catch (e: any) {
@@ -70,9 +80,57 @@ export const AnswerQuestionScreen: React.FC = () => {
     }
   };
 
+  const buildDataUrl = () => {
+    if (!image?.base64) return undefined;
+    const mime = image.mimeType || 'image/jpeg';
+    return `data:${mime};base64,${image.base64}`;
+  };
+
+  const pickFromLibrary = async () => {
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.8,
+      base64: true,
+    });
+
+    if (!res.canceled && res.assets?.[0]) {
+      const asset = res.assets[0];
+      setImage({
+        uri: asset.uri,
+        base64: asset.base64 ?? undefined,
+        mimeType: asset.mimeType ?? undefined,
+      });
+    }
+  };
+
+  const takePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('İzin gerekli', 'Kamera izni olmadan fotoğraf çekemezsiniz.');
+      return;
+    }
+
+    const res = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.8,
+      base64: true,
+    });
+
+    if (!res.canceled && res.assets?.[0]) {
+      const asset = res.assets[0];
+      setImage({
+        uri: asset.uri,
+        base64: asset.base64 ?? undefined,
+        mimeType: asset.mimeType ?? undefined,
+      });
+    }
+  };
+
   const handleSubmit = async () => {
     if (!answerContent.trim()) {
-      Alert.alert('Uyarı', 'Cevap içeriği giriniz');
+      Alert.alert('Uyarı', 'Cevap içeriğini giriniz');
       return;
     }
 
@@ -83,9 +141,14 @@ export const AnswerQuestionScreen: React.FC = () => {
 
     setSubmitting(true);
     try {
-      await createAnswer(questionId, studentId, answerContent);
+      await createAnswer({
+        question_id: questionId,
+        student_id: studentId,
+        answer_text: answerContent.trim(),
+        image_url: buildDataUrl(),
+      });
 
-      Alert.alert('Başarılı', 'Cevabınız başarıyla gönderildi', [
+      Alert.alert('Başarılı', 'Cevabınız gönderildi', [
         {
           text: 'Tamam',
           onPress: () => navigation.goBack(),
@@ -110,22 +173,25 @@ export const AnswerQuestionScreen: React.FC = () => {
     <View style={styles.container}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
         <Card style={styles.questionPreview}>
-          <Text style={styles.previewLabel}>Cevaplanacak Soru:</Text>
-          <Text style={styles.questionTitle}>{question.question_title}</Text>
-          <Text style={styles.questionContent} numberOfLines={3}>
-            {question.question_content}
+          <Text style={styles.previewLabel}>Cevaplanacak Soru</Text>
+          <Text style={styles.questionTitle}>{question.title}</Text>
+          <Text style={styles.questionContent} numberOfLines={5}>
+            {question.description}
           </Text>
           {question.subject && (
             <View style={styles.subjectBadge}>
               <Text style={styles.subjectText}>{question.subject}</Text>
             </View>
           )}
+          {question.image_url && (
+            <Image source={{ uri: question.image_url }} style={styles.questionImage} />
+          )}
         </Card>
 
         <Card>
           <Text style={styles.header}>Cevabını Yaz</Text>
           <Text style={styles.description}>
-            Yardımcı ve açıklayıcı bir cevap yaz. Adım adım açıklama yaparsan daha faydalı olur.
+            Yardımcı ve açıklayıcı bir cevap yaz. Adım adım anlatabilir, gerekirse fotoğraf ekleyebilirsin.
           </Text>
         </Card>
 
@@ -133,15 +199,41 @@ export const AnswerQuestionScreen: React.FC = () => {
           <View style={styles.form}>
             <View style={styles.fieldContainer}>
               <Text style={styles.label}>Cevap İçeriği *</Text>
-              <Input
+              <TextInput
                 placeholder="Cevabını detaylı bir şekilde yaz..."
+                placeholderTextColor="#94A3B8"
                 value={answerContent}
                 onChangeText={setAnswerContent}
                 multiline
                 numberOfLines={10}
-                style={styles.textArea}
+                style={[styles.input, styles.textArea]}
+                textAlignVertical="top"
               />
               <Text style={styles.helperText}>{answerContent.length} karakter</Text>
+            </View>
+
+            <View style={styles.fieldContainer}>
+              <Text style={styles.label}>Görsel Ekle (isteğe bağlı)</Text>
+              <View style={styles.imageActions}>
+                <Button
+                  title="Galeriden seç"
+                  variant="secondary"
+                  onPress={pickFromLibrary}
+                  style={{ flex: 1 }}
+                />
+                <Button
+                  title="Fotoğraf çek"
+                  variant="secondary"
+                  onPress={takePhoto}
+                  style={{ flex: 1 }}
+                />
+              </View>
+              {image && (
+                <View style={styles.imagePreview}>
+                  <Image source={{ uri: image.uri }} style={styles.previewImage} />
+                  <Button title="Görseli Kaldır" variant="secondary" onPress={() => setImage(null)} />
+                </View>
+              )}
             </View>
 
             <Button
@@ -153,13 +245,12 @@ export const AnswerQuestionScreen: React.FC = () => {
         </Card>
 
         <Card style={styles.tipsCard}>
-          <Text style={styles.tipsTitle}>💡 İyi Cevap İpuçları</Text>
+          <Text style={styles.tipsTitle}>✅ İyi Cevap İpuçları</Text>
           <View style={styles.tipsList}>
-            <Text style={styles.tip}>• Soruyu tam olarak cevaplamaya çalış</Text>
-            <Text style={styles.tip}>• Adım adım açıkla</Text>
-            <Text style={styles.tip}>• Örnekler vererek destekle</Text>
-            <Text style={styles.tip}>• Emin olmadığın konularda belirt</Text>
-            <Text style={styles.tip}>• Destekleyici ve nazik ol</Text>
+            <Text style={styles.tip}>• Soruyu tam olarak cevaplamaya çalış.</Text>
+            <Text style={styles.tip}>• Adım adım açıkla, mümkünse örnek ver.</Text>
+            <Text style={styles.tip}>• Emin olmadığın noktalarda belirt.</Text>
+            <Text style={styles.tip}>• Saygılı ve destekleyici ol.</Text>
           </View>
         </Card>
       </ScrollView>
@@ -208,6 +299,13 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 8,
   },
+  questionImage: {
+    marginTop: 10,
+    width: '100%',
+    height: 220,
+    borderRadius: 12,
+    backgroundColor: '#E5E7EB',
+  },
   subjectBadge: {
     alignSelf: 'flex-start',
     backgroundColor: '#EEF2FF',
@@ -250,7 +348,6 @@ const styles = StyleSheet.create({
   },
   textArea: {
     minHeight: 200,
-    textAlignVertical: 'top',
   },
   tipsCard: {
     backgroundColor: '#FFFBEB',
@@ -270,5 +367,28 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#78350F',
     lineHeight: 18,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: '#0F172A',
+  },
+  imageActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  imagePreview: {
+    marginTop: 10,
+    gap: 8,
+  },
+  previewImage: {
+    width: '100%',
+    height: 220,
+    borderRadius: 12,
+    backgroundColor: '#E5E7EB',
   },
 });

@@ -6,6 +6,8 @@ export type RootStackParamList = {
   Parent: undefined;
   Teacher: undefined;
   Institution: undefined;
+  QuestionPortal: undefined;
+  AIChat: undefined;
   QuestionList: undefined;
   QuestionDetail: { questionId: string };
   CreateQuestion: undefined;

@@ -25,7 +25,10 @@ import {
 import { supabase } from '../../lib/supabase';
 
 type QuestionDetailScreenRouteProp = RouteProp<RootStackParamList, 'QuestionDetail'>;
-type QuestionDetailScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'QuestionDetail'>;
+type QuestionDetailScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'QuestionDetail'
+>;
 
 export const QuestionDetailScreen: React.FC = () => {
   const route = useRoute<QuestionDetailScreenRouteProp>();
@@ -43,14 +46,18 @@ export const QuestionDetailScreen: React.FC = () => {
   }, [questionId]);
 
   const loadCurrentUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     setCurrentUserId(user?.id ?? null);
   };
 
   const loadQuestionData = async () => {
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       const userId = user?.id;
 
       const [questionData, answersData] = await Promise.all([
@@ -97,48 +104,40 @@ export const QuestionDetailScreen: React.FC = () => {
   };
 
   const handleDeleteQuestion = () => {
-    Alert.alert(
-      'Soru Sil',
-      'Bu soruyu silmek istediğinize emin misiniz?',
-      [
-        { text: 'İptal', style: 'cancel' },
-        {
-          text: 'Sil',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteQuestion(questionId);
-              Alert.alert('Başarılı', 'Soru silindi');
-              navigation.goBack();
-            } catch (e: any) {
-              Alert.alert('Hata', e?.message ?? 'Soru silinemedi');
-            }
-          },
+    Alert.alert('Soru Sil', 'Bu soruyu silmek istediğinize emin misiniz?', [
+      { text: 'İptal', style: 'cancel' },
+      {
+        text: 'Sil',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteQuestion(questionId);
+            Alert.alert('Başarılı', 'Soru silindi');
+            navigation.goBack();
+          } catch (e: any) {
+            Alert.alert('Hata', e?.message ?? 'Soru silinemedi');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const handleDeleteAnswer = (answerId: string) => {
-    Alert.alert(
-      'Cevap Sil',
-      'Bu cevabı silmek istediğinize emin misiniz?',
-      [
-        { text: 'İptal', style: 'cancel' },
-        {
-          text: 'Sil',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteAnswer(answerId);
-              loadQuestionData();
-            } catch (e: any) {
-              Alert.alert('Hata', e?.message ?? 'Cevap silinemedi');
-            }
-          },
+    Alert.alert('Cevap Sil', 'Bu cevabı silmek istediğinize emin misiniz?', [
+      { text: 'İptal', style: 'cancel' },
+      {
+        text: 'Sil',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteAnswer(answerId);
+            loadQuestionData();
+          } catch (e: any) {
+            Alert.alert('Hata', e?.message ?? 'Cevap silinemedi');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
   if (loading || !question) {
@@ -177,8 +176,12 @@ export const QuestionDetailScreen: React.FC = () => {
             )}
           </View>
 
-          <Text style={styles.questionTitle}>{question.question_title}</Text>
-          <Text style={styles.questionContent}>{question.question_content}</Text>
+          <Text style={styles.questionTitle}>{question.title}</Text>
+          <Text style={styles.questionContent}>{question.description}</Text>
+
+          {question.image_url && (
+            <Image source={{ uri: question.image_url }} style={styles.questionImage} />
+          )}
 
           {question.subject && (
             <View style={styles.subjectBadge}>
@@ -188,7 +191,7 @@ export const QuestionDetailScreen: React.FC = () => {
 
           <View style={styles.questionStats}>
             <Pressable style={styles.statButton} onPress={handleLikeQuestion}>
-              <Text style={styles.statIcon}>{question.is_liked ? '❤️' : '🤍'}</Text>
+              <Text style={styles.statIcon}>{question.user_has_liked ? '👍' : '🤍'}</Text>
               <Text style={styles.statText}>{question.like_count ?? 0} Beğeni</Text>
             </Pressable>
             <View style={styles.statButton}>
@@ -196,7 +199,7 @@ export const QuestionDetailScreen: React.FC = () => {
               <Text style={styles.statText}>{question.answer_count ?? 0} Cevap</Text>
             </View>
             <View style={styles.statButton}>
-              <Text style={styles.statIcon}>👁️</Text>
+              <Text style={styles.statIcon}>👀</Text>
               <Text style={styles.statText}>{question.view_count ?? 0} Görüntüleme</Text>
             </View>
           </View>
@@ -236,14 +239,17 @@ export const QuestionDetailScreen: React.FC = () => {
                   )}
                 </View>
 
-                <Text style={styles.answerContent}>{answer.answer_content}</Text>
+                <Text style={styles.answerContent}>{answer.answer_text}</Text>
+                {answer.image_url && (
+                  <Image source={{ uri: answer.image_url }} style={styles.answerImage} />
+                )}
 
                 <View style={styles.answerStats}>
                   <Pressable
                     style={styles.likeButton}
                     onPress={() => handleLikeAnswer(answer.id)}
                   >
-                    <Text style={styles.statIcon}>{answer.is_liked ? '❤️' : '🤍'}</Text>
+                    <Text style={styles.statIcon}>{answer.user_has_liked ? '👍' : '🤍'}</Text>
                     <Text style={styles.statText}>{answer.like_count ?? 0} Beğeni</Text>
                   </Pressable>
                 </View>
@@ -343,6 +349,13 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: 12,
   },
+  questionImage: {
+    width: '100%',
+    height: 240,
+    borderRadius: 12,
+    backgroundColor: '#E5E7EB',
+    marginBottom: 12,
+  },
   subjectBadge: {
     alignSelf: 'flex-start',
     backgroundColor: '#EEF2FF',
@@ -403,6 +416,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#374151',
     lineHeight: 20,
+    marginBottom: 12,
+  },
+  answerImage: {
+    width: '100%',
+    height: 220,
+    borderRadius: 12,
+    backgroundColor: '#E5E7EB',
     marginBottom: 12,
   },
   answerStats: {

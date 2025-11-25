@@ -1,5 +1,6 @@
 import React from 'react';
-import { FlatList, SafeAreaView, StatusBar, StyleSheet, Text, View } from 'react-native';
+import { FlatList, StatusBar, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { packages } from '../data/packages';
 import { PackageCard } from '../components/PackageCard';
 import { Button } from '../components/ui/Button';
@@ -26,6 +27,13 @@ export function HomeScreen({ navigation }: Props) {
             <Button title="Panoya git" onPress={() => navigation.navigate('Dashboard')} />
           )}
         </View>
+        <View style={styles.actionsRow}>
+          <Button
+            title="Soru Portalı"
+            variant="secondary"
+            onPress={() => navigation.navigate('QuestionList')}
+          />
+        </View>
       </View>
 
       <FlatList
@@ -37,7 +45,6 @@ export function HomeScreen({ navigation }: Props) {
           <PackageCard
             item={item}
             onSelect={() => {
-              // Payment flow to be integrated; for now navigate to auth if not logged in
               if (!user) {
                 navigation.navigate('Auth');
               } else {
@@ -82,6 +89,11 @@ const styles = StyleSheet.create({
   },
   actions: {
     marginTop: 8,
+  },
+  actionsRow: {
+    marginTop: 8,
+    flexDirection: 'row',
+    gap: 8,
   },
   list: {
     paddingHorizontal: 20,

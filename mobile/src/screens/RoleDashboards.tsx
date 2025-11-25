@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { SafeAreaView, StyleSheet, Text, View, ActivityIndicator, Pressable, Alert, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, ActivityIndicator, Pressable, Alert, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../components/ui/Button';
 import { InputMini } from '../components/ui/InputMini';
 import { useAuth } from '../contexts/AuthContext';

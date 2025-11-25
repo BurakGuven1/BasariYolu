@@ -8,7 +8,8 @@ import {
   Pressable,
   RefreshControl,
 } from 'react-native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { useAuth } from '../../contexts/AuthContext';
@@ -16,14 +17,16 @@ import { getAllQuestions, toggleQuestionLike } from '../../lib/questionPortalApi
 import type { StudentQuestion } from '../../lib/questionPortalApi';
 
 type RootStackParamList = {
+  Auth: undefined;
   QuestionList: undefined;
   QuestionDetail: { questionId: string };
   CreateQuestion: undefined;
 };
 
-type Props = NativeStackScreenProps<RootStackParamList, 'QuestionList'>;
+type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
-export const QuestionListScreen: React.FC<Props> = ({ navigation }) => {
+export const QuestionListScreen: React.FC = () => {
+  const navigation = useNavigation<Navigation>();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -31,6 +34,11 @@ export const QuestionListScreen: React.FC<Props> = ({ navigation }) => {
   const [filter, setFilter] = useState<'all' | 'solved' | 'unsolved'>('all');
 
   const loadQuestions = async () => {
+    if (!user) {
+      setLoading(false);
+      setRefreshing(false);
+      return;
+    }
     try {
       const data = await getAllQuestions(user?.id);
       setQuestions(data);
@@ -44,7 +52,7 @@ export const QuestionListScreen: React.FC<Props> = ({ navigation }) => {
 
   useEffect(() => {
     loadQuestions();
-  }, []);
+  }, [user?.id]);
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -78,8 +86,11 @@ export const QuestionListScreen: React.FC<Props> = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Soru Portali</Text>
-        <Button title="Soru Sor" onPress={() => navigation.navigate('CreateQuestion')} />
+        <Text style={styles.title}>Soru Portalı</Text>
+        <Button
+          title={user ? 'Soru Sor' : 'Giriş yap'}
+          onPress={() => navigation.navigate(user ? 'CreateQuestion' : 'Auth')}
+        />
       </View>
 
       <View style={styles.filters}>
@@ -92,7 +103,7 @@ export const QuestionListScreen: React.FC<Props> = ({ navigation }) => {
             <Text
               style={[styles.filterText, filter === f && styles.filterTextActive]}
             >
-              {f === 'all' ? 'Tümü' : f === 'solved' ? 'Çözülmüş' : 'Çözülmemiş'}
+              {f === 'all' ? 'Tümü' : f === 'solved' ? '✅ Çözüldü' : '🕐 Çözülmedi'}
             </Text>
           </Pressable>
         ))}
@@ -105,9 +116,16 @@ export const QuestionListScreen: React.FC<Props> = ({ navigation }) => {
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
       >
+        {!user && (
+          <Card style={{ marginBottom: 12 }}>
+            <Text style={styles.emptyText}>
+              Soruları görmek ve paylaşmak için giriş yapmalısın.
+            </Text>
+          </Card>
+        )}
         {filteredQuestions.length === 0 ? (
           <Card>
-            <Text style={styles.emptyText}>Henüz soru bulunmamaktadır</Text>
+            <Text style={styles.emptyText}>Henüz soru bulunmuyor</Text>
           </Card>
         ) : (
           filteredQuestions.map((question) => (
@@ -132,7 +150,12 @@ export const QuestionListScreen: React.FC<Props> = ({ navigation }) => {
                     )}
                     {question.is_solved && (
                       <View style={[styles.tag, styles.tagSolved]}>
-                        <Text style={styles.tagTextSolved}>✓ Çözülmüş</Text>
+                        <Text style={styles.tagTextSolved}>Çözüldü</Text>
+                      </View>
+                    )}
+                    {question.image_url && (
+                      <View style={[styles.tag, styles.tagMedia]}>
+                        <Text style={styles.tagText}>📷 Görsel</Text>
                       </View>
                     )}
                   </View>
@@ -156,7 +179,7 @@ export const QuestionListScreen: React.FC<Props> = ({ navigation }) => {
                       }}
                     >
                       <Text style={styles.statText}>
-                        {question.user_has_liked ? '❤️' : '🤍'} {question.like_count ?? 0}
+                        {question.user_has_liked ? '👍' : '🤍'} {question.like_count ?? 0}
                       </Text>
                     </Pressable>
                     <View style={styles.stat}>
@@ -165,7 +188,7 @@ export const QuestionListScreen: React.FC<Props> = ({ navigation }) => {
                       </Text>
                     </View>
                     <View style={styles.stat}>
-                      <Text style={styles.statText}>👁 {question.view_count}</Text>
+                      <Text style={styles.statText}>👀 {question.view_count ?? 0}</Text>
                     </View>
                   </View>
                 </View>
@@ -263,6 +286,9 @@ const styles = StyleSheet.create({
   },
   tagSolved: {
     backgroundColor: '#D1FAE5',
+  },
+  tagMedia: {
+    backgroundColor: '#E0F2FE',
   },
   tagText: {
     fontSize: 11,
