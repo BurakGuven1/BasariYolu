@@ -13,6 +13,7 @@ import { HomeworksTab } from './HomeworksTab';
 import { PomodoroTab } from './PomodoroTab';
 import { GoalsTab } from './GoalsTab';
 import { ScheduleTab } from './ScheduleTab';
+import { BigFiveTab } from './BigFiveTab';
 import { AIChatScreen } from '../AIChatScreen';
 import { QuestionListScreen } from '../QuestionPortal/QuestionListScreen';
 
@@ -114,6 +115,9 @@ export const StudentDashboard: React.FC<DashboardProps> = ({ navigation }) => {
         </Tab.Screen>
         <Tab.Screen name="Goals" options={{ title: 'Hedefler' }}>
           {() => <GoalsTab studentId={student.id} />}
+        </Tab.Screen>
+        <Tab.Screen name="BigFive" options={{ title: 'Big Five' }}>
+          {() => <BigFiveTab studentId={student.id} gradeLevel={profile?.grade || 9} />}
         </Tab.Screen>
         <Tab.Screen name="Schedule" options={{ title: 'Program' }}>
           {() => <ScheduleTab studentId={student.id} />}
