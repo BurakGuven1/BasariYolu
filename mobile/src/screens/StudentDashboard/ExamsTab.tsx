@@ -117,24 +117,81 @@ export const ExamsTab: React.FC<ExamsTabProps> = ({ studentId }) => {
 
   const calculateTotalScore = (): number => {
     const subjects = getSubjects();
-    let totalNet = 0;
 
-    subjects.forEach((subject) => {
-      const score = topicScores[subject.name];
-      if (score) {
-        const correct = Number(score.correct) || 0;
-        const wrong = Number(score.wrong) || 0;
-        totalNet += calculateNet(correct, wrong);
-      }
-    });
-
-    // Approximate score calculation (simplified)
     if (formData.exam_type === 'TYT') {
-      return Math.round(totalNet * 5);
+      // TYT: hamPuan = 100 + (turkceNet * 3.33) + (matematikNet * 3.33) + (fenNet * 3.45) + (sosyalNet * 3.45)
+      const turkceNet = calculateNet(
+        Number(topicScores['Türkçe']?.correct) || 0,
+        Number(topicScores['Türkçe']?.wrong) || 0
+      );
+      const matematikNet = calculateNet(
+        Number(topicScores['Matematik']?.correct) || 0,
+        Number(topicScores['Matematik']?.wrong) || 0
+      );
+      const fenNet = calculateNet(
+        Number(topicScores['Fen']?.correct) || 0,
+        Number(topicScores['Fen']?.wrong) || 0
+      );
+      const sosyalNet = calculateNet(
+        Number(topicScores['Sosyal']?.correct) || 0,
+        Number(topicScores['Sosyal']?.wrong) || 0
+      );
+
+      const hamPuan = 100 + (turkceNet * 3.33) + (matematikNet * 3.33) + (fenNet * 3.45) + (sosyalNet * 3.45);
+      return Math.round(Math.min(500, Math.max(100, hamPuan)));
     } else if (formData.exam_type === 'AYT') {
-      return Math.round(totalNet * 5);
+      // AYT: Calculate both TYT and AYT, then YKS = (TYT × 0.4) + (AYT × 0.6)
+      // First calculate TYT (from hidden fields or 0)
+      const tytScore = 100; // Default if no TYT entered
+
+      // Calculate AYT net total
+      let aytNetToplam = 0;
+      subjects.forEach((subject) => {
+        const score = topicScores[subject.name];
+        if (score) {
+          const correct = Number(score.correct) || 0;
+          const wrong = Number(score.wrong) || 0;
+          aytNetToplam += calculateNet(correct, wrong);
+        }
+      });
+
+      const aytHamPuan = (aytNetToplam * 5) + 100;
+      const aytScore = Math.min(500, Math.max(100, aytHamPuan));
+
+      // YKS calculation
+      const yksScore = (tytScore * 0.4) + (aytScore * 0.6);
+      return Math.round(Math.min(500, Math.max(100, yksScore)));
     } else if (formData.exam_type === 'LGS') {
-      return Math.round(totalNet * 5);
+      // LGS: katsayiliToplam = (turkce * 4) + (matematik * 4) + (fen * 4) + (inkılap * 1) + (ingilizce * 1) + (din * 1)
+      const turkceNet = calculateNet(
+        Number(topicScores['Türkçe']?.correct) || 0,
+        Number(topicScores['Türkçe']?.wrong) || 0
+      );
+      const matematikNet = calculateNet(
+        Number(topicScores['Matematik']?.correct) || 0,
+        Number(topicScores['Matematik']?.wrong) || 0
+      );
+      const fenNet = calculateNet(
+        Number(topicScores['Fen']?.correct) || 0,
+        Number(topicScores['Fen']?.wrong) || 0
+      );
+      const inkilapNet = calculateNet(
+        Number(topicScores['İnkılap']?.correct) || 0,
+        Number(topicScores['İnkılap']?.wrong) || 0
+      );
+      const ingilizceNet = calculateNet(
+        Number(topicScores['İngilizce']?.correct) || 0,
+        Number(topicScores['İngilizce']?.wrong) || 0
+      );
+      const dinNet = calculateNet(
+        Number(topicScores['Din']?.correct) || 0,
+        Number(topicScores['Din']?.wrong) || 0
+      );
+
+      const katsayiliToplam = (turkceNet * 4) + (matematikNet * 4) + (fenNet * 4) +
+                              (inkilapNet * 1) + (ingilizceNet * 1) + (dinNet * 1);
+      const hamPuan = (katsayiliToplam * 500) / 270;
+      return Math.round(Math.min(500, Math.max(0, hamPuan)));
     }
     return 0;
   };
@@ -273,13 +330,39 @@ export const ExamsTab: React.FC<ExamsTabProps> = ({ studentId }) => {
   };
 
   const updateTopicScore = (subject: string, field: 'correct' | 'wrong', value: string) => {
-    setTopicScores((prev) => ({
-      ...prev,
-      [subject]: {
-        correct: field === 'correct' ? value : prev[subject]?.correct || '0',
-        wrong: field === 'wrong' ? value : prev[subject]?.wrong || '0',
-      },
-    }));
+    // Only allow numeric input
+    const numericValue = value.replace(/[^0-9]/g, '');
+
+    setTopicScores((prev) => {
+      const currentScore = prev[subject] || { correct: '0', wrong: '0' };
+      const newScore = {
+        correct: field === 'correct' ? numericValue : currentScore.correct,
+        wrong: field === 'wrong' ? numericValue : currentScore.wrong,
+      };
+
+      // Find subject max questions
+      const subjects = getSubjects();
+      const subjectData = subjects.find(s => s.name === subject);
+      if (!subjectData) return prev;
+
+      // Check if total exceeds limit
+      const correct = Number(newScore.correct) || 0;
+      const wrong = Number(newScore.wrong) || 0;
+      const total = correct + wrong;
+
+      if (total > subjectData.maxQuestions) {
+        Alert.alert(
+          'Limit Aşıldı',
+          `${subject} için maksimum ${subjectData.maxQuestions} soru girilebilir. Toplam: ${total}`
+        );
+        return prev; // Don't update if limit exceeded
+      }
+
+      return {
+        ...prev,
+        [subject]: newScore,
+      };
+    });
   };
 
   const renderTopicScoreInputs = () => {
