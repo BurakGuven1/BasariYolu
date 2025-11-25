@@ -171,6 +171,18 @@ export function AIChatScreen() {
               </Text>
             </View>
           )}
+          ListFooterComponent={
+            loading ? (
+              <View style={[styles.bubble, styles.bubbleAI, styles.typingBubble]}>
+                <View style={styles.typingIndicator}>
+                  <View style={[styles.typingDot, { animationDelay: '0ms' }]} />
+                  <View style={[styles.typingDot, { animationDelay: '200ms' }]} />
+                  <View style={[styles.typingDot, { animationDelay: '400ms' }]} />
+                </View>
+                <Text style={styles.typingText}>AI düşünüyor...</Text>
+              </View>
+            ) : null
+          }
         />
 
         {attachedImage && (
@@ -287,5 +299,25 @@ const styles = StyleSheet.create({
     color: '#DC2626',
     fontWeight: '700',
     textAlign: 'right',
+  },
+  typingBubble: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  typingIndicator: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  typingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#94A3B8',
+  },
+  typingText: {
+    color: '#94A3B8',
+    fontSize: 13,
+    fontStyle: 'italic',
   },
 });

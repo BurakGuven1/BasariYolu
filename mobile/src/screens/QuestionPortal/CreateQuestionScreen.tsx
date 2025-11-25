@@ -38,6 +38,10 @@ const SUBJECTS = [
   'Diğer',
 ];
 
+const GRADE_LEVELS = ['5', '6', '7', '8', '9', '10', '11', '12'];
+
+const EXAM_TYPES = ['TYT', 'AYT', 'LGS', 'AYT-SAY', 'AYT-EA', 'AYT-SÖZ'];
+
 export const CreateQuestionScreen: React.FC = () => {
   const navigation = useNavigation<CreateQuestionScreenNavigationProp>();
   const [studentId, setStudentId] = useState<string | null>(null);
@@ -52,6 +56,8 @@ export const CreateQuestionScreen: React.FC = () => {
     title: '',
     content: '',
     subject: '',
+    grade_level: '',
+    exam_type: '',
   });
 
   useEffect(() => {
@@ -160,6 +166,8 @@ export const CreateQuestionScreen: React.FC = () => {
         description: formData.content.trim(),
         subject: formData.subject || null,
         image_url: buildDataUrl(),
+        grade_level: formData.grade_level || null,
+        exam_type: formData.exam_type || null,
       });
 
       Alert.alert('Başarılı', 'Soru başarıyla oluşturuldu', [
@@ -247,6 +255,74 @@ export const CreateQuestionScreen: React.FC = () => {
                       ]}
                     >
                       {subject}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View>
+
+            <View style={styles.fieldContainer}>
+              <Text style={styles.label}>Sınıf Seviyesi (Opsiyonel)</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.subjectsContainer}
+              >
+                {GRADE_LEVELS.map((grade) => (
+                  <Pressable
+                    key={grade}
+                    style={[
+                      styles.subjectChip,
+                      formData.grade_level === grade && styles.subjectChipActive,
+                    ]}
+                    onPress={() =>
+                      setFormData({
+                        ...formData,
+                        grade_level: formData.grade_level === grade ? '' : grade,
+                      })
+                    }
+                  >
+                    <Text
+                      style={[
+                        styles.subjectChipText,
+                        formData.grade_level === grade && styles.subjectChipTextActive,
+                      ]}
+                    >
+                      {grade}. Sınıf
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View>
+
+            <View style={styles.fieldContainer}>
+              <Text style={styles.label}>Sınav Tipi (Opsiyonel)</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.subjectsContainer}
+              >
+                {EXAM_TYPES.map((examType) => (
+                  <Pressable
+                    key={examType}
+                    style={[
+                      styles.subjectChip,
+                      formData.exam_type === examType && styles.subjectChipActive,
+                    ]}
+                    onPress={() =>
+                      setFormData({
+                        ...formData,
+                        exam_type: formData.exam_type === examType ? '' : examType,
+                      })
+                    }
+                  >
+                    <Text
+                      style={[
+                        styles.subjectChipText,
+                        formData.exam_type === examType && styles.subjectChipTextActive,
+                      ]}
+                    >
+                      {examType}
                     </Text>
                   </Pressable>
                 ))}

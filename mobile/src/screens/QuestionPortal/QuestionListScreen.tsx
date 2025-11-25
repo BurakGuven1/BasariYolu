@@ -25,6 +25,9 @@ type RootStackParamList = {
 
 type Navigation = NativeStackNavigationProp<RootStackParamList>;
 
+const GRADE_LEVELS = ['5', '6', '7', '8', '9', '10', '11', '12'];
+const EXAM_TYPES = ['TYT', 'AYT', 'LGS', 'AYT-SAY', 'AYT-EA', 'AYT-SÖZ'];
+
 export const QuestionListScreen: React.FC = () => {
   const navigation = useNavigation<Navigation>();
   const { user } = useAuth();
@@ -32,6 +35,8 @@ export const QuestionListScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [questions, setQuestions] = useState<StudentQuestion[]>([]);
   const [filter, setFilter] = useState<'all' | 'solved' | 'unsolved'>('all');
+  const [gradeFilter, setGradeFilter] = useState<string>('');
+  const [examFilter, setExamFilter] = useState<string>('');
 
   const loadQuestions = async () => {
     if (!user) {
@@ -70,8 +75,16 @@ export const QuestionListScreen: React.FC = () => {
   };
 
   const filteredQuestions = questions.filter((q) => {
-    if (filter === 'solved') return q.is_solved;
-    if (filter === 'unsolved') return !q.is_solved;
+    // Status filter
+    if (filter === 'solved' && !q.is_solved) return false;
+    if (filter === 'unsolved' && q.is_solved) return false;
+
+    // Grade filter
+    if (gradeFilter && q.grade_level !== gradeFilter) return false;
+
+    // Exam type filter
+    if (examFilter && q.exam_type !== examFilter) return false;
+
     return true;
   });
 
@@ -109,6 +122,84 @@ export const QuestionListScreen: React.FC = () => {
         ))}
       </View>
 
+      <View style={styles.extraFilters}>
+        <Text style={styles.filterLabel}>Sınıf:</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterChips}
+        >
+          <Pressable
+            style={[styles.filterChip, !gradeFilter && styles.filterChipActive]}
+            onPress={() => setGradeFilter('')}
+          >
+            <Text
+              style={[styles.filterChipText, !gradeFilter && styles.filterChipTextActive]}
+            >
+              Tümü
+            </Text>
+          </Pressable>
+          {GRADE_LEVELS.map((grade) => (
+            <Pressable
+              key={grade}
+              style={[
+                styles.filterChip,
+                gradeFilter === grade && styles.filterChipActive,
+              ]}
+              onPress={() => setGradeFilter(grade)}
+            >
+              <Text
+                style={[
+                  styles.filterChipText,
+                  gradeFilter === grade && styles.filterChipTextActive,
+                ]}
+              >
+                {grade}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      </View>
+
+      <View style={styles.extraFilters}>
+        <Text style={styles.filterLabel}>Sınav:</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterChips}
+        >
+          <Pressable
+            style={[styles.filterChip, !examFilter && styles.filterChipActive]}
+            onPress={() => setExamFilter('')}
+          >
+            <Text
+              style={[styles.filterChipText, !examFilter && styles.filterChipTextActive]}
+            >
+              Tümü
+            </Text>
+          </Pressable>
+          {EXAM_TYPES.map((examType) => (
+            <Pressable
+              key={examType}
+              style={[
+                styles.filterChip,
+                examFilter === examType && styles.filterChipActive,
+              ]}
+              onPress={() => setExamFilter(examType)}
+            >
+              <Text
+                style={[
+                  styles.filterChipText,
+                  examFilter === examType && styles.filterChipTextActive,
+                ]}
+              >
+                {examType}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      </View>
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
@@ -141,6 +232,16 @@ export const QuestionListScreen: React.FC = () => {
                     {question.subject && (
                       <View style={styles.tag}>
                         <Text style={styles.tagText}>{question.subject}</Text>
+                      </View>
+                    )}
+                    {question.grade_level && (
+                      <View style={[styles.tag, styles.tagGrade]}>
+                        <Text style={styles.tagText}>{question.grade_level}. Sınıf</Text>
+                      </View>
+                    )}
+                    {question.exam_type && (
+                      <View style={[styles.tag, styles.tagExam]}>
+                        <Text style={styles.tagText}>{question.exam_type}</Text>
                       </View>
                     )}
                     {question.difficulty && (
@@ -281,6 +382,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#EEF2FF',
     borderRadius: 6,
   },
+  tagGrade: {
+    backgroundColor: '#DBEAFE',
+  },
+  tagExam: {
+    backgroundColor: '#FCE7F3',
+  },
   tagDifficulty: {
     backgroundColor: '#FEF3C7',
   },
@@ -331,5 +438,42 @@ const styles = StyleSheet.create({
   statText: {
     fontSize: 12,
     color: '#6B7280',
+  },
+  extraFilters: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  filterLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 8,
+  },
+  filterChips: {
+    gap: 8,
+    paddingVertical: 4,
+  },
+  filterChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  filterChipActive: {
+    backgroundColor: '#EEF2FF',
+    borderColor: '#6366F1',
+  },
+  filterChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  filterChipTextActive: {
+    color: '#6366F1',
   },
 });

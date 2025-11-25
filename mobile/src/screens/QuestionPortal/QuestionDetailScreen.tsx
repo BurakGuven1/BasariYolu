@@ -183,11 +183,23 @@ export const QuestionDetailScreen: React.FC = () => {
             <Image source={{ uri: question.image_url }} style={styles.questionImage} />
           )}
 
-          {question.subject && (
-            <View style={styles.subjectBadge}>
-              <Text style={styles.subjectText}>{question.subject}</Text>
-            </View>
-          )}
+          <View style={styles.badgesRow}>
+            {question.subject && (
+              <View style={styles.subjectBadge}>
+                <Text style={styles.subjectText}>{question.subject}</Text>
+              </View>
+            )}
+            {question.grade_level && (
+              <View style={[styles.subjectBadge, styles.gradeBadge]}>
+                <Text style={styles.subjectText}>{question.grade_level}. Sınıf</Text>
+              </View>
+            )}
+            {question.exam_type && (
+              <View style={[styles.subjectBadge, styles.examBadge]}>
+                <Text style={styles.subjectText}>{question.exam_type}</Text>
+              </View>
+            )}
+          </View>
 
           <View style={styles.questionStats}>
             <Pressable style={styles.statButton} onPress={handleLikeQuestion}>
@@ -356,13 +368,23 @@ const styles = StyleSheet.create({
     backgroundColor: '#E5E7EB',
     marginBottom: 12,
   },
+  badgesRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+    flexWrap: 'wrap',
+  },
   subjectBadge: {
-    alignSelf: 'flex-start',
     backgroundColor: '#EEF2FF',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
-    marginBottom: 12,
+  },
+  gradeBadge: {
+    backgroundColor: '#DBEAFE',
+  },
+  examBadge: {
+    backgroundColor: '#FCE7F3',
   },
   subjectText: {
     fontSize: 12,

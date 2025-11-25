@@ -11,6 +11,8 @@ export interface StudentQuestion {
   topic?: string;
   difficulty?: string;
   image_url?: string;
+  grade_level?: string;
+  exam_type?: string;
   is_solved: boolean;
   view_count: number;
   created_at: string;
@@ -149,6 +151,8 @@ type QuestionInsert = {
   topic?: string | null;
   difficulty?: string | null;
   image_url?: string | null;
+  grade_level?: string | null;
+  exam_type?: string | null;
 };
 
 export const createQuestion = async (data: QuestionInsert) => {
@@ -160,6 +164,8 @@ export const createQuestion = async (data: QuestionInsert) => {
     topic: data.topic ?? null,
     difficulty: data.difficulty ?? null,
     image_url: data.image_url ?? null,
+    grade_level: data.grade_level ?? null,
+    exam_type: data.exam_type ?? null,
   };
 
   const { data: result, error } = await supabase
