@@ -1,5 +1,6 @@
 import { motion, useScroll, useTransform, useInView } from 'framer-motion';
 import { useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Lottie from 'lottie-react';
 import institution from '../animations/institution.json';
 import learning from '../animations/learning.json';
@@ -93,6 +94,7 @@ function HeroSection() {
           </p>
           <p className="text-lg md:text-xl text-gray-600 dark:text-gray-400 mb-12 max-w-2xl mx-auto">
             Yapay zeka destekli kişiselleştirilmiş eğitim deneyimi. Her öğrenci için özel bir yolculuk.
+            5-12. sınıf-Mezun, LGS, TYT ve AYT  hazırlık süreçlerinde yanınızdayız.
           </p>
         </motion.div>
 
@@ -103,7 +105,7 @@ function HeroSection() {
           className="mt-20"
         >
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-            10.000+ öğrenci, 300+ öğretmen tarafından güvenle kullanılıyor
+            1000+ öğrenci, 120+ öğretmen tarafından güvenle kullanılıyor
           </p>
         </motion.div>
       </div>
@@ -177,12 +179,17 @@ function PlatformOverview() {
       description: 'Kişiselleştirilmiş öğrenme deneyimi ile hedeflerine ulaş',
       color: 'from-blue-500 to-indigo-600',
       features: [
-        'Yapamadığınız soruyu Yapay Zeka Asistanına sorun',
+        'Yapamadığınız soruyu Yapay Zeka Asistanına veya soru portalındaki öğrencilere sorun',
         'Yapay zeka destekli konu analizi',
+        'ÖSYM ve MEB sınavlarında çıkmış konuların analizine göre yönlendirme',
+        'Deneme sonuçlarınıza göre size özel öneriler,kaynak yönlendirmeleri',
         'Pomodoro tekniği ile verimli çalışma',
         'Gerçek zamanlı performans takibi',
-        'Interaktif deneme sınavları',
-        'Gamification ile motivasyon',
+        'Öğretmen ve kurumunuzdan anlık geri bildirimler',
+        'Yapay Zeka destekli ders çalışma planı',
+        'Her konunun Özet PDF notları ve Formül Kartları',
+        'Big Five kişilik analizi ile her öğrenciye uygun motivasyon önerileri',
+        'Ve sayamadığımız birçok özellik',
       ],
     },
     {
@@ -191,12 +198,16 @@ function PlatformOverview() {
       description: 'Tüm eğitim süreçlerinizi tek platformdan yönetin',
       color: 'from-purple-500 to-pink-600',
       features: [
-        'Diğer kurumlardan farklı olun',
+        'Kurumunuza ait öğrencileriniz Gelişmiş paket özelliklerinden faydalansın',
+        'Kurumunuzu takip edin, dijitalleştirin diğer kurumlardan bir adım önde olun',
+        'Tek tıkla Öğrenci Listesi-Performans Raporu-Sınav Sonuçları gibi ihtiyaçlarınızı PDF ve Excel olarak indirin',
         'Kapsamlı soru bankası yönetimi',
         'Öğrenci ve öğretmen takibi',
         'Detaylı performans raporları',
-        'Özel sınav hazırlama araçları',
-        'Kurumunuzu takip edin ve dijitalleştirin'  
+        'Duyuru ve iletişim araçları',
+        'Kurum içi denemeleri ve performans takibini sağlayın',
+        'Kurumunuza özel ders programı oluşturun',
+        'Ve sayamadığımız birçok özellik'
       ],
     },
     {
@@ -205,8 +216,9 @@ function PlatformOverview() {
       description: 'Öğrencilerinizi en iyi şekilde destekleyin',
       color: 'from-green-500 to-emerald-600',
       features: [
-        'Sınıf yönetimi ve devamsızlık takibi',
+        'Sınıf yönetimi ve öğrenci bazlı takip',
         'Özel ödev ve quiz oluşturma',
+        'Kişiye özel veya sınıf geneline ders çalışma programı hazırlama',
         'Öğrenci gelişim raporları',
         'İletişim ve duyuru sistemi',
         'Ders planı ve materyal paylaşımı',
@@ -217,7 +229,7 @@ function PlatformOverview() {
     {
       icon: <Users className="w-8 h-8 text-white" />,
       title: 'Veli',
-      description: 'Çocuğunuzun eğitim sürecini yakından takip edin',
+      description: 'Çocuğunuzun eğitim sürecini yakından ve ücretsiz takip edin',
       color: 'from-orange-500 to-red-600',
       features: [
         'Velilere ücretsiz takip paneli',
@@ -351,10 +363,10 @@ function FeatureHighlight({ reverse, badge, title, description, features, gradie
 // Stats Section
 function StatsSection() {
   const stats = [
-    { value: '20,000+', label: 'Aktif Öğrenci' },
-    { value: '500+', label: 'Öğretmen' },
-    { value: '50+', label: 'Kurum' },
-    { value: '%98', label: 'Memnuniyet' },
+    { value: '10,000+', label: 'Aktif Öğrenci' },
+    { value: '120+', label: 'Öğretmen' },
+    { value: '10+', label: 'Kurum' },
+    { value: '%95', label: 'Memnuniyet' },
   ];
 
   return (
@@ -411,13 +423,21 @@ function CTASection() {
               Bugün Başlayın
             </span>
           </h2>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button className="px-10 py-5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-full text-lg font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <button
+              onClick={() => (window.location.href = "/")}
+              className="px-10 py-5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-full text-lg font-semibold shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
+            >
               Haydi Sen de Başla
             </button>
-            <button className="px-10 py-5 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 hover:border-indigo-600 dark:hover:border-indigo-400 text-gray-900 dark:text-white rounded-full text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300">
+            <a
+              href="https://wa.me/905074938307"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-10 py-5 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 hover:border-indigo-600 dark:hover:border-indigo-400 text-gray-900 dark:text-white rounded-full text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2 justify-center"
+            >
               Satış Ekibiyle Görüş
-            </button>
+            </a>
           </div>
         </motion.div>
       </div>
@@ -427,8 +447,18 @@ function CTASection() {
 
 // Main Component
 export default function FeaturesShowcase() {
+  const navigate = useNavigate();
+
   return (
-    <div className="bg-white dark:bg-gray-900 overflow-x-hidden">
+    <div className="bg-white dark:bg-gray-900 overflow-x-hidden relative">
+      <button
+        onClick={() => (navigate(-1), window.scrollTo(0, 0))}
+        className="hidden md:inline-flex items-center gap-2 absolute top-6 left-6 z-20 rounded-full bg-white/80 dark:bg-gray-800/80 px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-200 shadow-md backdrop-blur hover:shadow-lg transition"
+      >
+        <span className="text-lg">←</span>
+        Önceki sayfaya dön
+      </button>
+
       <HeroSection />
       <PlatformOverview />
 
@@ -442,7 +472,7 @@ export default function FeaturesShowcase() {
         features={[
           {
             icon: <TrainFront className="w-6 h-6 text-white" />,
-            title: 'Çözülemeyen ve anlaşılmayan sorular için Yapay Zeka Asistanı',
+            title: 'Çözülemeyen soru ve anlaşılmayan konuları için Yapay Zeka Asistanı',
             text: 'Yapamadığınız soruları ve anlamadığınız konuları anında sorun, detaylı açıklamalar alın',
           },
           {
@@ -459,6 +489,11 @@ export default function FeaturesShowcase() {
             icon: <TrendingUp className="w-6 h-6 text-white" />,
             title: 'Gerçek Zamanlı İlerleme',
             text: 'Her çalışmanızın etkisini anında görün, motivasyonunuzu koruyun',
+          },
+          {
+            icon: <Target className="w-6 h-6 text-white" />,
+            title: 'Her Konu İçin Özet PDF Notlar ve Formül Kartları',
+            text: 'Kısa süreli tekrarlarınız için özet notlar ve formül kartlarıyla bilgilerinizi pekiştirin',
           },
           
         ]}
@@ -554,3 +589,4 @@ export default function FeaturesShowcase() {
     </div>
   );
 }
+

@@ -95,11 +95,15 @@ const getCurrentWeekRange = () => {
   };
 };
 
-export default function StudentDashboard() {
+type StudentDashboardProps = {
+  authUser?: any;
+};
+
+export default function StudentDashboard({ authUser }: StudentDashboardProps) {
   const [insights, setInsights] = useState<any[]>([]);
   const [dailyChallenge, setDailyChallenge] = useState<any>(null);
   const { planName } = useFeatureAccess();
-  const { user, clearUser } = useAuth();
+  const { user, clearUser } = useAuth(authUser);
   const [activeTab, setActiveTab] = useState<DashboardTab>(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem(DASHBOARD_TAB_KEY) as DashboardTab | null;

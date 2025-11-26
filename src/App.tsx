@@ -79,8 +79,6 @@ function App() {
 
   const isInstitutionUser = user?.userType === 'institution';
   const isTeacherUser = user?.userType === 'teacher';
-  const isStudentUser = user?.userType === 'student';
-  const isParentUser = user?.userType === 'parent';
 
   const openInstitutionAuthRoute = React.useCallback(
     (targetPath: string) => {
@@ -238,8 +236,8 @@ function App() {
     }
 
     applySeo({
-      title: 'BasariYolu | Sayfa Bulunamadi',
-      description: 'Aradiginiz sayfa bulunamadi. BasariYolu ana sayfasina donerek aradiginiz icerigi kesfedin.',
+      title: 'BaşarıYolu',
+      description: 'Aradiginiz sayfa bulunamadı. BaşarıYolu ana sayfasına dönerek aradiginiz içeriği keşfedin.',
       path: location.pathname,
       type: 'website',
       noIndex: true,
@@ -261,14 +259,27 @@ function App() {
     console.log('handleLogin called', loginUser);
 
     if (loginUser) {
-      // Use AuthContext login
-      login(loginUser);
+      const normalizedUserType =
+        loginUser.userType ||
+        loginUser.user_type ||
+        loginUser?.user_metadata?.user_type ||
+        loginUser?.profile?.user_type ||
+        'student';
+
+      const normalizedUser = {
+        id: loginUser.id,
+        email: loginUser.email ?? '',
+        userType: normalizedUserType,
+        profile: loginUser.user_metadata ?? loginUser.profile ?? {},
+      };
+
+      login(normalizedUser);
     }
 
     setTimeout(() => {
       navigate('/dashboard');
       setShowStudentParentLoginModal(false);
-    }, 300);
+    }, 150);
   };
 
   const handleGetStarted = () => {
@@ -420,7 +431,7 @@ function App() {
     }
 
     if (user.userType === 'student') {
-      return <StudentDashboard />;
+      return <StudentDashboard authUser={user} />;
     }
 
     return (
