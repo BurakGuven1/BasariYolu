@@ -17,7 +17,7 @@ export default function ExamTemplateBuilder({
   onTemplateCreated,
   onClose,
 }: ExamTemplateBuilderProps) {
-  const [step, setStep] = useState<'basic' | 'questions'>('basic');
+  const [step, setStep] = useState<'basic' | 'questions' | 'answerKey'>('basic');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -28,6 +28,7 @@ export default function ExamTemplateBuilder({
   const [examType, setExamType] = useState<'TYT' | 'AYT' | 'LGS'>('TYT');
   const [totalQuestions, setTotalQuestions] = useState(120);
   const [questionMappings, setQuestionMappings] = useState<ExternalExamQuestionMapping[]>([]);
+  const [answerKey, setAnswerKey] = useState<Record<string, string>>({});
   const [useStandard, setUseStandard] = useState(false);
 
   const handleLoadStandardTemplate = () => {
@@ -79,6 +80,26 @@ export default function ExamTemplateBuilder({
     setQuestionMappings(updated);
   };
 
+  const updateAnswerKey = (questionNumber: number, answer: string) => {
+    setAnswerKey(prev => ({
+      ...prev,
+      [questionNumber]: answer.toUpperCase(),
+    }));
+  };
+
+  const handleBulkAnswerEntry = (startingFrom: number, answers: string) => {
+    // Parse answers string (e.g., "A D B C E A D B C E...")
+    const answerArray = answers.toUpperCase().split(/\s+/).filter(a => a.length > 0);
+    const updated = { ...answerKey };
+    answerArray.forEach((answer, index) => {
+      const questionNum = startingFrom + index;
+      if (questionNum <= totalQuestions && ['A', 'B', 'C', 'D', 'E'].includes(answer)) {
+        updated[questionNum] = answer;
+      }
+    });
+    setAnswerKey(updated);
+  };
+
   const handleSaveTemplate = async () => {
     // Validation
     if (!name.trim()) {
@@ -92,6 +113,13 @@ export default function ExamTemplateBuilder({
       return;
     }
 
+    // Cevap anahtarı opsiyonel - boş da olabilir, sonra eklenebilir
+    const answerKeyCount = Object.keys(answerKey).length;
+    if (answerKeyCount > 0 && answerKeyCount < totalQuestions) {
+      setError(`Cevap anahtarı eksik: ${answerKeyCount}/${totalQuestions} soru cevaplandı. Ya tümünü doldurun ya da boş bırakın (sonra ekleyebilirsiniz).`);
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -102,6 +130,7 @@ export default function ExamTemplateBuilder({
         examType,
         totalQuestions,
         questionMapping: questionMappings,
+        answerKey: Object.keys(answerKey).length > 0 ? answerKey : undefined,
         isPublic: false,
         institutionId,
       });
@@ -126,7 +155,9 @@ export default function ExamTemplateBuilder({
         <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6">
           <h2 className="text-2xl font-bold">Sınav Template Oluştur</h2>
           <p className="text-indigo-100 mt-1">
-            {step === 'basic' ? 'Temel Bilgiler' : 'Soru Eşleştirmeleri'}
+            {step === 'basic' && 'Adım 1/3: Temel Bilgiler'}
+            {step === 'questions' && 'Adım 2/3: Soru Eşleştirmeleri'}
+            {step === 'answerKey' && 'Adım 3/3: Cevap Anahtarı (Opsiyonel)'}
           </p>
         </div>
 
@@ -226,7 +257,7 @@ export default function ExamTemplateBuilder({
                 </div>
               </div>
             </div>
-          ) : (
+          ) : step === 'questions' ? (
             <div className="space-y-6">
               {/* Bulk Update Tool */}
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
@@ -315,7 +346,95 @@ export default function ExamTemplateBuilder({
                 </div>
               )}
             </div>
-          )}
+          ) : step === 'answerKey' ? (
+            <div className="space-y-6">
+              {/* Info */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h3 className="font-semibold text-blue-900 mb-2">Cevap Anahtarı (Opsiyonel)</h3>
+                <p className="text-sm text-blue-800">
+                  Cevap anahtarını şimdi girebilir veya daha sonra ekleyebilirsiniz.
+                  Cevap anahtarı girildikten sonra öğrenci cevapları otomatik olarak karşılaştırılacaktır.
+                </p>
+              </div>
+
+              {/* Bulk Answer Entry */}
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                <h3 className="font-semibold text-purple-900 mb-3">Toplu Cevap Girişi</h3>
+                <div className="space-y-2">
+                  <div className="grid grid-cols-6 gap-2">
+                    <input
+                      type="number"
+                      placeholder="1"
+                      id="answerStartFrom"
+                      className="px-3 py-2 border border-gray-300 rounded text-sm"
+                    />
+                    <textarea
+                      id="bulkAnswers"
+                      placeholder="A D B C E A D B C E..."
+                      rows={3}
+                      className="col-span-4 px-3 py-2 border border-gray-300 rounded text-sm"
+                    />
+                    <button
+                      onClick={() => {
+                        const start = parseInt(
+                          (document.getElementById('answerStartFrom') as HTMLInputElement)?.value || '1'
+                        );
+                        const answers = (document.getElementById('bulkAnswers') as HTMLTextAreaElement)?.value || '';
+                        handleBulkAnswerEntry(start, answers);
+                      }}
+                      className="px-3 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 text-sm"
+                    >
+                      Ekle
+                    </button>
+                  </div>
+                  <p className="text-xs text-purple-700">
+                    Cevapları boşlukla ayırarak girin (A, B, C, D, E). Örn: A D B C E A D B
+                  </p>
+                </div>
+              </div>
+
+              {/* Answer Key Grid */}
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                <div className="grid grid-cols-5 gap-2">
+                  {Array.from({ length: totalQuestions }, (_, i) => i + 1).map(questionNum => (
+                    <div key={questionNum} className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-gray-700 w-8">{questionNum}.</span>
+                      <select
+                        value={answerKey[questionNum] || ''}
+                        onChange={e => updateAnswerKey(questionNum, e.target.value)}
+                        className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                      >
+                        <option value="">-</option>
+                        <option value="A">A</option>
+                        <option value="B">B</option>
+                        <option value="C">C</option>
+                        <option value="D">D</option>
+                        <option value="E">E</option>
+                      </select>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Progress */}
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-700">İlerleme:</span>
+                  <span className="font-semibold text-gray-900">
+                    {Object.keys(answerKey).length} / {totalQuestions} soru
+                  </span>
+                </div>
+                <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-indigo-600 transition-all"
+                    style={{
+                      width: `${(Object.keys(answerKey).length / totalQuestions) * 100}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           {/* Error/Success */}
           {error && (
@@ -344,9 +463,9 @@ export default function ExamTemplateBuilder({
           </button>
 
           <div className="flex gap-2">
-            {step === 'questions' && (
+            {(step === 'questions' || step === 'answerKey') && (
               <button
-                onClick={() => setStep('basic')}
+                onClick={() => setStep(step === 'questions' ? 'basic' : 'questions')}
                 className="px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
                 disabled={loading}
               >
@@ -354,7 +473,26 @@ export default function ExamTemplateBuilder({
               </button>
             )}
 
-            {step === 'questions' ? (
+            {step === 'basic' ? (
+              <div className="text-sm text-gray-600">Devam etmek için hızlı başlat seçin</div>
+            ) : step === 'questions' ? (
+              <button
+                onClick={() => {
+                  // Validate before moving to answer key
+                  const emptyMappings = questionMappings.filter(m => !m.subject || !m.topic);
+                  if (emptyMappings.length > 0) {
+                    setError(`${emptyMappings.length} soru için ders/konu bilgisi eksik`);
+                    return;
+                  }
+                  setError(null);
+                  setStep('answerKey');
+                }}
+                disabled={loading}
+                className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Devam: Cevap Anahtarı →
+              </button>
+            ) : step === 'answerKey' ? (
               <button
                 onClick={handleSaveTemplate}
                 disabled={loading}
@@ -372,9 +510,7 @@ export default function ExamTemplateBuilder({
                   </>
                 )}
               </button>
-            ) : (
-              <div className="text-sm text-gray-600">Devam etmek için hızlı başlat seçin</div>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
