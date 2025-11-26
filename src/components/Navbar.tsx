@@ -13,6 +13,7 @@ interface NavbarProps {
   onMenuToggle: () => void;
   onNavigateToBlog?: () => void;
   onNavigateHome?: () => void;
+  onNavigateToQuestionBank?: () => void;
 }
 
 const ACTION_BASE = 'inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-all duration-200 hover:shadow-sm active:scale-95';
@@ -26,7 +27,8 @@ export default function Navbar({
   onLogout,
   onMenuToggle,
   onNavigateToBlog,
-  onNavigateHome
+  onNavigateHome,
+  onNavigateToQuestionBank
 }: NavbarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -52,6 +54,12 @@ export default function Navbar({
   };
 
   const scrollToSection = (sectionId: string) => {
+    if (sectionId === 'question-bank') {
+      onNavigateToQuestionBank?.();
+      setIsMobileMenuOpen(false);
+      return;
+    }
+
     if (sectionId === 'blog') {
       onNavigateToBlog?.();
       setIsMobileMenuOpen(false);
@@ -71,10 +79,10 @@ export default function Navbar({
   };
 
   const navItems = [
-    { id: 'features', label: 'Ozellikler', icon: Sparkles, isRoute: true },
+    { id: 'features', label: 'Özellikler', icon: Sparkles, isRoute: true },
     { id: 'pricing', label: 'Paketler', icon: Package },
-    { id: 'exam-topics', label: 'OSYM-MEB Cikmis Konular', icon: Goal },
-    { id: 'teacher', label: 'Ogretmenler', icon: GraduationCap },
+    { id: 'exam-topics', label: 'ÖSYM-MEB Çıkmış Konular', icon: Goal },
+    { id: 'teacher', label: 'Öğretmenler', icon: GraduationCap },
     { id: 'blog', label: 'Blog', icon: Book },
   ];
 

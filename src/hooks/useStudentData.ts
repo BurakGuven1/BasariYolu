@@ -105,19 +105,6 @@ export const useStudentData = (userId?: string) => {
     refetchOnReconnect: false,
   });
 
-  // Debug logging
-  console.log('useStudentData state:', {
-    userId,
-    studentId,
-    studentQueryStatus: studentQuery.status,
-    studentQueryIsLoading: studentQuery.isLoading,
-    studentQueryIsFetching: studentQuery.isFetching,
-    studentQueryData: studentQuery.data,
-    studentQueryError: studentQuery.error,
-    examResultsIsLoading: examResultsQuery.isLoading,
-    homeworksIsLoading: homeworksQuery.isLoading,
-  });
-
   const loading =
     studentQuery.isLoading ||
     studentQuery.isFetching ||
