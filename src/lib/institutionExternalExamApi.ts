@@ -8,7 +8,6 @@ export interface ExternalExamQuestionMapping {
   questionNumber: number;
   subject: string;
   topic: string;
-  correctAnswer?: string; // Opsiyonel - cevap anahtarı
 }
 
 export interface ExternalExamTemplate {
@@ -19,6 +18,7 @@ export interface ExternalExamTemplate {
   exam_number: number | null;
   total_questions: number;
   question_mapping: ExternalExamQuestionMapping[];
+  answer_key: Record<string, string>; // {"1": "A", "2": "D", "3": "B", ...}
   is_public: boolean;
   created_by: string | null;
   institution_id: string | null;
@@ -27,8 +27,8 @@ export interface ExternalExamTemplate {
 }
 
 export interface ExternalExamAnswer {
-  answer: 'D' | 'Y' | 'B'; // Doğru, Yanlış, Boş
-  isCorrect?: boolean;
+  studentAnswer: 'A' | 'B' | 'C' | 'D' | 'E' | 'X'; // X = Boş
+  isCorrect: boolean;
 }
 
 export interface ExternalExamResult {
@@ -59,6 +59,7 @@ export interface CreateExternalExamTemplatePayload {
   examNumber?: number;
   totalQuestions: number;
   questionMapping: ExternalExamQuestionMapping[];
+  answerKey?: Record<string, string>; // {"1": "A", "2": "D", ...} - Öğretmen tarafından girilir
   isPublic?: boolean;
   institutionId?: string;
 }
@@ -66,7 +67,7 @@ export interface CreateExternalExamTemplatePayload {
 export interface BulkExamResultEntry {
   studentUserId: string;
   studentName: string;
-  answers: Record<number, 'D' | 'Y' | 'B'>; // {1: "D", 2: "Y", 3: "B", ...}
+  answers: Record<number, 'A' | 'B' | 'C' | 'D' | 'E' | 'X'>; // {1: "A", 2: "D", 3: "X" (boş), ...}
 }
 
 export interface CreateBulkExternalExamResultsPayload {
@@ -92,6 +93,7 @@ export async function createExternalExamTemplate(
       exam_number: payload.examNumber || null,
       total_questions: payload.totalQuestions,
       question_mapping: payload.questionMapping,
+      answer_key: payload.answerKey || {},
       is_public: payload.isPublic || false,
       institution_id: payload.institutionId || null,
     })
@@ -133,7 +135,25 @@ export async function fetchExternalExamTemplates(
 }
 
 /**
- * Toplu sonuç girişi
+ * Template'in cevap anahtarını güncelle
+ */
+export async function updateTemplateAnswerKey(
+  templateId: string,
+  answerKey: Record<string, string>
+): Promise<void> {
+  const { error } = await supabase
+    .from('institution_external_exam_templates')
+    .update({ answer_key: answerKey })
+    .eq('id', templateId);
+
+  if (error) {
+    console.error('Error updating answer key:', error);
+    throw error;
+  }
+}
+
+/**
+ * Toplu sonuç girişi (Yeni: Cevap anahtarı ile karşılaştırma)
  */
 export async function createBulkExternalExamResults(
   payload: CreateBulkExternalExamResultsPayload
@@ -150,6 +170,12 @@ export async function createBulkExternalExamResults(
   }
 
   const questionMapping = template.question_mapping as ExternalExamQuestionMapping[];
+  const answerKey = (template.answer_key || {}) as Record<string, string>;
+
+  // Cevap anahtarı yoksa hata ver
+  if (!answerKey || Object.keys(answerKey).length === 0) {
+    throw new Error('Bu şablon için cevap anahtarı tanımlanmamış. Lütfen önce cevap anahtarını girin.');
+  }
 
   // Her öğrenci için sonuç hesapla
   const resultsToInsert = [];
@@ -175,20 +201,32 @@ export async function createBulkExternalExamResults(
 
       const processedAnswers: Record<number, ExternalExamAnswer> = {};
 
-      // Her cevabı değerlendir
-      Object.entries(entry.answers).forEach(([questionNumStr, answer]) => {
+      // Her cevabı değerlendir (Cevap anahtarı ile karşılaştır)
+      Object.entries(entry.answers).forEach(([questionNumStr, studentAnswer]) => {
         const questionNum = parseInt(questionNumStr);
-        const questionInfo = questionMapping.find(q => q.questionNumber === questionNum);
+        const correctAnswer = answerKey[questionNumStr];
 
-        if (answer === 'B') {
+        if (studentAnswer === 'X') {
+          // Boş bırakılmış
           emptyCount++;
-          processedAnswers[questionNum] = { answer: 'B' };
-        } else if (answer === 'D') {
+          processedAnswers[questionNum] = {
+            studentAnswer: 'X',
+            isCorrect: false
+          };
+        } else if (correctAnswer && studentAnswer === correctAnswer) {
+          // Doğru cevap
           correctCount++;
-          processedAnswers[questionNum] = { answer: 'D', isCorrect: true };
-        } else if (answer === 'Y') {
+          processedAnswers[questionNum] = {
+            studentAnswer,
+            isCorrect: true
+          };
+        } else {
+          // Yanlış cevap
           wrongCount++;
-          processedAnswers[questionNum] = { answer: 'Y', isCorrect: false };
+          processedAnswers[questionNum] = {
+            studentAnswer,
+            isCorrect: false
+          };
         }
       });
 

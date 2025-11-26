@@ -118,6 +118,16 @@ export default function InstitutionExternalExamPanel({
             continue;
           }
 
+          // Cevap anahtarı satırını atla
+          if (studentName.includes('CEVAP ANAHTARI') || studentName.includes('🔑')) {
+            continue;
+          }
+
+          // Boş satırları atla
+          if (!studentName.trim()) {
+            continue;
+          }
+
           // Öğrenci ID'sini bul (ad eşleştirmesi)
           const student = students.find(s =>
             s.name.toLowerCase().trim() === studentName.toLowerCase().trim()
@@ -128,19 +138,19 @@ export default function InstitutionExternalExamPanel({
             continue;
           }
 
-          // Cevapları parse et
-          const answers: Record<number, 'D' | 'Y' | 'B'> = {};
+          // Cevapları parse et (A/B/C/D/E/X formatında - X = boş)
+          const answers: Record<number, 'A' | 'B' | 'C' | 'D' | 'E' | 'X'> = {};
 
           for (let i = 1; i <= template.total_questions; i++) {
             const questionKey = `Soru ${i}`;
             let answer = (row[questionKey] || '').toString().toUpperCase().trim();
 
-            // D/Y/B formatında değilse varsayılan boş
-            if (!['D', 'Y', 'B'].includes(answer)) {
-              answer = 'B';
+            // Geçerli cevap formatında değilse varsayılan boş (X)
+            if (!['A', 'B', 'C', 'D', 'E', 'X'].includes(answer)) {
+              answer = 'X';
             }
 
-            answers[i] = answer as 'D' | 'Y' | 'B';
+            answers[i] = answer as 'A' | 'B' | 'C' | 'D' | 'E' | 'X';
           }
 
           bulkResults.push({
@@ -209,13 +219,31 @@ export default function InstitutionExternalExamPanel({
       headers.push(`Soru ${i}`);
     }
 
-    // Örnek satırlar ekle
-    const exampleData = students.slice(0, 3).map(student => {
+    // Önce cevap anahtarı satırı ekle (varsa)
+    const exampleData: any[] = [];
+
+    if (template.answer_key && Object.keys(template.answer_key).length > 0) {
+      const answerKeyRow: any = { 'Öğrenci Adı': '🔑 CEVAP ANAHTARI' };
+      for (let i = 1; i <= template.total_questions; i++) {
+        answerKeyRow[`Soru ${i}`] = template.answer_key[i] || '-';
+      }
+      exampleData.push(answerKeyRow);
+
+      // Boş ayırıcı satır
+      const separatorRow: any = { 'Öğrenci Adı': '' };
+      for (let i = 1; i <= template.total_questions; i++) {
+        separatorRow[`Soru ${i}`] = '';
+      }
+      exampleData.push(separatorRow);
+    }
+
+    // Tüm öğrenciler için boş satırlar ekle
+    students.forEach(student => {
       const row: any = { 'Öğrenci Adı': student.name };
       for (let i = 1; i <= template.total_questions; i++) {
-        row[`Soru ${i}`] = ''; // Boş bırak, kullanıcı dolduracak
+        row[`Soru ${i}`] = ''; // Kullanıcı A/B/C/D/E/X girecek
       }
-      return row;
+      exampleData.push(row);
     });
 
     // Workbook oluştur
@@ -245,11 +273,13 @@ export default function InstitutionExternalExamPanel({
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
           <h3 className="font-semibold text-blue-900 mb-2">Nasıl Çalışır?</h3>
           <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
-            <li>Sınav türünü seçin (TYT, AYT, LGS vb.)</li>
+            <li>Sınav türünü seçin veya yeni template oluşturun</li>
+            <li>Template için cevap anahtarını girin (şablona girebilirsiniz)</li>
             <li>"Şablon İndir" ile Excel dosyasını indirin</li>
-            <li>Excel'de öğrenci cevaplarını doldurun (D/Y/B)</li>
+            <li>Excel'de öğrenci cevaplarını doldurun (A/B/C/D/E veya X=boş)</li>
             <li>"Excel Yükle" ile sonuçları sisteme aktarın</li>
-            <li>Performans analizi otomatik oluşur!</li>
+            <li>Sistem otomatik olarak cevap anahtarı ile karşılaştırır!</li>
+            <li>Performans analizi konu bazlı otomatik oluşur!</li>
           </ol>
         </div>
       </div>

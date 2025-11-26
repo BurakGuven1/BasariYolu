@@ -7,10 +7,13 @@ import { CreateExternalExamTemplatePayload, ExternalExamQuestionMapping } from '
 
 /**
  * TYT Standart Yapısı (120 Soru)
- * - Türkçe: 40 soru (1-40)
- * - Matematik: 40 soru (41-80)
- * - Fen Bilimleri: 20 soru (81-100)
- * - Sosyal Bilimler: 20 soru (101-120)
+ * DOĞRU SIRA:
+ * - Türkçe: 40 soru
+ * - Sosyal Bilimler: 20 soru
+ * - Matematik: 40 soru
+ * - Fen Bilimleri: 20 soru
+ *
+ * NOT: Her bölüm kendi içinde 1'den başlar
  */
 export const TYT_STANDARD_TEMPLATE: Omit<CreateExternalExamTemplatePayload, 'institutionId'> = {
   name: 'TYT Standart (120 Soru)',
@@ -19,7 +22,7 @@ export const TYT_STANDARD_TEMPLATE: Omit<CreateExternalExamTemplatePayload, 'ins
   totalQuestions: 120,
   isPublic: true,
   questionMapping: [
-    // TÜRKÇE (1-40)
+    // TÜRKÇE (Soru 1-40)
     // Sözcükte Anlam (1-8)
     ...Array.from({ length: 8 }, (_, i) => ({
       questionNumber: i + 1,
@@ -51,114 +54,114 @@ export const TYT_STANDARD_TEMPLATE: Omit<CreateExternalExamTemplatePayload, 'ins
       topic: 'Yazım Kuralları',
     })),
 
-    // MATEMATİK (41-80)
-    // Temel Matematik (41-60)
-    // Sayılar (41-45)
+    // SOSYAL BİLİMLER (Soru 41-60)
+    // Tarih (41-45)
     ...Array.from({ length: 5 }, (_, i) => ({
       questionNumber: i + 41,
+      subject: 'Tarih',
+      topic: i < 2 ? 'İnkılap Tarihi' : 'Türk Tarihi',
+    })),
+    // Coğrafya (46-50)
+    ...Array.from({ length: 5 }, (_, i) => ({
+      questionNumber: i + 46,
+      subject: 'Coğrafya',
+      topic: i < 2 ? 'Fiziki Coğrafya' : 'Beşeri Coğrafya',
+    })),
+    // Felsefe (51-55)
+    ...Array.from({ length: 5 }, (_, i) => ({
+      questionNumber: i + 51,
+      subject: 'Felsefe',
+      topic: i < 2 ? 'Felsefe Bilimi' : 'Felsefi Disiplinler',
+    })),
+    // Din Kültürü (56-60)
+    ...Array.from({ length: 5 }, (_, i) => ({
+      questionNumber: i + 56,
+      subject: 'Din Kültürü',
+      topic: i < 2 ? 'İslam' : 'Dinler Tarihi',
+    })),
+
+    // MATEMATİK (Soru 61-100)
+    // Temel Matematik (61-80)
+    // Sayılar (61-65)
+    ...Array.from({ length: 5 }, (_, i) => ({
+      questionNumber: i + 61,
       subject: 'Matematik',
       topic: 'Sayılar',
     })),
-    // Rasyonel Sayılar (46-48)
+    // Rasyonel Sayılar (66-68)
     ...Array.from({ length: 3 }, (_, i) => ({
-      questionNumber: i + 46,
+      questionNumber: i + 66,
       subject: 'Matematik',
       topic: 'Rasyonel Sayılar',
     })),
-    // Oran-Orantı (49-51)
+    // Oran-Orantı (69-71)
     ...Array.from({ length: 3 }, (_, i) => ({
-      questionNumber: i + 49,
+      questionNumber: i + 69,
       subject: 'Matematik',
       topic: 'Oran-Orantı',
     })),
-    // Cebirsel İfadeler (52-55)
+    // Cebirsel İfadeler (72-75)
     ...Array.from({ length: 4 }, (_, i) => ({
-      questionNumber: i + 52,
+      questionNumber: i + 72,
       subject: 'Matematik',
       topic: 'Cebirsel İfadeler',
     })),
-    // Denklemler (56-60)
+    // Denklemler (76-80)
     ...Array.from({ length: 5 }, (_, i) => ({
-      questionNumber: i + 56,
+      questionNumber: i + 76,
       subject: 'Matematik',
       topic: 'Denklemler ve Eşitsizlikler',
     })),
-    // Geometri (61-80)
-    // Temel Geometri (61-65)
+    // Geometri (81-100)
+    // Temel Geometri (81-85)
     ...Array.from({ length: 5 }, (_, i) => ({
-      questionNumber: i + 61,
+      questionNumber: i + 81,
       subject: 'Geometri',
       topic: 'Temel Geometri',
     })),
-    // Üçgenler (66-70)
+    // Üçgenler (86-90)
     ...Array.from({ length: 5 }, (_, i) => ({
-      questionNumber: i + 66,
+      questionNumber: i + 86,
       subject: 'Geometri',
       topic: 'Üçgenler',
     })),
-    // Dörtgenler (71-73)
+    // Dörtgenler (91-93)
     ...Array.from({ length: 3 }, (_, i) => ({
-      questionNumber: i + 71,
+      questionNumber: i + 91,
       subject: 'Geometri',
       topic: 'Dörtgenler',
     })),
-    // Çember (74-77)
+    // Çember (94-97)
     ...Array.from({ length: 4 }, (_, i) => ({
-      questionNumber: i + 74,
+      questionNumber: i + 94,
       subject: 'Geometri',
       topic: 'Çember',
     })),
-    // Analitik Geometri (78-80)
+    // Analitik Geometri (98-100)
     ...Array.from({ length: 3 }, (_, i) => ({
-      questionNumber: i + 78,
+      questionNumber: i + 98,
       subject: 'Geometri',
       topic: 'Analitik Geometri',
     })),
 
-    // FEN BİLİMLERİ (81-100)
-    // Fizik (81-87)
+    // FEN BİLİMLERİ (Soru 101-120)
+    // Fizik (101-107)
     ...Array.from({ length: 7 }, (_, i) => ({
-      questionNumber: i + 81,
+      questionNumber: i + 101,
       subject: 'Fizik',
       topic: i < 3 ? 'Hareket' : i < 5 ? 'Kuvvet' : 'Enerji',
     })),
-    // Kimya (88-94)
+    // Kimya (108-114)
     ...Array.from({ length: 7 }, (_, i) => ({
-      questionNumber: i + 88,
+      questionNumber: i + 108,
       subject: 'Kimya',
       topic: i < 3 ? 'Atom Yapısı' : i < 5 ? 'Kimyasal Türler' : 'Kimyasal Tepkimeler',
     })),
-    // Biyoloji (95-100)
+    // Biyoloji (115-120)
     ...Array.from({ length: 6 }, (_, i) => ({
-      questionNumber: i + 95,
+      questionNumber: i + 115,
       subject: 'Biyoloji',
       topic: i < 3 ? 'Hücre' : 'Canlılar',
-    })),
-
-    // SOSYAL BİLİMLER (101-120)
-    // Tarih (101-105)
-    ...Array.from({ length: 5 }, (_, i) => ({
-      questionNumber: i + 101,
-      subject: 'Tarih',
-      topic: i < 2 ? 'İnkılap Tarihi' : 'Türk Tarihi',
-    })),
-    // Coğrafya (106-110)
-    ...Array.from({ length: 5 }, (_, i) => ({
-      questionNumber: i + 106,
-      subject: 'Coğrafya',
-      topic: i < 2 ? 'Fiziki Coğrafya' : 'Beşeri Coğrafya',
-    })),
-    // Felsefe (111-115)
-    ...Array.from({ length: 5 }, (_, i) => ({
-      questionNumber: i + 111,
-      subject: 'Felsefe',
-      topic: i < 2 ? 'Felsefe Bilimi' : 'Felsefi Disiplinler',
-    })),
-    // Din Kültürü (116-120)
-    ...Array.from({ length: 5 }, (_, i) => ({
-      questionNumber: i + 116,
-      subject: 'Din Kültürü',
-      topic: i < 2 ? 'İslam' : 'Dinler Tarihi',
     })),
   ],
 };
