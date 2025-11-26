@@ -20,6 +20,7 @@ import {
   type ExternalExamTemplate,
   type BulkExamResultEntry,
 } from '../lib/institutionExternalExamApi';
+import ExamTemplateBuilder from './ExamTemplateBuilder';
 
 interface InstitutionExternalExamPanelProps {
   institutionId: string;
@@ -38,6 +39,7 @@ export default function InstitutionExternalExamPanel({
     type: 'success' | 'error' | null;
     message: string;
   }>({ type: null, message: '' });
+  const [showTemplateBuilder, setShowTemplateBuilder] = useState(false);
 
   // Öğrenci listesi (kurum öğrencileri)
   const [students, setStudents] = useState<Array<{ userId: string; name: string }>>([]);
@@ -254,11 +256,29 @@ export default function InstitutionExternalExamPanel({
 
       {/* Sınav Seçimi */}
       <div className="bg-white rounded-xl shadow-md p-6">
-        <h3 className="text-lg font-bold text-gray-900 mb-4">1. Sınav Türü Seçin</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-gray-900">1. Sınav Türü Seçin</h3>
+          <button
+            onClick={() => setShowTemplateBuilder(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+          >
+            <Plus className="h-5 w-5" />
+            Yeni Template Oluştur
+          </button>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {templates.length === 0 ? (
-            <p className="text-gray-500 col-span-full">Template bulunamadı</p>
+            <div className="col-span-full text-center py-8">
+              <p className="text-gray-500 mb-4">Henüz template yok</p>
+              <button
+                onClick={() => setShowTemplateBuilder(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                <Plus className="h-5 w-5" />
+                İlk Template'i Oluştur
+              </button>
+            </div>
           ) : (
             templates.map(template => (
               <button
@@ -404,6 +424,18 @@ export default function InstitutionExternalExamPanel({
           </p>
         </div>
       </div>
+
+      {/* Template Builder Modal */}
+      {showTemplateBuilder && (
+        <ExamTemplateBuilder
+          institutionId={institutionId}
+          onTemplateCreated={() => {
+            loadTemplates();
+            setShowTemplateBuilder(false);
+          }}
+          onClose={() => setShowTemplateBuilder(false)}
+        />
+      )}
     </div>
   );
 }
