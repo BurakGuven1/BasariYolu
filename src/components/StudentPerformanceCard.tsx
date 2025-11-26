@@ -31,6 +31,7 @@ import {
   type StudentPerformanceCard as PerformanceCardData,
   type TopicPerformance,
 } from '../lib/institutionPerformanceApi';
+import { exportPerformanceCardToPDF } from '../lib/pdfExport';
 
 interface StudentPerformanceCardProps {
   studentUserId: string;
@@ -50,6 +51,7 @@ export default function StudentPerformanceCard({
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<PerformanceCardData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     loadPerformanceData();
@@ -71,6 +73,24 @@ export default function StudentPerformanceCard({
       setError(err.message || 'Performans verileri yüklenemedi');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleExportPDF = async () => {
+    if (!data) return;
+
+    try {
+      setExporting(true);
+      if (onExportPDF) {
+        onExportPDF();
+      } else {
+        await exportPerformanceCardToPDF(data.studentName, data.lastExamDate);
+      }
+    } catch (err: any) {
+      console.error('PDF export error:', err);
+      alert('PDF oluşturulurken bir hata oluştu. Lütfen tekrar deneyin.');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -179,7 +199,7 @@ export default function StudentPerformanceCard({
   };
 
   return (
-    <div className="space-y-6">
+    <div id="performance-card-export" className="space-y-6">
       {/* Header */}
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl shadow-lg p-6 text-white">
         <div className="flex items-start justify-between">
@@ -213,15 +233,23 @@ export default function StudentPerformanceCard({
           </div>
         </div>
 
-        {onExportPDF && (
-          <button
-            onClick={onExportPDF}
-            className="mt-4 flex items-center gap-2 px-4 py-2 bg-white text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors font-medium"
-          >
-            <Download className="h-5 w-5" />
-            PDF İndir
-          </button>
-        )}
+        <button
+          onClick={handleExportPDF}
+          disabled={exporting}
+          className="mt-4 flex items-center gap-2 px-4 py-2 bg-white text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {exporting ? (
+            <>
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-600"></div>
+              PDF Oluşturuluyor...
+            </>
+          ) : (
+            <>
+              <Download className="h-5 w-5" />
+              📄 PDF İndir
+            </>
+          )}
+        </button>
       </div>
 
       {/* Ders Bazlı Özet Kartlar */}
