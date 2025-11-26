@@ -181,82 +181,6 @@ export default function StudentDashboard() {
     refetch
   } = useStudentData(user?.id);
 
-  // CRITICAL: Check loading/error states BEFORE any other code
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Yükleniyor...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (studentDataError) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-center max-w-md">
-          <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-          <p className="text-gray-900 font-semibold mb-2">Veri yükleme hatası</p>
-          <p className="text-gray-600 mb-4">
-            {studentDataError instanceof Error
-              ? studentDataError.message
-              : 'Öğrenci verisi yüklenirken bir hata oluştu'}
-          </p>
-          <div className="flex gap-3 justify-center">
-            <button
-              onClick={() => refetch()}
-              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
-            >
-              Tekrar Dene
-            </button>
-            <button
-              onClick={() => {
-                clearUser();
-                window.location.href = '/';
-              }}
-              className="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300"
-            >
-              Çıkış Yap
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!studentData || !user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-center max-w-md">
-          <AlertCircle className="h-16 w-16 text-amber-500 mx-auto mb-4" />
-          <p className="text-gray-900 font-semibold mb-2">Öğrenci kaydı bulunamadı</p>
-          <p className="text-gray-600 mb-4">
-            Hesabınıza bağlı bir öğrenci kaydı bulunamadı. Lütfen öğrenci olarak kayıt olduğunuzdan emin olun.
-          </p>
-          <div className="flex gap-3 justify-center">
-            <button
-              onClick={() => refetch()}
-              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
-            >
-              Tekrar Dene
-            </button>
-            <button
-              onClick={() => {
-                clearUser();
-                window.location.href = '/';
-              }}
-              className="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300"
-            >
-              Çıkış Yap
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   const institutionProfile = studentData?.profile;
   const isInstitutionStudent = Boolean(institutionProfile?.institution_student && institutionProfile?.institution_id);
   const showInstitutionPortal = Boolean(isInstitutionStudent && institutionRequest?.status === 'approved');
@@ -491,6 +415,62 @@ export default function StudentDashboard() {
   React.useEffect(() => {
     loadWeeklyQuestionPlan();
   }, [loadWeeklyQuestionPlan]);
+
+  // ALL HOOKS COMPLETE - NOW SAFE TO DO EARLY RETURNS
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600 font-medium">Öğrenci verileri yükleniyor...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (studentDataError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center">
+          <div className="mb-4">
+            <AlertCircle className="h-16 w-16 text-red-500 mx-auto" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Hata Oluştu</h2>
+          <p className="text-gray-600 mb-6">
+            {studentDataError instanceof Error ? studentDataError.message : 'Öğrenci verileri yüklenirken bir hata oluştu.'}
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+          >
+            Yeniden Dene
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!studentData) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center">
+          <div className="mb-4">
+            <AlertCircle className="h-16 w-16 text-yellow-500 mx-auto" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Öğrenci Verisi Bulunamadı</h2>
+          <p className="text-gray-600 mb-6">
+            Hesabınıza ait öğrenci kaydı bulunamadı. Lütfen yöneticinizle iletişime geçin.
+          </p>
+          <button
+            onClick={() => clearUser()}
+            className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+          >
+            Çıkış Yap
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const handleLogout = () => {
     console.log('StudentDashboard logout başlatıldı');
