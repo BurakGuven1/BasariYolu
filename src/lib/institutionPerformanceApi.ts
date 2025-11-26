@@ -1,9 +1,11 @@
 import { supabase } from './supabase';
 import type { InstitutionExamResult } from './institutionStudentApi';
 import type { InstitutionQuestion } from './institutionQuestionApi';
+import { fetchExternalExamResults, type ExternalExamResult } from './institutionExternalExamApi';
 
 /**
  * Konu bazında performans analizi
+ * HEM blueprint-based exam results HEM DE external exam results'ı destekler
  */
 export interface TopicPerformance {
   subject: string;
@@ -46,6 +48,7 @@ export interface ClassPerformance {
 
 /**
  * Bir öğrencinin sınav sonuçlarından konu bazlı performansını hesapla
+ * HEM blueprint-based exams HEM DE external (fiziksel) exams'i dahil eder
  */
 export async function analyzeStudentTopicPerformance(
   studentUserId: string,
@@ -53,7 +56,7 @@ export async function analyzeStudentTopicPerformance(
   dateRangeStart?: string,
   dateRangeEnd?: string
 ): Promise<TopicPerformance[]> {
-  // 1. Öğrencinin tüm sınav sonuçlarını çek
+  // 1A. Blueprint-based sınav sonuçlarını çek
   let query = supabase
     .from('institution_exam_results')
     .select('*')
@@ -75,9 +78,13 @@ export async function analyzeStudentTopicPerformance(
     throw examError;
   }
 
-  if (!examResults || examResults.length === 0) {
-    return [];
-  }
+  // 1B. Harici (fiziksel) sınav sonuçlarını çek
+  const externalResults = await fetchExternalExamResults(
+    institutionId,
+    studentUserId,
+    dateRangeStart,
+    dateRangeEnd
+  );
 
   // 2. Tüm benzersiz question_ids'leri topla
   const allQuestionIds = new Set<string>();
@@ -113,7 +120,8 @@ export async function analyzeStudentTopicPerformance(
     empty: number;
   }>();
 
-  examResults.forEach((result: any) => {
+  // 5A. Blueprint-based sınavları işle
+  (examResults || []).forEach((result: any) => {
     const answers = result.answers || {};
     const questionIds = result.question_ids || [];
 
@@ -143,6 +151,46 @@ export async function analyzeStudentTopicPerformance(
       } else if (answer.isCorrect) {
         stats.correct++;
       } else {
+        stats.wrong++;
+      }
+    });
+  });
+
+  // 5B. Harici (fiziksel) sınavları işle
+  externalResults.forEach((result: any) => {
+    const template = result.template;
+    if (!template || !template.question_mapping) return;
+
+    const answers = result.answers || {};
+    const questionMapping = template.question_mapping;
+
+    questionMapping.forEach((mapping: any) => {
+      const questionNum = mapping.questionNumber;
+      const subject = mapping.subject;
+      const topic = mapping.topic;
+
+      const key = `${subject}|${topic}`;
+
+      if (!topicStats.has(key)) {
+        topicStats.set(key, {
+          subject,
+          topic,
+          total: 0,
+          correct: 0,
+          wrong: 0,
+          empty: 0,
+        });
+      }
+
+      const stats = topicStats.get(key)!;
+      stats.total++;
+
+      const answer = answers[questionNum];
+      if (!answer || answer.answer === 'B') {
+        stats.empty++;
+      } else if (answer.answer === 'D') {
+        stats.correct++;
+      } else if (answer.answer === 'Y') {
         stats.wrong++;
       }
     });

@@ -1,6 +1,6 @@
 
 import { useMemo, useState, type ComponentType } from 'react';
-import { Building2, Users, FileSpreadsheet, ClipboardList, ShieldCheck, LogOut, Mail, CheckCircle2, Layers, Copy, Download, BarChart3, Calendar, Award } from 'lucide-react';
+import { Building2, Users, FileSpreadsheet, ClipboardList, ShieldCheck, LogOut, Mail, CheckCircle2, Layers, Copy, Download, BarChart3, Calendar, Award, Upload } from 'lucide-react';
 import { InstitutionSession } from '../lib/institutionApi';
 import InstitutionQuestionBankPanel from './InstitutionQuestionBankPanel';
 import InstitutionStudentApprovalPanel from './InstitutionStudentApprovalPanel';
@@ -9,6 +9,7 @@ import InstitutionTeacherManagementPanel from './InstitutionTeacherManagementPan
 import InstitutionAnalyticsPanel from './InstitutionAnalyticsPanel';
 import InstitutionScheduleManagement from './InstitutionScheduleManagement';
 import ClassPerformancePanel from './ClassPerformancePanel';
+import InstitutionExternalExamPanel from './InstitutionExternalExamPanel';
 import { exportStudentsToExcel, exportExamResultsToExcel, exportPerformanceReportToExcel } from '../lib/institutionExportUtils';
 
 interface InstitutionDashboardProps {
@@ -44,7 +45,7 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
   const isTeacherRole = session.role === 'teacher';
   const canManageInstitution = ['owner', 'manager'].includes(session.role);
   const canAccessQuestionBank = canManageInstitution || isTeacherRole;
-  type PanelKey = 'overview' | 'analytics' | 'performance' | 'question-bank' | 'schedule' | 'teachers' | 'students' | 'engagement';
+  type PanelKey = 'overview' | 'analytics' | 'performance' | 'external-exams' | 'question-bank' | 'schedule' | 'teachers' | 'students' | 'engagement';
   const [activePanel, setActivePanel] = useState<PanelKey>('overview');
 
   type PanelItem = {
@@ -76,6 +77,13 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
         label: 'Performans Raporları',
         description: 'Öğrenci ve sınıf performans analizi',
         icon: Award,
+        visible: canManageInstitution && isActive,
+      },
+      {
+        key: 'external-exams',
+        label: 'Fiziksel Sınav Sonuçları',
+        description: 'Yayınevi denemeleri ve harici sınavlar',
+        icon: Upload,
         visible: canManageInstitution && isActive,
       },
       {
@@ -751,6 +759,17 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
               )
             ) : (
               renderPanelMessage('Performans raporları yalnızca kurum yöneticilerine açıktır.')
+            ))}
+
+          {resolvedPanel === 'external-exams' &&
+            (canManageInstitution ? (
+              isActive ? (
+                <InstitutionExternalExamPanel institutionId={session.institution.id} userId={session.user.id} />
+              ) : (
+                renderPanelMessage('Kurum onayı tamamlandığında harici sınav yüklemesi aktifleştirilecek.')
+              )
+            ) : (
+              renderPanelMessage('Harici sınav yüklemesi yalnızca kurum yöneticilerine açıktır.')
             ))}
 
           {resolvedPanel === 'engagement' &&
