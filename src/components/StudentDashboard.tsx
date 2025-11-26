@@ -180,6 +180,17 @@ export default function StudentDashboard() {
     refetch
   } = useStudentData(user?.id);
 
+  // Debug logging
+  useEffect(() => {
+    console.log('[StudentDashboard] Data state:', {
+      loading,
+      hasUser: !!user,
+      hasStudentData: !!studentData,
+      userId: user?.id,
+      studentData
+    });
+  }, [loading, user, studentData]);
+
   const institutionProfile = studentData?.profile;
   const isInstitutionStudent = Boolean(institutionProfile?.institution_student && institutionProfile?.institution_id);
   const showInstitutionPortal = Boolean(isInstitutionStudent && institutionRequest?.status === 'approved');
