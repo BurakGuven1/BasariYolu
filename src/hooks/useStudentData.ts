@@ -107,6 +107,8 @@ export const useStudentData = (userId?: string) => {
 
   const loading =
     studentQuery.isLoading ||
+    studentQuery.isFetching ||
+    (studentQuery.data === undefined && !studentQuery.isError) ||
     examResultsQuery.isLoading ||
     homeworksQuery.isLoading ||
     classesQuery.isLoading ||
@@ -134,6 +136,7 @@ export const useStudentData = (userId?: string) => {
     classAnnouncements: classAnnouncementsQuery.data ?? [],
     classExamResults: classExamResultsQuery.data ?? [],
     loading,
+    error: studentQuery.error,
     refetch,
   };
 };
