@@ -17,6 +17,7 @@ import {
 } from './lib/seo';
 
 import { PomodoroProvider } from './contexts/PomodoroContext';
+import StudentDashboard from './components/StudentDashboard';
 
 // Loading component for Suspense fallbacks
 const LoadingSpinner = () => (
@@ -33,7 +34,6 @@ const PricingSection = lazy(() => import('./components/PricingSection'));
 const TeacherSection = lazy(() => import('./components/TeacherSection'));
 const SiteFooter = lazy(() => import('./components/SiteFooter'));
 const LoginModal = lazy(() => import('./components/LoginModal'));
-const StudentDashboard = lazy(() => import('./components/StudentDashboard'));
 const ParentDashboard = lazy(() => import('./components/ParentDashboard'));
 const ExamTopicsSection = lazy(() => import('./components/ExamTopicsSection'));
 const TeacherLogin = lazy(() => import('./components/TeacherLogin'));
@@ -419,13 +419,16 @@ function App() {
       return <Navigate to="/" replace />;
     }
 
+    if (user.userType === 'student') {
+      return <StudentDashboard />;
+    }
+
     return (
       <Suspense fallback={<LoadingSpinner />}>
         {user.userType === 'teacher' && (
           <TeacherDashboard teacherUser={user.teacherData} onLogout={handleLogout} />
         )}
         {(user.userType === 'parent' || user.isParentLogin) && <ParentDashboard />}
-        {user.userType === 'student' && <StudentDashboard />}
       </Suspense>
     );
   };
