@@ -416,14 +416,6 @@ export default function StudentDashboard() {
     loadWeeklyQuestionPlan();
   }, [loadWeeklyQuestionPlan]);
 
-  // Debug logging
-  console.log('StudentDashboard render:', {
-    loading,
-    studentDataError,
-    hasStudentData: Boolean(studentData),
-    studentData,
-  });
-
   // ALL HOOKS COMPLETE - NOW SAFE TO DO EARLY RETURNS
   if (loading) {
     return (

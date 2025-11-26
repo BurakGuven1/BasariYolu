@@ -415,23 +415,14 @@ function App() {
   }
 
   const DashboardRoute = () => {
-    console.log('DashboardRoute render:', {
-      hasUser: Boolean(user),
-      userType: user?.userType,
-      user: user,
-    });
-
     if (!user) {
-      console.log('DashboardRoute: No user, redirecting to /');
       return <Navigate to="/" replace />;
     }
 
     if (user.userType === 'student') {
-      console.log('DashboardRoute: Rendering StudentDashboard');
       return <StudentDashboard />;
     }
 
-    console.log('DashboardRoute: Rendering Teacher or Parent Dashboard');
     return (
       <Suspense fallback={<LoadingSpinner />}>
         {user.userType === 'teacher' && (
