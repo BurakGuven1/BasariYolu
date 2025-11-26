@@ -17,6 +17,7 @@ import {
   createBulkExternalExamResults,
   fetchExternalExamResults,
   deleteExternalExamResult,
+  assignExamToStudents,
   type ExternalExamTemplate,
   type BulkExamResultEntry,
 } from '../lib/institutionExternalExamApi';
@@ -40,6 +41,8 @@ export default function InstitutionExternalExamPanel({
     message: string;
   }>({ type: null, message: '' });
   const [showTemplateBuilder, setShowTemplateBuilder] = useState(false);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
 
   // Öğrenci listesi (kurum öğrencileri)
   const [students, setStudents] = useState<Array<{ userId: string; name: string }>>([]);

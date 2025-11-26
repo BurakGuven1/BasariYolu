@@ -78,6 +78,38 @@ export interface CreateBulkExternalExamResultsPayload {
   createdBy: string;
 }
 
+export interface StudentExamAssignment {
+  id: string;
+  institution_id: string;
+  template_id: string;
+  student_id: string;
+  user_id: string;
+  exam_date: string;
+  deadline: string | null;
+  status: 'pending' | 'completed' | 'expired';
+  assigned_by: string | null;
+  assigned_at: string;
+  created_at: string;
+  updated_at: string;
+  template?: ExternalExamTemplate;
+  has_submitted?: boolean;
+}
+
+export interface AssignExamToStudentsPayload {
+  institutionId: string;
+  templateId: string;
+  studentUserIds: string[];
+  examDate: string;
+  deadline?: string;
+  assignedBy: string;
+}
+
+export interface SubmitStudentAnswersPayload {
+  assignmentId: string;
+  answers: Record<number, 'A' | 'B' | 'C' | 'D' | 'E' | 'X'>;
+  userId: string;
+}
+
 /**
  * Yeni harici sınav template'i oluştur
  */
@@ -324,6 +356,225 @@ export async function deleteExternalExamResult(resultId: string): Promise<void> 
     console.error('Error deleting external exam result:', error);
     throw error;
   }
+}
+
+/**
+ * ÖĞRENCİ SINAV ATAMA SİSTEMİ
+ */
+
+/**
+ * Öğrencilere sınav ata
+ */
+export async function assignExamToStudents(
+  payload: AssignExamToStudentsPayload
+): Promise<{ success: number; failed: number; errors: string[] }> {
+  const assignments = [];
+  const errors: string[] = [];
+
+  for (const userId of payload.studentUserIds) {
+    try {
+      // Student ID'yi bul
+      const { data: student } = await supabase
+        .from('students')
+        .select('id')
+        .eq('user_id', userId)
+        .single();
+
+      if (!student) {
+        errors.push(`User ${userId}: Öğrenci kaydı bulunamadı`);
+        continue;
+      }
+
+      assignments.push({
+        institution_id: payload.institutionId,
+        template_id: payload.templateId,
+        student_id: student.id,
+        user_id: userId,
+        exam_date: payload.examDate,
+        deadline: payload.deadline || null,
+        status: 'pending',
+        assigned_by: payload.assignedBy,
+      });
+    } catch (err: any) {
+      errors.push(`User ${userId}: ${err.message}`);
+    }
+  }
+
+  if (assignments.length === 0) {
+    throw new Error('Hiç geçerli öğrenci bulunamadı');
+  }
+
+  const { data, error } = await supabase
+    .from('institution_student_exam_assignments')
+    .insert(assignments)
+    .select();
+
+  if (error) {
+    console.error('Error assigning exams:', error);
+    throw error;
+  }
+
+  return {
+    success: data?.length || 0,
+    failed: errors.length,
+    errors,
+  };
+}
+
+/**
+ * Öğrenciye atanan sınavları getir
+ */
+export async function fetchStudentAssignedExams(
+  userId: string
+): Promise<StudentExamAssignment[]> {
+  const { data, error } = await supabase
+    .from('institution_student_exam_assignments')
+    .select(`
+      *,
+      template:institution_external_exam_templates(*)
+    `)
+    .eq('user_id', userId)
+    .order('exam_date', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching assigned exams:', error);
+    throw error;
+  }
+
+  // Her assignment için submit edilmiş mi kontrol et
+  const assignmentsWithStatus = await Promise.all(
+    (data || []).map(async (assignment) => {
+      const { data: result } = await supabase
+        .from('institution_external_exam_results')
+        .select('id')
+        .eq('assignment_id', assignment.id)
+        .eq('user_id', userId)
+        .single();
+
+      return {
+        ...assignment,
+        has_submitted: !!result,
+      };
+    })
+  );
+
+  return assignmentsWithStatus;
+}
+
+/**
+ * Öğrenci cevaplarını gönder (otomatik karşılaştırma)
+ */
+export async function submitStudentExamAnswers(
+  payload: SubmitStudentAnswersPayload
+): Promise<ExternalExamResult> {
+  // Assignment'ı getir
+  const { data: assignment, error: assignmentError } = await supabase
+    .from('institution_student_exam_assignments')
+    .select(`
+      *,
+      template:institution_external_exam_templates(*)
+    `)
+    .eq('id', payload.assignmentId)
+    .eq('user_id', payload.userId)
+    .single();
+
+  if (assignmentError || !assignment) {
+    throw new Error('Sınav ataması bulunamadı veya size ait değil');
+  }
+
+  if (assignment.status === 'completed') {
+    throw new Error('Bu sınav için zaten cevap gönderdiniz');
+  }
+
+  // Template ve cevap anahtarını al
+  const template = assignment.template as any;
+  const answerKey = (template.answer_key || {}) as Record<string, string>;
+
+  if (!answerKey || Object.keys(answerKey).length === 0) {
+    throw new Error('Bu sınav için henüz cevap anahtarı tanımlanmamış');
+  }
+
+  // Student ID'yi al
+  const { data: student } = await supabase
+    .from('students')
+    .select('id')
+    .eq('user_id', payload.userId)
+    .single();
+
+  if (!student) {
+    throw new Error('Öğrenci kaydı bulunamadı');
+  }
+
+  // Cevapları karşılaştır
+  let correctCount = 0;
+  let wrongCount = 0;
+  let emptyCount = 0;
+
+  const processedAnswers: Record<number, ExternalExamAnswer> = {};
+
+  Object.entries(payload.answers).forEach(([questionNumStr, studentAnswer]) => {
+    const questionNum = parseInt(questionNumStr);
+    const correctAnswer = answerKey[questionNumStr];
+
+    if (studentAnswer === 'X') {
+      emptyCount++;
+      processedAnswers[questionNum] = {
+        studentAnswer: 'X',
+        isCorrect: false,
+      };
+    } else if (correctAnswer && studentAnswer === correctAnswer) {
+      correctCount++;
+      processedAnswers[questionNum] = {
+        studentAnswer,
+        isCorrect: true,
+      };
+    } else {
+      wrongCount++;
+      processedAnswers[questionNum] = {
+        studentAnswer,
+        isCorrect: false,
+      };
+    }
+  });
+
+  // Net hesapla
+  const netScore = correctCount - wrongCount / 4;
+
+  // Sonucu kaydet
+  const { data: result, error: resultError } = await supabase
+    .from('institution_external_exam_results')
+    .insert({
+      institution_id: assignment.institution_id,
+      template_id: assignment.template_id,
+      student_id: student.id,
+      user_id: payload.userId,
+      exam_date: assignment.exam_date,
+      answers: processedAnswers,
+      correct_count: correctCount,
+      wrong_count: wrongCount,
+      empty_count: emptyCount,
+      net_score: netScore,
+      score: null,
+      metadata: {},
+      created_by: payload.userId,
+      self_submitted: true,
+      assignment_id: payload.assignmentId,
+    })
+    .select()
+    .single();
+
+  if (resultError) {
+    console.error('Error submitting answers:', resultError);
+    throw resultError;
+  }
+
+  // Assignment durumunu güncelle
+  await supabase
+    .from('institution_student_exam_assignments')
+    .update({ status: 'completed' })
+    .eq('id', payload.assignmentId);
+
+  return result;
 }
 
 /**

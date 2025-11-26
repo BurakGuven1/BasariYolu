@@ -30,6 +30,7 @@ import InstitutionStudentPortal from './InstitutionStudentPortal';
 import SoruPortali from './SoruPortali';
 import StudentExamPerformancePanel from './StudentExamPerformancePanel';
 import AIChatPanel from './AIChatPanel';
+import StudentExternalExams from './StudentExternalExams';
 import type { InstitutionExamBlueprint } from '../lib/institutionQuestionApi';
 import {
   fetchInstitutionStudentPortalData,
@@ -54,7 +55,8 @@ type DashboardTab =
   | 'classes'
   | 'subscription'
   | 'ai-chat'
-  | 'soru-portali';
+  | 'soru-portali'
+  | 'kurumsal-sinavlar';
 
 const DASHBOARD_TAB_KEY = 'studentDashboardActiveTab';
 const DASHBOARD_TABS: DashboardTab[] = [
@@ -72,6 +74,7 @@ const DASHBOARD_TABS: DashboardTab[] = [
   'subscription',
   'ai-chat',
   'soru-portali',
+  'kurumsal-sinavlar',
 ];
 
 const getCurrentWeekRange = () => {
@@ -1234,6 +1237,10 @@ export default function StudentDashboard({ authUser }: StudentDashboardProps) {
     { key: 'exams', label: 'Denemeler', icon: BookOpen },
     { key: 'homeworks', label: 'Ödevler', icon: Calendar },
     { key: 'classes', label: showInstitutionPortal ? 'Kurumlarım' : 'Sınıflarım', icon: Users },
+    ...(isInstitutionStudent && institutionRequest?.status === 'approved'
+      ? [{ key: 'kurumsal-sinavlar' as const, label: 'Kurumsal Sınavlar', icon: Target }]
+      : []
+    ),
     { key: 'soru-portali', label: 'Soru Portalı', icon: MessageSquare },
     { key: 'ai-analysis', label: 'AI Analiz & Akıllı Plan', icon: Brain },
     { key: 'ai-chat', label: 'Yapay Zekaya Sor', icon: Brain },
@@ -1354,6 +1361,7 @@ export default function StudentDashboard({ authUser }: StudentDashboardProps) {
         )}
         {activeTab === 'ai-chat' && <AIChatPanel />}
         {activeTab === 'soru-portali' && <SoruPortali />}
+        {activeTab === 'kurumsal-sinavlar' && user && <StudentExternalExams userId={user.id} />}
         {activeTab === 'classes' && (
           showInstitutionPortal ? (
             <div className="bg-white rounded-lg p-6 shadow-sm">
