@@ -129,6 +129,55 @@ export default function StudentPerformanceCard({
     başarı: tp.successRate,
   }));
 
+  // Ders bazlı özet hesapla
+  const subjectSummary = data.topicPerformances.reduce((acc, topic) => {
+    if (!acc[topic.subject]) {
+      acc[topic.subject] = {
+        subject: topic.subject,
+        totalQuestions: 0,
+        correctCount: 0,
+        wrongCount: 0,
+        emptyCount: 0,
+        successRate: 0,
+      };
+    }
+    acc[topic.subject].totalQuestions += topic.totalQuestions;
+    acc[topic.subject].correctCount += topic.correctCount;
+    acc[topic.subject].wrongCount += topic.wrongCount;
+    acc[topic.subject].emptyCount += topic.emptyCount;
+    return acc;
+  }, {} as Record<string, any>);
+
+  // Başarı oranını hesapla
+  Object.values(subjectSummary).forEach((summary: any) => {
+    summary.successRate = summary.totalQuestions > 0
+      ? Math.round((summary.correctCount / summary.totalQuestions) * 100)
+      : 0;
+  });
+
+  const subjectSummaryArray = Object.values(subjectSummary).sort((a: any, b: any) =>
+    b.successRate - a.successRate
+  );
+
+  // Ders ikonları
+  const getSubjectIcon = (subject: string) => {
+    const icons: Record<string, string> = {
+      'Matematik': '📐',
+      'Geometri': '📏',
+      'Türkçe': '📚',
+      'Fen': '🔬',
+      'Fizik': '⚛️',
+      'Kimya': '🧪',
+      'Biyoloji': '🧬',
+      'Tarih': '📜',
+      'Coğrafya': '🌍',
+      'Felsefe': '🤔',
+      'Din Kültürü': '☪️',
+      'İngilizce': '🇬🇧',
+    };
+    return icons[subject] || '📖';
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -175,6 +224,66 @@ export default function StudentPerformanceCard({
         )}
       </div>
 
+      {/* Ders Bazlı Özet Kartlar */}
+      {subjectSummaryArray.length > 0 && (
+        <div>
+          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <BarChart3 className="h-6 w-6 text-indigo-600" />
+            Ders Bazlı Başarı Özeti
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {subjectSummaryArray.map((subject: any, idx) => (
+              <div
+                key={idx}
+                className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow p-5 border-t-4"
+                style={{ borderTopColor: getSuccessColor(subject.successRate) }}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-4xl">{getSubjectIcon(subject.subject)}</div>
+                  <div className="text-right">
+                    <div
+                      className="text-3xl font-bold"
+                      style={{ color: getSuccessColor(subject.successRate) }}
+                    >
+                      %{subject.successRate}
+                    </div>
+                  </div>
+                </div>
+                <h4 className="font-bold text-gray-900 text-lg mb-2">{subject.subject}</h4>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Toplam Soru:</span>
+                    <span className="font-semibold text-gray-900">{subject.totalQuestions}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Doğru:</span>
+                    <span className="font-semibold text-green-600">{subject.correctCount}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Yanlış:</span>
+                    <span className="font-semibold text-red-600">{subject.wrongCount}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Boş:</span>
+                    <span className="font-semibold text-gray-500">{subject.emptyCount}</span>
+                  </div>
+                </div>
+                {/* İlerleme çubuğu */}
+                <div className="mt-3 h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full transition-all"
+                    style={{
+                      width: `${subject.successRate}%`,
+                      backgroundColor: getSuccessColor(subject.successRate),
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Güçlü ve Zayıf Konular */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Güçlü Konular */}
@@ -188,13 +297,23 @@ export default function StudentPerformanceCard({
               <p className="text-gray-500 text-sm">Henüz yeterli veri yok</p>
             ) : (
               data.strongTopics.map((topic, idx) => (
-                <div key={idx} className="border-l-4 border-green-500 pl-4">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-medium text-gray-900">{topic.topic}</span>
-                    <span className="text-green-600 font-bold">%{topic.successRate}</span>
+                <div key={idx} className="bg-green-50 rounded-lg p-4 border-l-4 border-green-500">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-semibold text-gray-900">{topic.topic}</span>
+                    <div className="flex items-center gap-2">
+                      <div className="text-2xl">🏆</div>
+                      <span className="text-green-600 font-bold text-lg">%{topic.successRate}</span>
+                    </div>
                   </div>
-                  <div className="text-sm text-gray-600">
-                    {topic.subject} • {topic.correctCount}/{topic.totalQuestions} doğru
+                  <div className="text-sm text-gray-600 mb-2">
+                    {getSubjectIcon(topic.subject)} {topic.subject} • {topic.correctCount}/{topic.totalQuestions} doğru
+                  </div>
+                  {/* İlerleme çubuğu */}
+                  <div className="h-2 bg-green-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-green-500 transition-all"
+                      style={{ width: `${topic.successRate}%` }}
+                    />
                   </div>
                 </div>
               ))
@@ -213,16 +332,27 @@ export default function StudentPerformanceCard({
               <p className="text-gray-500 text-sm">Henüz yeterli veri yok</p>
             ) : (
               data.weakTopics.map((topic, idx) => (
-                <div key={idx} className="border-l-4 border-red-500 pl-4">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-medium text-gray-900">{topic.topic}</span>
-                    <span className="text-red-600 font-bold">%{topic.successRate}</span>
+                <div key={idx} className="bg-red-50 rounded-lg p-4 border-l-4 border-red-500">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-semibold text-gray-900">{topic.topic}</span>
+                    <div className="flex items-center gap-2">
+                      <div className="text-2xl">📍</div>
+                      <span className="text-red-600 font-bold text-lg">%{topic.successRate}</span>
+                    </div>
                   </div>
-                  <div className="text-sm text-gray-600">
-                    {topic.subject} • {topic.wrongCount} yanlış, {topic.emptyCount} boş
+                  <div className="text-sm text-gray-600 mb-2">
+                    {getSubjectIcon(topic.subject)} {topic.subject} • {topic.wrongCount} yanlış, {topic.emptyCount} boş
                   </div>
-                  <div className="mt-2 bg-red-50 text-red-700 text-xs px-2 py-1 rounded inline-block">
-                    ⚠️ Öncelikli çalışma önerilir
+                  {/* İlerleme çubuğu */}
+                  <div className="h-2 bg-red-200 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-red-500 transition-all"
+                      style={{ width: `${topic.successRate}%` }}
+                    />
+                  </div>
+                  <div className="mt-3 bg-red-100 text-red-800 text-xs px-3 py-2 rounded-lg font-medium flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4" />
+                    <span>⚡ Öncelikli çalışma önerilir - Bu konuya odaklanın!</span>
                   </div>
                 </div>
               ))
