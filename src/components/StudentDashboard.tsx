@@ -177,19 +177,9 @@ export default function StudentDashboard() {
     classAnnouncements,
     classExamResults,
     loading,
+    error: studentDataError,
     refetch
   } = useStudentData(user?.id);
-
-  // Debug logging
-  useEffect(() => {
-    console.log('[StudentDashboard] Data state:', {
-      loading,
-      hasUser: !!user,
-      hasStudentData: !!studentData,
-      userId: user?.id,
-      studentData
-    });
-  }, [loading, user, studentData]);
 
   const institutionProfile = studentData?.profile;
   const isInstitutionStudent = Boolean(institutionProfile?.institution_student && institutionProfile?.institution_id);
@@ -723,6 +713,8 @@ export default function StudentDashboard() {
     });
 
   const renderOverview = () => {
+    if (!studentData) return null;
+
     const questionTarget = questionPlan?.question_target || 0;
     const questionsCompleted = questionPlan?.questions_completed || 0;
     const questionsRemaining = questionTarget ? Math.max(questionTarget - questionsCompleted, 0) : 0;
@@ -1052,11 +1044,14 @@ export default function StudentDashboard() {
     );
   };
 
-  const renderExams = () => (
-    <div className="bg-white rounded-lg p-6 shadow-sm">
-      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-6">
-        <h3 className="text-lg font-semibold">Deneme Sonuçları</h3>
-        <button 
+  const renderExams = () => {
+    if (!studentData) return null;
+
+    return (
+      <div className="bg-white rounded-lg p-6 shadow-sm">
+        <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-6">
+          <h3 className="text-lg font-semibold">Deneme Sonuçları</h3>
+          <button 
           onClick={() => setShowExamForm(true)}
           className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700 sm:w-auto">
           <Plus className="h-4 w-4" />
@@ -1131,7 +1126,8 @@ export default function StudentDashboard() {
         )}
       </div>
     </div>
-  );
+    );
+  };
 
   if (loading) {
     return (
@@ -1144,19 +1140,59 @@ export default function StudentDashboard() {
     );
   }
 
+  if (studentDataError) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center max-w-md">
+          <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+          <p className="text-gray-900 font-semibold mb-2">Veri yükleme hatası</p>
+          <p className="text-gray-600 mb-4">
+            {studentDataError instanceof Error
+              ? studentDataError.message
+              : 'Öğrenci verisi yüklenirken bir hata oluştu'}
+          </p>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => refetch()}
+              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+            >
+              Tekrar Dene
+            </button>
+            <button
+              onClick={handleLogout}
+              className="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300"
+            >
+              Çıkış Yap
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!studentData || !user) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-center">
-          <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-          <p className="text-gray-900 font-semibold mb-2">Öğrenci verisi yüklenemedi</p>
-          <p className="text-gray-600 mb-4">Lütfen sayfayı yenileyin veya tekrar giriş yapın</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
-          >
-            Sayfayı Yenile
-          </button>
+        <div className="text-center max-w-md">
+          <AlertCircle className="h-16 w-16 text-amber-500 mx-auto mb-4" />
+          <p className="text-gray-900 font-semibold mb-2">Öğrenci kaydı bulunamadı</p>
+          <p className="text-gray-600 mb-4">
+            Hesabınıza bağlı bir öğrenci kaydı bulunamadı. Lütfen öğrenci olarak kayıt olduğunuzdan emin olun.
+          </p>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => refetch()}
+              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+            >
+              Tekrar Dene
+            </button>
+            <button
+              onClick={handleLogout}
+              className="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300"
+            >
+              Çıkış Yap
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -1173,6 +1209,8 @@ export default function StudentDashboard() {
   };
 
   const renderInstitutionClasses = () => {
+    if (!studentData) return null;
+
     if (institutionPortalLoading) {
       return (
         <div className="text-center text-gray-500 py-10">
@@ -1204,7 +1242,7 @@ export default function StudentDashboard() {
         results={institutionExamResults}
         announcements={institutionAnnouncements}
         assignments={institutionAssignments}
-        studentId={studentData?.id}
+        studentId={studentData.id}
         userId={user?.id ?? undefined}
         onExamSubmitted={triggerInstitutionPortalReload}
       />
