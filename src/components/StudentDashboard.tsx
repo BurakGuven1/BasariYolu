@@ -1133,6 +1133,24 @@ export default function StudentDashboard() {
     );
   }
 
+  if (!studentData || !user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center">
+          <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+          <p className="text-gray-900 font-semibold mb-2">Öğrenci verisi yüklenemedi</p>
+          <p className="text-gray-600 mb-4">Lütfen sayfayı yenileyin veya tekrar giriş yapın</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+          >
+            Sayfayı Yenile
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const renderAnalysis = () => {
     if (!studentData) return null;
     return (

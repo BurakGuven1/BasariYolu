@@ -513,56 +513,61 @@ export const loginInstitutionAccount = async (email: string, password: string): 
 };
 
 export const getInstitutionSessionForUser = async (userId: string): Promise<InstitutionSession | null> => {
-  const { data, error } = await supabase
-    .from('institution_members')
-    .select(
-      `
-        id,
-        role,
-        institution:institutions (
+  try {
+    // First try to get institution member
+    const { data: memberData, error: memberError } = await supabase
+      .from('institution_members')
+      .select(
+        `
           id,
-          name,
-          logo_url,
-          contact_email,
-          contact_phone,
-          status,
-          is_active,
-          created_at,
-          student_invite_code,
-          teacher_invite_code,
-          student_quota,
-          approved_student_count
-        )
-      `,
-    )
-    .eq('user_id', userId)
-    .order('created_at', { ascending: true })
-    .maybeSingle();
+          role,
+          institution:institution_id (
+            id,
+            name,
+            logo_url,
+            contact_email,
+            contact_phone,
+            status,
+            is_active,
+            created_at,
+            student_invite_code,
+            teacher_invite_code,
+            student_quota,
+            approved_student_count
+          )
+        `,
+      )
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true })
+      .maybeSingle();
 
-  if (error) {
+    // Log for debugging
+    console.log('[Institution] Member query result:', { memberData, memberError });
+
+    if (memberData && memberData.institution) {
+      const institutionRecord = Array.isArray(memberData.institution)
+        ? memberData.institution[0]
+        : memberData.institution;
+
+      return {
+        membershipId: memberData.id,
+        role: memberData.role as InstitutionSession['role'],
+        institution: institutionRecord,
+        user: {
+          id: userId,
+          email: (await supabase.auth.getUser()).data.user?.email ?? null,
+        },
+      };
+    }
+
+    // If not found as member, return null (don't throw error)
+    console.warn('[Institution] getInstitutionSessionForUser no data for user', userId);
+    return null;
+
+  } catch (error) {
     console.error('[Institution] getInstitutionSessionForUser error:', error);
-    throw error;
+    return null;
   }
-
-  if (!data || !data.institution) {
-  console.warn('[Institution] getInstitutionSessionForUser no data for user', userId);
-  return null;
-}
-
-console.log('[Institution] getInstitutionSessionForUser raw payload:', data);
-const institutionRecord = Array.isArray(data.institution)
-  ? data.institution[0]
-  : data.institution;
-
-return {
-  membershipId: data.id,
-  role: data.role as InstitutionSession['role'],
-  institution: institutionRecord,
-    user: {
-      id: userId,
-      email: (await supabase.auth.getUser()).data.user?.email ?? null,
-    },
-  };
 };
 
 export const refreshInstitutionSession = async (): Promise<InstitutionSession | null> => {
