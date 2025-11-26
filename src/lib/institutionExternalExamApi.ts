@@ -578,6 +578,155 @@ export async function submitStudentExamAnswers(
 }
 
 /**
+ * Kurum için tüm atamaları getir (yönetim ekranı için)
+ */
+export interface AssignmentWithStats extends StudentExamAssignment {
+  student_name?: string;
+  total_assigned: number;
+  submitted_count: number;
+  pending_count: number;
+  submission_rate: number;
+}
+
+export async function fetchInstitutionAssignments(
+  institutionId: string,
+  templateId?: string
+): Promise<AssignmentWithStats[]> {
+  let query = supabase
+    .from('institution_student_exam_assignments')
+    .select(`
+      *,
+      template:institution_external_exam_templates(*),
+      student:students!institution_student_exam_assignments_student_id_fkey(
+        user:profiles!students_user_id_fkey(full_name)
+      )
+    `)
+    .eq('institution_id', institutionId)
+    .order('created_at', { ascending: false });
+
+  if (templateId) {
+    query = query.eq('template_id', templateId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Error fetching institution assignments:', error);
+    throw error;
+  }
+
+  // Her assignment için submission status kontrol et
+  const assignmentsWithStats = await Promise.all(
+    (data || []).map(async (assignment: any) => {
+      const { data: result } = await supabase
+        .from('institution_external_exam_results')
+        .select('id')
+        .eq('assignment_id', assignment.id)
+        .eq('user_id', assignment.user_id)
+        .single();
+
+      return {
+        ...assignment,
+        student_name: assignment.student?.user?.full_name || 'Bilinmeyen',
+        has_submitted: !!result,
+        total_assigned: 1,
+        submitted_count: result ? 1 : 0,
+        pending_count: result ? 0 : 1,
+        submission_rate: result ? 100 : 0,
+      };
+    })
+  );
+
+  return assignmentsWithStats;
+}
+
+/**
+ * Atama istatistiklerini al (template bazında özet)
+ */
+export interface AssignmentSummary {
+  template_id: string;
+  template_name: string;
+  exam_type: string;
+  exam_date: string;
+  total_assigned: number;
+  submitted_count: number;
+  pending_count: number;
+  submission_rate: number;
+  deadline: string | null;
+}
+
+export async function fetchAssignmentSummaries(
+  institutionId: string
+): Promise<AssignmentSummary[]> {
+  const assignments = await fetchInstitutionAssignments(institutionId);
+
+  // Template ve exam_date bazında grupla
+  const grouped = new Map<string, AssignmentSummary>();
+
+  assignments.forEach((assignment) => {
+    const key = `${assignment.template_id}-${assignment.exam_date}`;
+    const template = assignment.template as any;
+
+    if (!grouped.has(key)) {
+      grouped.set(key, {
+        template_id: assignment.template_id,
+        template_name: template?.name || 'Bilinmeyen',
+        exam_type: template?.exam_type || '',
+        exam_date: assignment.exam_date,
+        total_assigned: 0,
+        submitted_count: 0,
+        pending_count: 0,
+        submission_rate: 0,
+        deadline: assignment.deadline,
+      });
+    }
+
+    const summary = grouped.get(key)!;
+    summary.total_assigned += 1;
+    summary.submitted_count += assignment.has_submitted ? 1 : 0;
+    summary.pending_count += assignment.has_submitted ? 0 : 1;
+    summary.submission_rate = (summary.submitted_count / summary.total_assigned) * 100;
+  });
+
+  return Array.from(grouped.values()).sort((a, b) =>
+    new Date(b.exam_date).getTime() - new Date(a.exam_date).getTime()
+  );
+}
+
+/**
+ * Atama sil
+ */
+export async function deleteAssignment(assignmentId: string): Promise<void> {
+  const { error } = await supabase
+    .from('institution_student_exam_assignments')
+    .delete()
+    .eq('id', assignmentId);
+
+  if (error) {
+    console.error('Error deleting assignment:', error);
+    throw error;
+  }
+}
+
+/**
+ * Atama deadline'ını güncelle
+ */
+export async function updateAssignmentDeadline(
+  assignmentId: string,
+  newDeadline: string
+): Promise<void> {
+  const { error } = await supabase
+    .from('institution_student_exam_assignments')
+    .update({ deadline: newDeadline })
+    .eq('id', assignmentId);
+
+  if (error) {
+    console.error('Error updating deadline:', error);
+    throw error;
+  }
+}
+
+/**
  * POPÜLER YAYINEVI TEMPLATE'LERİ (Seed Data)
  */
 export const POPULAR_EXAM_TEMPLATES: Omit<CreateExternalExamTemplatePayload, 'institutionId'>[] = [
