@@ -84,49 +84,383 @@ export default function StudentExamResultDetail({
     }
   };
 
+  // Calculate exam score based on exam type
+  const calculateExamScore = () => {
+    const examType = template?.exam_type;
+    if (!examType) return null;
+
+    // Helper function to calculate net score for a subject
+    const calculateNetScore = (correct: number, wrong: number) => {
+      return Math.max(0, correct - (wrong / 4));
+    };
+
+    // Group topics by subject (using heuristics)
+    const subjectStats = new Map<string, { correct: number; wrong: number; empty: number }>();
+
+    topicStats.forEach((stats, topic) => {
+      const topicLower = topic.toLowerCase();
+      let subject = 'Diğer';
+
+      // Türkçe
+      if (topicLower.includes('türkçe') || topicLower.includes('dil') || topicLower.includes('sözcük') ||
+          topicLower.includes('cümle') || topicLower.includes('paragraf') || topicLower.includes('anlam')) {
+        subject = 'Türkçe';
+      }
+      // Matematik
+      else if (topicLower.includes('matematik') || topicLower.includes('geometri') || topicLower.includes('sayı') ||
+               topicLower.includes('fonksiyon') || topicLower.includes('olasılık') || topicLower.includes('alan')) {
+        subject = 'Matematik';
+      }
+      // Fen
+      else if (topicLower.includes('fen') || topicLower.includes('fizik') || topicLower.includes('kimya') ||
+               topicLower.includes('biyoloji') || topicLower.includes('bilim')) {
+        subject = 'Fen';
+      }
+      // Sosyal
+      else if (topicLower.includes('sosyal') || topicLower.includes('tarih') || topicLower.includes('coğrafya') ||
+               topicLower.includes('felsefe') || topicLower.includes('din') || topicLower.includes('inkılap')) {
+        subject = 'Sosyal';
+      }
+      // Edebiyat
+      else if (topicLower.includes('edebiyat') || topicLower.includes('şiir') || topicLower.includes('roman')) {
+        subject = 'Edebiyat';
+      }
+      // İngilizce
+      else if (topicLower.includes('ingilizce') || topicLower.includes('english')) {
+        subject = 'İngilizce';
+      }
+
+      if (!subjectStats.has(subject)) {
+        subjectStats.set(subject, { correct: 0, wrong: 0, empty: 0 });
+      }
+
+      const subjectStat = subjectStats.get(subject)!;
+      subjectStat.correct += stats.correct;
+      subjectStat.wrong += stats.wrong;
+      subjectStat.empty += stats.empty;
+    });
+
+    // Calculate score based on exam type
+    if (examType === 'TYT') {
+      const turkce = subjectStats.get('Türkçe') || { correct: 0, wrong: 0, empty: 0 };
+      const matematik = subjectStats.get('Matematik') || { correct: 0, wrong: 0, empty: 0 };
+      const fen = subjectStats.get('Fen') || { correct: 0, wrong: 0, empty: 0 };
+      const sosyal = subjectStats.get('Sosyal') || { correct: 0, wrong: 0, empty: 0 };
+
+      const turkceNet = calculateNetScore(turkce.correct, turkce.wrong);
+      const matematikNet = calculateNetScore(matematik.correct, matematik.wrong);
+      const fenNet = calculateNetScore(fen.correct, fen.wrong);
+      const sosyalNet = calculateNetScore(sosyal.correct, sosyal.wrong);
+
+      const hamPuan = 100 + (turkceNet * 3.33) + (matematikNet * 3.33) + (fenNet * 3.45) + (sosyalNet * 3.45);
+      return Math.min(500, Math.max(100, Math.round(hamPuan * 100) / 100));
+    } else if (examType === 'AYT') {
+      // For AYT, we'll use a simplified calculation based on total net
+      const aytHamPuan = (result.net_score * 5) + 100;
+      return Math.min(500, Math.max(100, Math.round(aytHamPuan * 100) / 100));
+    } else if (examType === 'LGS') {
+      const turkce = subjectStats.get('Türkçe') || { correct: 0, wrong: 0, empty: 0 };
+      const matematik = subjectStats.get('Matematik') || { correct: 0, wrong: 0, empty: 0 };
+      const fen = subjectStats.get('Fen') || { correct: 0, wrong: 0, empty: 0 };
+      const sosyal = subjectStats.get('Sosyal') || { correct: 0, wrong: 0, empty: 0 };
+      const ingilizce = subjectStats.get('İngilizce') || { correct: 0, wrong: 0, empty: 0 };
+
+      const turkceNet = calculateNetScore(turkce.correct, turkce.wrong);
+      const matematikNet = calculateNetScore(matematik.correct, matematik.wrong);
+      const fenNet = calculateNetScore(fen.correct, fen.wrong);
+      const sosyalNet = calculateNetScore(sosyal.correct, sosyal.wrong);
+      const ingilizceNet = calculateNetScore(ingilizce.correct, ingilizce.wrong);
+
+      const katsayiliToplam = (turkceNet * 4) + (matematikNet * 4) + (fenNet * 4) +
+                              (sosyalNet * 1) + (ingilizceNet * 1);
+
+      const hamPuan = (katsayiliToplam * 500) / 270;
+      return Math.min(500, Math.max(0, Math.round(hamPuan * 100) / 100));
+    }
+
+    return null;
+  };
+
+  const examScore = calculateExamScore();
+
   const downloadPDF = async () => {
     if (!result) return;
 
     try {
       setDownloading(true);
-      const element = document.getElementById('exam-result-content');
-      if (!element) return;
 
-      // Optimize html2canvas settings
-      const canvas = await html2canvas(element, {
-        scale: 1.5, // Reduce from 2 to 1.5
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-        windowWidth: 1200,
-        windowHeight: element.scrollHeight,
-      });
-
-      const imgData = canvas.toDataURL('image/jpeg', 0.7); // Use JPEG with 70% quality
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
         format: 'a4',
-        compress: true, // Enable compression
+        compress: true,
       });
 
-      const imgWidth = 210; // A4 width in mm
-      const pageHeight = 297; // A4 height in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      let position = 0;
+      const pageWidth = 210;
+      const pageHeight = 297;
+      const margin = 15;
+      const contentWidth = pageWidth - (margin * 2);
+      let yPos = margin;
 
-      // Add first page
-      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
-      heightLeft -= pageHeight;
+      // Helper function to add text
+      const addText = (text: string, size: number, style: 'normal' | 'bold' = 'normal', align: 'left' | 'center' | 'right' = 'left') => {
+        pdf.setFontSize(size);
+        if (style === 'bold') {
+          pdf.setFont('helvetica', 'bold');
+        } else {
+          pdf.setFont('helvetica', 'normal');
+        }
 
-      // Add additional pages if needed
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
-        heightLeft -= pageHeight;
+        if (align === 'center') {
+          pdf.text(text, pageWidth / 2, yPos, { align: 'center' });
+        } else if (align === 'right') {
+          pdf.text(text, pageWidth - margin, yPos, { align: 'right' });
+        } else {
+          pdf.text(text, margin, yPos);
+        }
+      };
+
+      // Header
+      pdf.setFillColor(79, 70, 229); // Indigo color
+      pdf.rect(0, 0, pageWidth, 35, 'F');
+      pdf.setTextColor(255, 255, 255);
+      yPos = 15;
+      addText('SINAV PERFORMANS RAPORU', 18, 'bold', 'center');
+      yPos = 25;
+      addText(`${template?.name} - ${new Date(examDate).toLocaleDateString('tr-TR')}`, 12, 'normal', 'center');
+
+      // Reset text color
+      pdf.setTextColor(0, 0, 0);
+      yPos = 45;
+
+      // Exam Score (prominent)
+      if (examScore !== null) {
+        pdf.setFillColor(249, 250, 251);
+        pdf.roundedRect(margin, yPos, contentWidth, 20, 3, 3, 'F');
+        pdf.setFillColor(79, 70, 229);
+        pdf.roundedRect(margin + 5, yPos + 5, 60, 10, 2, 2, 'F');
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('SINAV PUANI', margin + 35, yPos + 12, { align: 'center' });
+        pdf.setTextColor(79, 70, 229);
+        pdf.setFontSize(16);
+        pdf.text(`${examScore} / 500`, margin + 110, yPos + 13, { align: 'center' });
+        pdf.setTextColor(0, 0, 0);
+        yPos += 25;
       }
+
+      // Overall Statistics
+      yPos += 5;
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('GENEL İSTATİSTİKLER', margin, yPos);
+      yPos += 8;
+
+      const statsBoxWidth = (contentWidth - 10) / 4;
+      const statsY = yPos;
+
+      // Doğru
+      pdf.setFillColor(220, 252, 231);
+      pdf.roundedRect(margin, statsY, statsBoxWidth, 18, 2, 2, 'F');
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('Doğru', margin + statsBoxWidth / 2, statsY + 6, { align: 'center' });
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(22, 163, 74);
+      pdf.text(String(result.correct_count), margin + statsBoxWidth / 2, statsY + 14, { align: 'center' });
+      pdf.setTextColor(0, 0, 0);
+
+      // Yanlış
+      pdf.setFillColor(254, 226, 226);
+      pdf.roundedRect(margin + statsBoxWidth + 3, statsY, statsBoxWidth, 18, 2, 2, 'F');
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('Yanlış', margin + statsBoxWidth + 3 + statsBoxWidth / 2, statsY + 6, { align: 'center' });
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(220, 38, 38);
+      pdf.text(String(result.wrong_count), margin + statsBoxWidth + 3 + statsBoxWidth / 2, statsY + 14, { align: 'center' });
+      pdf.setTextColor(0, 0, 0);
+
+      // Boş
+      pdf.setFillColor(243, 244, 246);
+      pdf.roundedRect(margin + (statsBoxWidth + 3) * 2, statsY, statsBoxWidth, 18, 2, 2, 'F');
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('Boş', margin + (statsBoxWidth + 3) * 2 + statsBoxWidth / 2, statsY + 6, { align: 'center' });
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(107, 114, 128);
+      pdf.text(String(result.empty_count), margin + (statsBoxWidth + 3) * 2 + statsBoxWidth / 2, statsY + 14, { align: 'center' });
+      pdf.setTextColor(0, 0, 0);
+
+      // Net
+      pdf.setFillColor(224, 231, 255);
+      pdf.roundedRect(margin + (statsBoxWidth + 3) * 3, statsY, statsBoxWidth, 18, 2, 2, 'F');
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('Net', margin + (statsBoxWidth + 3) * 3 + statsBoxWidth / 2, statsY + 6, { align: 'center' });
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(79, 70, 229);
+      pdf.text(result.net_score.toFixed(2), margin + (statsBoxWidth + 3) * 3 + statsBoxWidth / 2, statsY + 14, { align: 'center' });
+      pdf.setTextColor(0, 0, 0);
+
+      yPos = statsY + 25;
+
+      // Weak Topics
+      const weakTopics = Array.from(topicStats.entries())
+        .map(([topic, stats]) => {
+          const total = stats.correct + stats.wrong + stats.empty;
+          const successRate = total > 0 ? (stats.correct / total) * 100 : 0;
+          return { topic, stats, total, successRate };
+        })
+        .filter(t => t.successRate < 60)
+        .sort((a, b) => a.successRate - b.successRate);
+
+      if (weakTopics.length > 0) {
+        yPos += 5;
+        pdf.setFontSize(12);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(194, 65, 12);
+        pdf.text('⚠ ACİL ÇALIŞILMASI GEREKEN KONULAR', margin, yPos);
+        pdf.setTextColor(0, 0, 0);
+        yPos += 7;
+
+        weakTopics.slice(0, 5).forEach(({ topic, stats, successRate }) => {
+          pdf.setFillColor(254, 243, 199);
+          pdf.roundedRect(margin, yPos, contentWidth, 12, 2, 2, 'F');
+
+          pdf.setFontSize(9);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text(topic.substring(0, 50), margin + 2, yPos + 5);
+
+          pdf.setTextColor(194, 65, 12);
+          pdf.text(`%${Math.round(successRate)}`, margin + contentWidth - 15, yPos + 5);
+          pdf.setTextColor(0, 0, 0);
+
+          pdf.setFontSize(8);
+          pdf.setFont('helvetica', 'normal');
+          pdf.setTextColor(107, 114, 128);
+          pdf.text(`D:${stats.correct} Y:${stats.wrong} B:${stats.empty}`, margin + 2, yPos + 9);
+          pdf.setTextColor(0, 0, 0);
+
+          yPos += 13;
+        });
+      } else {
+        yPos += 5;
+        pdf.setFillColor(220, 252, 231);
+        pdf.roundedRect(margin, yPos, contentWidth, 15, 2, 2, 'F');
+        pdf.setFontSize(11);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(22, 163, 74);
+        pdf.text('✓ Harika! Tüm Konularda İyi Durumdasın', margin + contentWidth / 2, yPos + 7, { align: 'center' });
+        pdf.setFontSize(9);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text('Tüm konularda %60\'ın üzerinde başarı gösterdin. Böyle devam et!', margin + contentWidth / 2, yPos + 11, { align: 'center' });
+        pdf.setTextColor(0, 0, 0);
+        yPos += 18;
+      }
+
+      // Topic Analysis Table
+      yPos += 5;
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('KONU BAZLI DETAYLI ANALİZ', margin, yPos);
+      yPos += 7;
+
+      // Table header
+      pdf.setFillColor(79, 70, 229);
+      pdf.rect(margin, yPos, contentWidth, 8, 'F');
+      pdf.setFontSize(8);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(255, 255, 255);
+      pdf.text('Konu', margin + 2, yPos + 5);
+      pdf.text('D', margin + 110, yPos + 5);
+      pdf.text('Y', margin + 125, yPos + 5);
+      pdf.text('B', margin + 140, yPos + 5);
+      pdf.text('Başarı', margin + 155, yPos + 5);
+      pdf.setTextColor(0, 0, 0);
+      yPos += 8;
+
+      // Table rows (limit to fit on page)
+      const topicsArray = Array.from(topicStats.entries());
+      const maxTopics = Math.min(topicsArray.length, 12);
+
+      topicsArray.slice(0, maxTopics).forEach(([topic, stats], index) => {
+        const total = stats.correct + stats.wrong + stats.empty;
+        const successRate = total > 0 ? (stats.correct / total) * 100 : 0;
+
+        if (index % 2 === 0) {
+          pdf.setFillColor(249, 250, 251);
+          pdf.rect(margin, yPos - 4, contentWidth, 6, 'F');
+        }
+
+        pdf.setFontSize(7);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(topic.substring(0, 35), margin + 2, yPos);
+        pdf.text(String(stats.correct), margin + 110, yPos);
+        pdf.text(String(stats.wrong), margin + 125, yPos);
+        pdf.text(String(stats.empty), margin + 140, yPos);
+
+        // Success rate with color
+        if (successRate >= 75) {
+          pdf.setTextColor(22, 163, 74);
+        } else if (successRate >= 50) {
+          pdf.setTextColor(234, 179, 8);
+        } else {
+          pdf.setTextColor(220, 38, 38);
+        }
+        pdf.text(`%${Math.round(successRate)}`, margin + 155, yPos);
+        pdf.setTextColor(0, 0, 0);
+
+        yPos += 6;
+      });
+
+      // Recommendations
+      yPos += 8;
+      if (yPos > 260) {
+        // If too close to bottom, skip recommendations
+      } else {
+        pdf.setFontSize(12);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('ÖNERİLER', margin, yPos);
+        yPos += 7;
+
+        pdf.setFontSize(8);
+        pdf.setFont('helvetica', 'normal');
+        const recommendations = [];
+
+        if (weakTopics.length > 0) {
+          recommendations.push(`• ${weakTopics.length} konuda ekstra çalışma yapman öneriliyor.`);
+        }
+        if (result.empty_count > template?.total_questions * 0.1) {
+          recommendations.push(`• Boş bıraktığın ${result.empty_count} soruyu azaltmaya çalış.`);
+        }
+        if (result.wrong_count > result.correct_count * 0.5) {
+          recommendations.push('• Yanlış sayını azaltmak için konu tekrarı yap.');
+        }
+        if (classResults.length > 1 && result.net_score < classAverage) {
+          recommendations.push('• Sınıf ortalamasını yakalamak için düzenli çalış.');
+        }
+        if (recommendations.length === 0) {
+          recommendations.push('• Harika bir performans! Böyle devam et.');
+        }
+
+        recommendations.forEach(rec => {
+          pdf.text(rec, margin + 2, yPos);
+          yPos += 5;
+        });
+      }
+
+      // Footer
+      pdf.setFontSize(7);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(107, 114, 128);
+      pdf.text(`Rapor Tarihi: ${new Date().toLocaleDateString('tr-TR')}`, margin, pageHeight - 10);
+      pdf.text('Başarı Yolu - Öğrenci Performans Sistemi', pageWidth - margin, pageHeight - 10, { align: 'right' });
 
       pdf.save(`Sınav_Raporu_${result.template?.name}_${examDate}.pdf`);
     } catch (error) {
@@ -237,6 +571,22 @@ export default function StudentExamResultDetail({
             <span>{template?.total_questions} Soru</span>
           </div>
         </div>
+
+        {/* Exam Score - Prominent Display */}
+        {examScore !== null && (
+          <div className="bg-gradient-to-r from-indigo-500 to-purple-500 rounded-xl shadow-lg p-6 text-white">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm opacity-90 mb-1">Sınav Puanın</p>
+                <p className="text-5xl font-bold">{examScore}</p>
+                <p className="text-xl opacity-90 mt-1">/ 500</p>
+              </div>
+              <div className="p-4 bg-white bg-opacity-20 rounded-xl">
+                <Award className="h-16 w-16" />
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Overall Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
