@@ -201,15 +201,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Refresh session
   const refreshSession = useCallback(async () => {
-    const session = await loadSession();
-    if (session) {
-      setUser(session);
-      saveSession(session);
-    } else {
-      setUser(null);
-      saveSession(null);
+    try {
+      const session = await loadSession();
+      if (session) {
+        setUser(session);
+        saveSession(session);
+      } else {
+        setUser(null);
+        saveSession(null);
+      }
+    } catch (error) {
+      console.error('Error refreshing session:', error);
+      // On error, keep current user state but log the issue
     }
   }, [loadSession, saveSession]);
+
+  // Handle visibility change - refresh session when user returns to tab
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible' && user) {
+        // Only refresh if we have a user and tab becomes visible
+        try {
+          await refreshSession();
+        } catch (error) {
+          console.error('Failed to refresh session on visibility change:', error);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [user, refreshSession]);
+
+  // Handle page focus - additional safety net for session refresh
+  useEffect(() => {
+    const handleFocus = async () => {
+      if (user) {
+        try {
+          await refreshSession();
+        } catch (error) {
+          console.error('Failed to refresh session on focus:', error);
+        }
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [user, refreshSession]);
 
   const value: AuthContextType = {
     user,

@@ -65,9 +65,16 @@ class ErrorBoundary extends Component<Props, State> {
               Sayfa yüklenirken beklenmeyen bir hata oluştu. Lütfen sayfayı yenileyin.
             </p>
 
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+            {this.state.error && (
               <div className="mb-4 p-3 bg-gray-100 rounded-lg overflow-auto max-h-40">
-                <p className="text-xs font-mono text-red-600">{this.state.error.toString()}</p>
+                <p className="text-xs font-mono text-red-600 break-words">
+                  {this.state.error.toString()}
+                </p>
+                {this.state.error.message && (
+                  <p className="text-xs font-mono text-gray-600 mt-2 break-words">
+                    {this.state.error.message}
+                  </p>
+                )}
               </div>
             )}
 

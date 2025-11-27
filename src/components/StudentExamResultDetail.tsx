@@ -26,6 +26,107 @@ interface StudentExamResultDetailProps {
   onBack: () => void;
 }
 
+// Helper function to calculate exam score based on exam type
+const calculateExamScore = (
+  template: any,
+  topicStats: Map<string, { correct: number; wrong: number; empty: number }>,
+  netScore: number
+): number | null => {
+  const examType = template?.exam_type;
+  if (!examType) return null;
+
+  // Helper function to calculate net score for a subject
+  const calculateNetScore = (correct: number, wrong: number) => {
+    return Math.max(0, correct - (wrong / 4));
+  };
+
+  // Group topics by subject (using heuristics)
+  const subjectStats = new Map<string, { correct: number; wrong: number; empty: number }>();
+
+  topicStats.forEach((stats, topic) => {
+    const topicLower = topic.toLowerCase();
+    let subject = 'Diğer';
+
+    // Türkçe
+    if (topicLower.includes('türkçe') || topicLower.includes('dil') || topicLower.includes('sözcük') ||
+        topicLower.includes('cümle') || topicLower.includes('paragraf') || topicLower.includes('anlam')) {
+      subject = 'Türkçe';
+    }
+    // Matematik
+    else if (topicLower.includes('matematik') || topicLower.includes('geometri') || topicLower.includes('sayı') ||
+             topicLower.includes('fonksiyon') || topicLower.includes('olasılık') || topicLower.includes('alan')) {
+      subject = 'Matematik';
+    }
+    // Fen
+    else if (topicLower.includes('fen') || topicLower.includes('fizik') || topicLower.includes('kimya') ||
+             topicLower.includes('biyoloji') || topicLower.includes('bilim')) {
+      subject = 'Fen';
+    }
+    // Sosyal
+    else if (topicLower.includes('sosyal') || topicLower.includes('tarih') || topicLower.includes('coğrafya') ||
+             topicLower.includes('felsefe') || topicLower.includes('din') || topicLower.includes('inkılap')) {
+      subject = 'Sosyal';
+    }
+    // Edebiyat
+    else if (topicLower.includes('edebiyat') || topicLower.includes('şiir') || topicLower.includes('roman')) {
+      subject = 'Edebiyat';
+    }
+    // İngilizce
+    else if (topicLower.includes('ingilizce') || topicLower.includes('english')) {
+      subject = 'İngilizce';
+    }
+
+    if (!subjectStats.has(subject)) {
+      subjectStats.set(subject, { correct: 0, wrong: 0, empty: 0 });
+    }
+
+    const subjectStat = subjectStats.get(subject)!;
+    subjectStat.correct += stats.correct;
+    subjectStat.wrong += stats.wrong;
+    subjectStat.empty += stats.empty;
+  });
+
+  // Calculate score based on exam type
+  if (examType === 'TYT') {
+    const turkce = subjectStats.get('Türkçe') || { correct: 0, wrong: 0, empty: 0 };
+    const matematik = subjectStats.get('Matematik') || { correct: 0, wrong: 0, empty: 0 };
+    const fen = subjectStats.get('Fen') || { correct: 0, wrong: 0, empty: 0 };
+    const sosyal = subjectStats.get('Sosyal') || { correct: 0, wrong: 0, empty: 0 };
+
+    const turkceNet = calculateNetScore(turkce.correct, turkce.wrong);
+    const matematikNet = calculateNetScore(matematik.correct, matematik.wrong);
+    const fenNet = calculateNetScore(fen.correct, fen.wrong);
+    const sosyalNet = calculateNetScore(sosyal.correct, sosyal.wrong);
+
+    const hamPuan = 100 + (turkceNet * 3.33) + (matematikNet * 3.33) + (fenNet * 3.45) + (sosyalNet * 3.45);
+    return Math.min(500, Math.max(100, Math.round(hamPuan * 100) / 100));
+  } else if (examType === 'AYT') {
+    // For AYT, we'll use a simplified calculation based on total net
+    const aytHamPuan = (netScore * 5) + 100;
+    return Math.min(500, Math.max(100, Math.round(aytHamPuan * 100) / 100));
+  } else if (examType === 'LGS') {
+    const turkce = subjectStats.get('Türkçe') || { correct: 0, wrong: 0, empty: 0 };
+    const matematik = subjectStats.get('Matematik') || { correct: 0, wrong: 0, empty: 0 };
+    const fen = subjectStats.get('Fen') || { correct: 0, wrong: 0, empty: 0 };
+    const sosyal = subjectStats.get('Sosyal') || { correct: 0, wrong: 0, empty: 0 };
+    const ingilizce = subjectStats.get('İngilizce') || { correct: 0, wrong: 0, empty: 0 };
+
+    const turkceNet = calculateNetScore(turkce.correct, turkce.wrong);
+    const matematikNet = calculateNetScore(matematik.correct, matematik.wrong);
+    const fenNet = calculateNetScore(fen.correct, fen.wrong);
+    const sosyalNet = calculateNetScore(sosyal.correct, sosyal.wrong);
+    const ingilizceNet = calculateNetScore(ingilizce.correct, ingilizce.wrong);
+
+    const katsayiliToplam = (turkceNet * 4) + (matematikNet * 4) + (fenNet * 4) +
+                            (sosyalNet * 1) + (ingilizceNet * 1);
+
+    const hamPuan = (katsayiliToplam * 500) / 270;
+    return Math.min(500, Math.max(0, Math.round(hamPuan * 100) / 100));
+  }
+
+  return null;
+};
+
 export default function StudentExamResultDetail({
   userId,
   institutionId,
@@ -84,106 +185,7 @@ export default function StudentExamResultDetail({
     }
   };
 
-  // Calculate exam score based on exam type
-  const calculateExamScore = () => {
-    const examType = template?.exam_type;
-    if (!examType) return null;
-
-    // Helper function to calculate net score for a subject
-    const calculateNetScore = (correct: number, wrong: number) => {
-      return Math.max(0, correct - (wrong / 4));
-    };
-
-    // Group topics by subject (using heuristics)
-    const subjectStats = new Map<string, { correct: number; wrong: number; empty: number }>();
-
-    topicStats.forEach((stats, topic) => {
-      const topicLower = topic.toLowerCase();
-      let subject = 'Diğer';
-
-      // Türkçe
-      if (topicLower.includes('türkçe') || topicLower.includes('dil') || topicLower.includes('sözcük') ||
-          topicLower.includes('cümle') || topicLower.includes('paragraf') || topicLower.includes('anlam')) {
-        subject = 'Türkçe';
-      }
-      // Matematik
-      else if (topicLower.includes('matematik') || topicLower.includes('geometri') || topicLower.includes('sayı') ||
-               topicLower.includes('fonksiyon') || topicLower.includes('olasılık') || topicLower.includes('alan')) {
-        subject = 'Matematik';
-      }
-      // Fen
-      else if (topicLower.includes('fen') || topicLower.includes('fizik') || topicLower.includes('kimya') ||
-               topicLower.includes('biyoloji') || topicLower.includes('bilim')) {
-        subject = 'Fen';
-      }
-      // Sosyal
-      else if (topicLower.includes('sosyal') || topicLower.includes('tarih') || topicLower.includes('coğrafya') ||
-               topicLower.includes('felsefe') || topicLower.includes('din') || topicLower.includes('inkılap')) {
-        subject = 'Sosyal';
-      }
-      // Edebiyat
-      else if (topicLower.includes('edebiyat') || topicLower.includes('şiir') || topicLower.includes('roman')) {
-        subject = 'Edebiyat';
-      }
-      // İngilizce
-      else if (topicLower.includes('ingilizce') || topicLower.includes('english')) {
-        subject = 'İngilizce';
-      }
-
-      if (!subjectStats.has(subject)) {
-        subjectStats.set(subject, { correct: 0, wrong: 0, empty: 0 });
-      }
-
-      const subjectStat = subjectStats.get(subject)!;
-      subjectStat.correct += stats.correct;
-      subjectStat.wrong += stats.wrong;
-      subjectStat.empty += stats.empty;
-    });
-
-    // Calculate score based on exam type
-    if (examType === 'TYT') {
-      const turkce = subjectStats.get('Türkçe') || { correct: 0, wrong: 0, empty: 0 };
-      const matematik = subjectStats.get('Matematik') || { correct: 0, wrong: 0, empty: 0 };
-      const fen = subjectStats.get('Fen') || { correct: 0, wrong: 0, empty: 0 };
-      const sosyal = subjectStats.get('Sosyal') || { correct: 0, wrong: 0, empty: 0 };
-
-      const turkceNet = calculateNetScore(turkce.correct, turkce.wrong);
-      const matematikNet = calculateNetScore(matematik.correct, matematik.wrong);
-      const fenNet = calculateNetScore(fen.correct, fen.wrong);
-      const sosyalNet = calculateNetScore(sosyal.correct, sosyal.wrong);
-
-      const hamPuan = 100 + (turkceNet * 3.33) + (matematikNet * 3.33) + (fenNet * 3.45) + (sosyalNet * 3.45);
-      return Math.min(500, Math.max(100, Math.round(hamPuan * 100) / 100));
-    } else if (examType === 'AYT') {
-      // For AYT, we'll use a simplified calculation based on total net
-      const aytHamPuan = (result.net_score * 5) + 100;
-      return Math.min(500, Math.max(100, Math.round(aytHamPuan * 100) / 100));
-    } else if (examType === 'LGS') {
-      const turkce = subjectStats.get('Türkçe') || { correct: 0, wrong: 0, empty: 0 };
-      const matematik = subjectStats.get('Matematik') || { correct: 0, wrong: 0, empty: 0 };
-      const fen = subjectStats.get('Fen') || { correct: 0, wrong: 0, empty: 0 };
-      const sosyal = subjectStats.get('Sosyal') || { correct: 0, wrong: 0, empty: 0 };
-      const ingilizce = subjectStats.get('İngilizce') || { correct: 0, wrong: 0, empty: 0 };
-
-      const turkceNet = calculateNetScore(turkce.correct, turkce.wrong);
-      const matematikNet = calculateNetScore(matematik.correct, matematik.wrong);
-      const fenNet = calculateNetScore(fen.correct, fen.wrong);
-      const sosyalNet = calculateNetScore(sosyal.correct, sosyal.wrong);
-      const ingilizceNet = calculateNetScore(ingilizce.correct, ingilizce.wrong);
-
-      const katsayiliToplam = (turkceNet * 4) + (matematikNet * 4) + (fenNet * 4) +
-                              (sosyalNet * 1) + (ingilizceNet * 1);
-
-      const hamPuan = (katsayiliToplam * 500) / 270;
-      return Math.min(500, Math.max(0, Math.round(hamPuan * 100) / 100));
-    }
-
-    return null;
-  };
-
-  const examScore = calculateExamScore();
-
-  const downloadPDF = async () => {
+  const downloadPDF = async (topicStats: Map<string, { correct: number; wrong: number; empty: number }>, template: any, examScore: number | null) => {
     if (!result) return;
 
     try {
@@ -537,6 +539,9 @@ export default function StudentExamResultDetail({
 
   const improvement = previousAverage !== null ? result.net_score - previousAverage : null;
 
+  // Calculate exam score using the helper function
+  const examScore = calculateExamScore(template, topicStats, result.net_score);
+
   return (
     <div className="space-y-6">
       {/* Header Actions */}
@@ -549,7 +554,7 @@ export default function StudentExamResultDetail({
           Geri Dön
         </button>
         <button
-          onClick={downloadPDF}
+          onClick={() => downloadPDF(topicStats, template, examScore)}
           disabled={downloading}
           className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
         >
