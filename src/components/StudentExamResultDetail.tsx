@@ -15,8 +15,9 @@ import {
 } from 'lucide-react';
 import { fetchExternalExamResults, type ExternalExamResult } from '../lib/institutionExternalExamApi';
 import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 
 interface StudentExamResultDetailProps {
   userId: string;
@@ -185,7 +186,11 @@ export default function StudentExamResultDetail({
     }
   };
 
-  const downloadPDF = async (topicStats: Map<string, { correct: number; wrong: number; empty: number }>, template: any, examScore: number | null) => {
+  const downloadPDF = async (
+    topicStats: Map<string, { correct: number; wrong: number; empty: number }>,
+    template: any,
+    examScore: number | null
+  ) => {
     if (!result) return;
 
     try {
@@ -200,119 +205,77 @@ export default function StudentExamResultDetail({
 
       const pageWidth = 210;
       const pageHeight = 297;
-      const margin = 15;
-      const contentWidth = pageWidth - (margin * 2);
+      const margin = 12;
+      const contentWidth = pageWidth - margin * 2;
       let yPos = margin;
 
-      // Helper function to add text
-      const addText = (text: string, size: number, style: 'normal' | 'bold' = 'normal', align: 'left' | 'center' | 'right' = 'left') => {
-        pdf.setFontSize(size);
-        if (style === 'bold') {
-          pdf.setFont('helvetica', 'bold');
-        } else {
-          pdf.setFont('helvetica', 'normal');
-        }
-
-        if (align === 'center') {
-          pdf.text(text, pageWidth / 2, yPos, { align: 'center' });
-        } else if (align === 'right') {
-          pdf.text(text, pageWidth - margin, yPos, { align: 'right' });
-        } else {
-          pdf.text(text, margin, yPos);
-        }
-      };
-
-      // Header
-      pdf.setFillColor(79, 70, 229); // Indigo color
-      pdf.rect(0, 0, pageWidth, 35, 'F');
+      // PAGE 1: HEADER & STATISTICS
+      // Header with gradient effect
+      pdf.setFillColor(79, 70, 229);
+      pdf.rect(0, 0, pageWidth, 30, 'F');
       pdf.setTextColor(255, 255, 255);
-      yPos = 15;
-      addText('SINAV PERFORMANS RAPORU', 18, 'bold', 'center');
-      yPos = 25;
-      addText(`${template?.name} - ${new Date(examDate).toLocaleDateString('tr-TR')}`, 12, 'normal', 'center');
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('SINAV PERFORMANS RAPORU', pageWidth / 2, 12, { align: 'center' });
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`${template?.name || ''} - ${new Date(examDate).toLocaleDateString('tr-TR')}`, pageWidth / 2, 22, { align: 'center' });
 
-      // Reset text color
       pdf.setTextColor(0, 0, 0);
-      yPos = 45;
+      yPos = 38;
 
-      // Exam Score (prominent)
+      // Exam Score Box (prominent)
       if (examScore !== null) {
-        pdf.setFillColor(249, 250, 251);
-        pdf.roundedRect(margin, yPos, contentWidth, 20, 3, 3, 'F');
-        pdf.setFillColor(79, 70, 229);
-        pdf.roundedRect(margin + 5, yPos + 5, 60, 10, 2, 2, 'F');
-        pdf.setTextColor(255, 255, 255);
-        pdf.setFontSize(10);
+        pdf.setFillColor(240, 240, 255);
+        pdf.roundedRect(margin, yPos, contentWidth, 16, 2, 2, 'F');
+        pdf.setFontSize(11);
         pdf.setFont('helvetica', 'bold');
-        pdf.text('SINAV PUANI', margin + 35, yPos + 12, { align: 'center' });
         pdf.setTextColor(79, 70, 229);
-        pdf.setFontSize(16);
-        pdf.text(`${examScore} / 500`, margin + 110, yPos + 13, { align: 'center' });
+        pdf.text('SINAV PUANI:', margin + 4, yPos + 6);
+        pdf.setFontSize(14);
+        pdf.text(`${examScore} / 500`, margin + 45, yPos + 6);
         pdf.setTextColor(0, 0, 0);
-        yPos += 25;
+        pdf.setFontSize(8);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(`Sinav Turu: ${template?.exam_type || ''}`, margin + contentWidth - 50, yPos + 6);
+        yPos += 20;
       }
 
-      // Overall Statistics
-      yPos += 5;
-      pdf.setFontSize(14);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('GENEL İSTATİSTİKLER', margin, yPos);
-      yPos += 8;
+      // Statistics table using autoTable (supports Turkish characters)
+      autoTable(pdf, {
+        startY: yPos,
+        head: [['Dogru', 'Yanlis', 'Bos', 'Net']],
+        body: [[
+          String(result.correct_count),
+          String(result.wrong_count),
+          String(result.empty_count),
+          result.net_score.toFixed(2),
+        ]],
+        theme: 'grid',
+        styles: {
+          fontSize: 10,
+          halign: 'center',
+          font: 'helvetica',
+        },
+        headStyles: {
+          fillColor: [79, 70, 229],
+          textColor: [255, 255, 255],
+          fontSize: 10,
+          font: 'helvetica',
+          fontStyle: 'bold',
+        },
+        columnStyles: {
+          0: { cellWidth: contentWidth / 4 },
+          1: { cellWidth: contentWidth / 4 },
+          2: { cellWidth: contentWidth / 4 },
+          3: { cellWidth: contentWidth / 4 },
+        },
+        margin: { left: margin, right: margin },
+      });
 
-      const statsBoxWidth = (contentWidth - 10) / 4;
-      const statsY = yPos;
+      yPos = (pdf as any).lastAutoTable.finalY + 8;
 
-      // Doğru
-      pdf.setFillColor(220, 252, 231);
-      pdf.roundedRect(margin, statsY, statsBoxWidth, 18, 2, 2, 'F');
-      pdf.setFontSize(9);
-      pdf.setFont('helvetica', 'normal');
-      pdf.text('Doğru', margin + statsBoxWidth / 2, statsY + 6, { align: 'center' });
-      pdf.setFontSize(16);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(22, 163, 74);
-      pdf.text(String(result.correct_count), margin + statsBoxWidth / 2, statsY + 14, { align: 'center' });
-      pdf.setTextColor(0, 0, 0);
-
-      // Yanlış
-      pdf.setFillColor(254, 226, 226);
-      pdf.roundedRect(margin + statsBoxWidth + 3, statsY, statsBoxWidth, 18, 2, 2, 'F');
-      pdf.setFontSize(9);
-      pdf.setFont('helvetica', 'normal');
-      pdf.text('Yanlış', margin + statsBoxWidth + 3 + statsBoxWidth / 2, statsY + 6, { align: 'center' });
-      pdf.setFontSize(16);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(220, 38, 38);
-      pdf.text(String(result.wrong_count), margin + statsBoxWidth + 3 + statsBoxWidth / 2, statsY + 14, { align: 'center' });
-      pdf.setTextColor(0, 0, 0);
-
-      // Boş
-      pdf.setFillColor(243, 244, 246);
-      pdf.roundedRect(margin + (statsBoxWidth + 3) * 2, statsY, statsBoxWidth, 18, 2, 2, 'F');
-      pdf.setFontSize(9);
-      pdf.setFont('helvetica', 'normal');
-      pdf.text('Boş', margin + (statsBoxWidth + 3) * 2 + statsBoxWidth / 2, statsY + 6, { align: 'center' });
-      pdf.setFontSize(16);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(107, 114, 128);
-      pdf.text(String(result.empty_count), margin + (statsBoxWidth + 3) * 2 + statsBoxWidth / 2, statsY + 14, { align: 'center' });
-      pdf.setTextColor(0, 0, 0);
-
-      // Net
-      pdf.setFillColor(224, 231, 255);
-      pdf.roundedRect(margin + (statsBoxWidth + 3) * 3, statsY, statsBoxWidth, 18, 2, 2, 'F');
-      pdf.setFontSize(9);
-      pdf.setFont('helvetica', 'normal');
-      pdf.text('Net', margin + (statsBoxWidth + 3) * 3 + statsBoxWidth / 2, statsY + 6, { align: 'center' });
-      pdf.setFontSize(16);
-      pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(79, 70, 229);
-      pdf.text(result.net_score.toFixed(2), margin + (statsBoxWidth + 3) * 3 + statsBoxWidth / 2, statsY + 14, { align: 'center' });
-      pdf.setTextColor(0, 0, 0);
-
-      yPos = statsY + 25;
-
-      // Weak Topics
+      // Weak Topics Section (compact)
       const weakTopics = Array.from(topicStats.entries())
         .map(([topic, stats]) => {
           const total = stats.correct + stats.wrong + stats.empty;
@@ -322,149 +285,214 @@ export default function StudentExamResultDetail({
         .filter(t => t.successRate < 60)
         .sort((a, b) => a.successRate - b.successRate);
 
-      if (weakTopics.length > 0) {
-        yPos += 5;
-        pdf.setFontSize(12);
-        pdf.setFont('helvetica', 'bold');
-        pdf.setTextColor(194, 65, 12);
-        pdf.text('⚠ ACİL ÇALIŞILMASI GEREKEN KONULAR', margin, yPos);
-        pdf.setTextColor(0, 0, 0);
-        yPos += 7;
+      // Check for recurring weak topics from previous exams
+      const recurringWeakTopics = weakTopics.filter(wt => {
+        // Check if this topic was also weak in previous exams
+        const wasWeakBefore = previousResults.some(prevResult => {
+          const prevTemplate = prevResult.template as any;
+          const prevMapping = prevTemplate?.question_mapping || [];
+          const prevTopicStats = new Map<string, { correct: number; wrong: number; empty: number }>();
 
-        weakTopics.slice(0, 5).forEach(({ topic, stats, successRate }) => {
-          pdf.setFillColor(254, 243, 199);
-          pdf.roundedRect(margin, yPos, contentWidth, 12, 2, 2, 'F');
+          Object.entries(prevResult.answers).forEach(([qNum, answer]: [string, any]) => {
+            const q = prevMapping.find((m: any) => m.questionNumber === parseInt(qNum));
+            if (q?.topic === wt.topic) {
+              if (!prevTopicStats.has(q.topic)) {
+                prevTopicStats.set(q.topic, { correct: 0, wrong: 0, empty: 0 });
+              }
+              const s = prevTopicStats.get(q.topic)!;
+              if (answer.studentAnswer === 'X') s.empty++;
+              else if (answer.isCorrect) s.correct++;
+              else s.wrong++;
+            }
+          });
 
-          pdf.setFontSize(9);
-          pdf.setFont('helvetica', 'bold');
-          pdf.text(topic.substring(0, 50), margin + 2, yPos + 5);
-
-          pdf.setTextColor(194, 65, 12);
-          pdf.text(`%${Math.round(successRate)}`, margin + contentWidth - 15, yPos + 5);
-          pdf.setTextColor(0, 0, 0);
-
-          pdf.setFontSize(8);
-          pdf.setFont('helvetica', 'normal');
-          pdf.setTextColor(107, 114, 128);
-          pdf.text(`D:${stats.correct} Y:${stats.wrong} B:${stats.empty}`, margin + 2, yPos + 9);
-          pdf.setTextColor(0, 0, 0);
-
-          yPos += 13;
+          const stats = prevTopicStats.get(wt.topic);
+          if (stats) {
+            const total = stats.correct + stats.wrong + stats.empty;
+            const rate = total > 0 ? (stats.correct / total) * 100 : 0;
+            return rate < 60;
+          }
+          return false;
         });
-      } else {
-        yPos += 5;
-        pdf.setFillColor(220, 252, 231);
-        pdf.roundedRect(margin, yPos, contentWidth, 15, 2, 2, 'F');
+        return wasWeakBefore;
+      });
+
+      if (weakTopics.length > 0) {
         pdf.setFontSize(11);
         pdf.setFont('helvetica', 'bold');
-        pdf.setTextColor(22, 163, 74);
-        pdf.text('✓ Harika! Tüm Konularda İyi Durumdasın', margin + contentWidth / 2, yPos + 7, { align: 'center' });
-        pdf.setFontSize(9);
-        pdf.setFont('helvetica', 'normal');
-        pdf.text('Tüm konularda %60\'ın üzerinde başarı gösterdin. Böyle devam et!', margin + contentWidth / 2, yPos + 11, { align: 'center' });
+        pdf.setTextColor(194, 65, 12);
+        pdf.text('ACIL CALISILMASI GEREKEN KONULAR', margin, yPos);
         pdf.setTextColor(0, 0, 0);
-        yPos += 18;
+        yPos += 6;
+
+        // Use autoTable for compact display
+        const weakTopicData = weakTopics.slice(0, 10).map(wt => {
+          const isRecurring = recurringWeakTopics.some(r => r.topic === wt.topic);
+          return [
+            (isRecurring ? '🔴 ' : '') + wt.topic,
+            `${wt.stats.correct}`,
+            `${wt.stats.wrong}`,
+            `${wt.stats.empty}`,
+            `%${Math.round(wt.successRate)}`,
+          ];
+        });
+
+        autoTable(pdf, {
+          startY: yPos,
+          head: [['Konu', 'D', 'Y', 'B', 'Basari']],
+          body: weakTopicData,
+          theme: 'striped',
+          styles: {
+            fontSize: 7,
+            cellPadding: 1.5,
+            font: 'helvetica',
+          },
+          headStyles: {
+            fillColor: [255, 243, 205],
+            textColor: [0, 0, 0],
+            fontSize: 8,
+            fontStyle: 'bold',
+          },
+          columnStyles: {
+            0: { cellWidth: contentWidth * 0.50 },
+            1: { cellWidth: contentWidth * 0.10, halign: 'center' },
+            2: { cellWidth: contentWidth * 0.10, halign: 'center' },
+            3: { cellWidth: contentWidth * 0.10, halign: 'center' },
+            4: { cellWidth: contentWidth * 0.20, halign: 'right' },
+          },
+          margin: { left: margin, right: margin },
+        });
+
+        yPos = (pdf as any).lastAutoTable.finalY + 6;
+
+        // Note about recurring topics
+        if (recurringWeakTopics.length > 0) {
+          pdf.setFontSize(7);
+          pdf.setFont('helvetica', 'italic');
+          pdf.setTextColor(220, 38, 38);
+          pdf.text(`🔴 = Bu konu önceki denemede de zayıftı (${recurringWeakTopics.length} tekrarlayan konu)`, margin, yPos);
+          pdf.setTextColor(0, 0, 0);
+          yPos += 5;
+        }
       }
 
-      // Topic Analysis Table
-      yPos += 5;
-      pdf.setFontSize(12);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('KONU BAZLI DETAYLI ANALİZ', margin, yPos);
-      yPos += 7;
+      // Check if we need a new page
+      if (yPos > pageHeight - 60) {
+        pdf.addPage();
+        yPos = margin;
+      }
 
-      // Table header
-      pdf.setFillColor(79, 70, 229);
-      pdf.rect(margin, yPos, contentWidth, 8, 'F');
-      pdf.setFontSize(8);
+      // PAGE 2: TOPIC ANALYSIS TABLE
+      pdf.setFontSize(11);
       pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(255, 255, 255);
-      pdf.text('Konu', margin + 2, yPos + 5);
-      pdf.text('D', margin + 110, yPos + 5);
-      pdf.text('Y', margin + 125, yPos + 5);
-      pdf.text('B', margin + 140, yPos + 5);
-      pdf.text('Başarı', margin + 155, yPos + 5);
-      pdf.setTextColor(0, 0, 0);
-      yPos += 8;
+      pdf.text('KONU BAZLI DETAYLI ANALIZ', margin, yPos);
+      yPos += 6;
 
-      // Table rows (limit to fit on page)
       const topicsArray = Array.from(topicStats.entries());
-      const maxTopics = Math.min(topicsArray.length, 12);
-
-      topicsArray.slice(0, maxTopics).forEach(([topic, stats], index) => {
+      const topicTableData = topicsArray.map(([topic, stats]) => {
         const total = stats.correct + stats.wrong + stats.empty;
         const successRate = total > 0 ? (stats.correct / total) * 100 : 0;
+        return [
+          topic,
+          String(stats.correct),
+          String(stats.wrong),
+          String(stats.empty),
+          `%${Math.round(successRate)}`,
+        ];
+      });
 
-        if (index % 2 === 0) {
-          pdf.setFillColor(249, 250, 251);
-          pdf.rect(margin, yPos - 4, contentWidth, 6, 'F');
+      autoTable(pdf, {
+        startY: yPos,
+        head: [['Konu', 'Dogru', 'Yanlis', 'Bos', 'Basari']],
+        body: topicTableData,
+        theme: 'grid',
+        styles: {
+          fontSize: 7,
+          cellPadding: 1.5,
+          font: 'helvetica',
+        },
+        headStyles: {
+          fillColor: [79, 70, 229],
+          textColor: [255, 255, 255],
+          fontSize: 8,
+          fontStyle: 'bold',
+        },
+        columnStyles: {
+          0: { cellWidth: contentWidth * 0.45 },
+          1: { cellWidth: contentWidth * 0.12, halign: 'center' },
+          2: { cellWidth: contentWidth * 0.12, halign: 'center' },
+          3: { cellWidth: contentWidth * 0.12, halign: 'center' },
+          4: { cellWidth: contentWidth * 0.19, halign: 'right' },
+        },
+        margin: { left: margin, right: margin },
+        didParseCell: (data) => {
+          // Color code success rates
+          if (data.column.index === 4 && data.section === 'body') {
+            const rate = parseInt(data.cell.text[0].replace('%', ''));
+            if (rate >= 75) {
+              data.cell.styles.textColor = [22, 163, 74]; // green
+            } else if (rate >= 50) {
+              data.cell.styles.textColor = [234, 179, 8]; // yellow
+            } else {
+              data.cell.styles.textColor = [220, 38, 38]; // red
+            }
+          }
+        },
+      });
+
+      yPos = (pdf as any).lastAutoTable.finalY + 6;
+
+      // Recommendations
+      if (yPos < pageHeight - 40) {
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('ONERILER', margin, yPos);
+        yPos += 5;
+
+        const recommendations = [];
+        if (weakTopics.length > 0) {
+          recommendations.push(`${weakTopics.length} konuda ekstra calisma yapman oneriliyor.`);
+        }
+        if (recurringWeakTopics.length > 0) {
+          recommendations.push(`${recurringWeakTopics.length} konu surekli zayif kaliyor - bunlara oncelik ver!`);
+        }
+        if (result.empty_count > template?.total_questions * 0.1) {
+          recommendations.push(`Bos biraktigin ${result.empty_count} soruyu azaltmaya calis.`);
+        }
+        if (result.wrong_count > result.correct_count * 0.5) {
+          recommendations.push('Yanlis sayini azaltmak icin konu tekrari yap.');
+        }
+        if (classResults.length > 1 && result.net_score < classAverage) {
+          recommendations.push('Sinif ortalamasini yakalamak icin duzenli calis.');
+        }
+        if (improvement && improvement > 0) {
+          recommendations.push(`Harika! Onceki denemelere gore ${improvement.toFixed(2)} net ilerleme kaydettin.`);
+        }
+        if (recommendations.length === 0) {
+          recommendations.push('Harika bir performans! Boyle devam et.');
         }
 
         pdf.setFontSize(7);
         pdf.setFont('helvetica', 'normal');
-        pdf.text(topic.substring(0, 35), margin + 2, yPos);
-        pdf.text(String(stats.correct), margin + 110, yPos);
-        pdf.text(String(stats.wrong), margin + 125, yPos);
-        pdf.text(String(stats.empty), margin + 140, yPos);
-
-        // Success rate with color
-        if (successRate >= 75) {
-          pdf.setTextColor(22, 163, 74);
-        } else if (successRate >= 50) {
-          pdf.setTextColor(234, 179, 8);
-        } else {
-          pdf.setTextColor(220, 38, 38);
-        }
-        pdf.text(`%${Math.round(successRate)}`, margin + 155, yPos);
-        pdf.setTextColor(0, 0, 0);
-
-        yPos += 6;
-      });
-
-      // Recommendations
-      yPos += 8;
-      if (yPos > 260) {
-        // If too close to bottom, skip recommendations
-      } else {
-        pdf.setFontSize(12);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('ÖNERİLER', margin, yPos);
-        yPos += 7;
-
-        pdf.setFontSize(8);
-        pdf.setFont('helvetica', 'normal');
-        const recommendations = [];
-
-        if (weakTopics.length > 0) {
-          recommendations.push(`• ${weakTopics.length} konuda ekstra çalışma yapman öneriliyor.`);
-        }
-        if (result.empty_count > template?.total_questions * 0.1) {
-          recommendations.push(`• Boş bıraktığın ${result.empty_count} soruyu azaltmaya çalış.`);
-        }
-        if (result.wrong_count > result.correct_count * 0.5) {
-          recommendations.push('• Yanlış sayını azaltmak için konu tekrarı yap.');
-        }
-        if (classResults.length > 1 && result.net_score < classAverage) {
-          recommendations.push('• Sınıf ortalamasını yakalamak için düzenli çalış.');
-        }
-        if (recommendations.length === 0) {
-          recommendations.push('• Harika bir performans! Böyle devam et.');
-        }
-
-        recommendations.forEach(rec => {
-          pdf.text(rec, margin + 2, yPos);
-          yPos += 5;
+        recommendations.forEach((rec, idx) => {
+          pdf.text(`${idx + 1}. ${rec}`, margin + 2, yPos);
+          yPos += 4;
         });
       }
 
-      // Footer
-      pdf.setFontSize(7);
-      pdf.setFont('helvetica', 'normal');
-      pdf.setTextColor(107, 114, 128);
-      pdf.text(`Rapor Tarihi: ${new Date().toLocaleDateString('tr-TR')}`, margin, pageHeight - 10);
-      pdf.text('Başarı Yolu - Öğrenci Performans Sistemi', pageWidth - margin, pageHeight - 10, { align: 'right' });
+      // Footer on each page
+      const pageCount = pdf.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        pdf.setPage(i);
+        pdf.setFontSize(7);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setTextColor(128, 128, 128);
+        pdf.text(`Rapor Tarihi: ${new Date().toLocaleDateString('tr-TR')}`, margin, pageHeight - 8);
+        pdf.text(`Sayfa ${i} / ${pageCount}`, pageWidth / 2, pageHeight - 8, { align: 'center' });
+        pdf.text('Basari Yolu', pageWidth - margin, pageHeight - 8, { align: 'right' });
+      }
 
-      pdf.save(`Sınav_Raporu_${result.template?.name}_${examDate}.pdf`);
+      pdf.save(`Sinav_Raporu_${template?.name || 'Deneme'}_${examDate}.pdf`);
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert('PDF oluşturulurken bir hata oluştu');

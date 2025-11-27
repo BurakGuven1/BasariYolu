@@ -1194,24 +1194,61 @@ function StudentPerformanceList({
   loading,
   onViewPerformance,
 }: StudentPerformanceListProps) {
-  const [assignments, setAssignments] = useState<AssignmentWithStats[]>([]);
+  const [students, setStudents] = useState<Array<{
+    userId: string;
+    name: string;
+    examResults: any[];
+  }>>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
 
   useEffect(() => {
-    loadAllAssignments();
-  }, [summaries]);
+    loadStudentPerformances();
+  }, [institutionId]);
 
-  const loadAllAssignments = async () => {
-    if (summaries.length === 0) return;
-
+  const loadStudentPerformances = async () => {
     try {
       setLoadingDetails(true);
-      const data = await fetchInstitutionAssignments(institutionId);
-      // Only show submitted assignments
-      const submitted = data.filter(a => a.has_submitted);
-      setAssignments(submitted);
+
+      // Get all institution students
+      const { data: studentData, error: studentError } = await import('../lib/supabase').then(mod =>
+        mod.supabase
+          .from('institution_student_requests')
+          .select('user_id, full_name')
+          .eq('institution_id', institutionId)
+          .eq('status', 'approved')
+      );
+
+      if (studentError || !studentData) {
+        console.error('Error loading students:', studentError);
+        return;
+      }
+
+      // For each student, get all their exam results
+      const studentPerformances = await Promise.all(
+        studentData.map(async (student) => {
+          try {
+            const results = await fetchExternalExamResults(institutionId, student.user_id);
+            return {
+              userId: student.user_id,
+              name: student.full_name,
+              examResults: results.sort((a, b) =>
+                new Date(b.exam_date).getTime() - new Date(a.exam_date).getTime()
+              ),
+            };
+          } catch (error) {
+            console.error(`Error loading results for student ${student.user_id}:`, error);
+            return {
+              userId: student.user_id,
+              name: student.full_name,
+              examResults: [],
+            };
+          }
+        })
+      );
+
+      setStudents(studentPerformances.filter(s => s.examResults.length > 0));
     } catch (error) {
-      console.error('Error loading assignment details:', error);
+      console.error('Error loading student performances:', error);
     } finally {
       setLoadingDetails(false);
     }
@@ -1226,7 +1263,7 @@ function StudentPerformanceList({
     );
   }
 
-  if (assignments.length === 0) {
+  if (students.length === 0) {
     return (
       <div className="text-center py-12">
         <TrendingUp className="h-16 w-16 text-gray-300 mx-auto mb-4" />
@@ -1238,85 +1275,90 @@ function StudentPerformanceList({
     );
   }
 
-  // Group by template and exam date
-  const groupedByExam = new Map<string, AssignmentWithStats[]>();
-  assignments.forEach((assignment) => {
-    const key = `${assignment.template_id}-${assignment.exam_date}`;
-    if (!groupedByExam.has(key)) {
-      groupedByExam.set(key, []);
-    }
-    groupedByExam.get(key)!.push(assignment);
-  });
-
   return (
-    <div className="space-y-6">
-      {Array.from(groupedByExam.entries()).map(([key, examAssignments]) => {
-        const firstAssignment = examAssignments[0];
-        const template = firstAssignment.template as any;
+    <div className="overflow-x-auto">
+      <table className="min-w-full divide-y divide-gray-200">
+        <thead className="bg-gray-50">
+          <tr>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Öğrenci Adı
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Toplam Deneme
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Son 2 Deneme Puanı
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Ortalama Puan
+            </th>
+            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              İşlemler
+            </th>
+          </tr>
+        </thead>
+        <tbody className="bg-white divide-y divide-gray-200">
+          {students.map((student) => {
+            const last2Results = student.examResults.slice(0, 2);
+            const avgScore = student.examResults.length > 0
+              ? student.examResults.reduce((sum, r) => sum + (r.net_score || 0), 0) / student.examResults.length
+              : 0;
 
-        return (
-          <div key={key} className="border border-gray-200 rounded-lg p-5">
-            <div className="mb-4">
-              <h3 className="text-lg font-bold text-gray-900">{template?.name}</h3>
-              <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
-                <span className="font-medium px-2 py-1 bg-gray-100 rounded">{template?.exam_type}</span>
-                <span>Tarih: {new Date(firstAssignment.exam_date).toLocaleDateString('tr-TR')}</span>
-                <span>{examAssignments.length} öğrenci sonuç girdi</span>
-              </div>
-            </div>
+            // Determine exam type (TYT/AYT/LGS) from most recent exam
+            const examType = student.examResults[0]?.template?.exam_type || '';
 
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Öğrenci Adı
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Gönderim Tarihi
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Durum
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      İşlemler
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {examAssignments.map((assignment) => (
-                    <tr key={assignment.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{assignment.student_name}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-600">
-                          {new Date(assignment.updated_at).toLocaleDateString('tr-TR')}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
-                          <CheckCircle className="h-3 w-3" />
-                          Tamamlandı
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button
-                          onClick={() => onViewPerformance(assignment.user_id, assignment.template_id, assignment.exam_date)}
-                          className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-                        >
-                          <Eye className="h-4 w-4" />
-                          Performans Göster
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        );
-      })}
+            return (
+              <tr key={student.userId} className="hover:bg-gray-50">
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm font-medium text-gray-900">{student.name}</div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-600">{student.examResults.length} Deneme</div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="flex items-center gap-2 text-sm">
+                    {last2Results.map((result, idx) => (
+                      <span
+                        key={result.id}
+                        className={`px-2 py-1 rounded ${
+                          idx === 0
+                            ? 'bg-indigo-100 text-indigo-800 font-semibold'
+                            : 'bg-gray-100 text-gray-700'
+                        }`}
+                      >
+                        {result.net_score?.toFixed(1) || '0.0'}
+                      </span>
+                    ))}
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-gray-900">
+                      {avgScore.toFixed(2)}
+                    </span>
+                    <span className="text-xs text-gray-500 px-2 py-0.5 bg-gray-100 rounded">
+                      {examType}
+                    </span>
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <button
+                    onClick={() => {
+                      // Open modal with latest exam
+                      const latest = student.examResults[0];
+                      onViewPerformance(student.userId, latest.template_id, latest.exam_date);
+                    }}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                  >
+                    <Download className="h-4 w-4" />
+                    Performans Analizi
+                  </button>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }
