@@ -27,6 +27,7 @@ export default function StudentExternalExams({ userId, institutionId }: StudentE
   const [selectedAssignment, setSelectedAssignment] = useState<StudentExamAssignment | null>(null);
   const [showAnswerEntry, setShowAnswerEntry] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadAssignments();
@@ -35,10 +36,29 @@ export default function StudentExternalExams({ userId, institutionId }: StudentE
   const loadAssignments = async () => {
     try {
       setLoading(true);
+      setError(null);
       const data = await fetchStudentAssignedExams(userId);
+      console.log('📚 Loaded assignments:', data);
+
+      // Check if template data is properly loaded
+      data.forEach((assignment, index) => {
+        console.log(`📋 Assignment ${index + 1}:`, {
+          id: assignment.id,
+          template_id: assignment.template_id,
+          template: assignment.template,
+          totalQuestions: assignment.template?.total_questions,
+          answerKey: assignment.template?.answer_key ? Object.keys(assignment.template.answer_key).length : 0
+        });
+      });
+
       setAssignments(data);
-    } catch (error) {
-      console.error('Error loading assignments:', error);
+    } catch (error: any) {
+      console.error('❌ Error loading assignments:', error);
+      if (error.message?.includes('relation') || error.message?.includes('does not exist')) {
+        setError('Veritabanı tabloları henüz oluşturulmamış. Lütfen yöneticinize migration dosyasını çalıştırmasını söyleyin.');
+      } else {
+        setError('Sınavlar yüklenirken bir hata oluştu. Lütfen sayfayı yenileyin.');
+      }
     } finally {
       setLoading(false);
     }
@@ -115,6 +135,26 @@ export default function StudentExternalExams({ userId, institutionId }: StudentE
       <div className="bg-white rounded-xl shadow-md p-8 text-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
         <p className="mt-4 text-gray-600">Sınavlar yükleniyor...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-xl shadow-md p-8">
+        <div className="text-center">
+          <div className="p-4 bg-red-100 rounded-full inline-block mb-4">
+            <AlertCircle className="h-12 w-12 text-red-600" />
+          </div>
+          <h3 className="text-xl font-bold text-gray-900 mb-2">Bir Hata Oluştu</h3>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <button
+            onClick={loadAssignments}
+            className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+          >
+            Tekrar Dene
+          </button>
+        </div>
       </div>
     );
   }
@@ -282,12 +322,21 @@ function StudentAnswerEntry({
   const template = assignment.template as any;
   const totalQuestions = template?.total_questions || 0;
 
+  console.log('StudentAnswerEntry - assignment:', assignment);
+  console.log('StudentAnswerEntry - template:', template);
+  console.log('StudentAnswerEntry - totalQuestions:', totalQuestions);
+
   const [answers, setAnswers] = useState<Record<number, 'A' | 'B' | 'C' | 'D' | 'E' | 'X'>>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Initialize all answers as X (empty)
   useEffect(() => {
+    if (totalQuestions === 0) {
+      setError('Sınav bilgileri yüklenemedi. Lütfen sayfayı yenileyin.');
+      return;
+    }
+
     const initialAnswers: Record<number, 'A' | 'B' | 'C' | 'D' | 'E' | 'X'> = {};
     for (let i = 1; i <= totalQuestions; i++) {
       initialAnswers[i] = 'X';
