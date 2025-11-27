@@ -18,6 +18,20 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
+import { examData } from '../data/examTopics';
+
+// Helper function to convert Turkish characters for PDF compatibility
+const toAscii = (text: string): string => {
+  const charMap: { [key: string]: string } = {
+    'ç': 'c', 'Ç': 'C',
+    'ğ': 'g', 'Ğ': 'G',
+    'ı': 'i', 'İ': 'I',
+    'ö': 'o', 'Ö': 'O',
+    'ş': 's', 'Ş': 'S',
+    'ü': 'u', 'Ü': 'U',
+  };
+  return text.split('').map(char => charMap[char] || char).join('');
+};
 
 interface StudentExamResultDetailProps {
   userId: string;
@@ -189,7 +203,9 @@ export default function StudentExamResultDetail({
   const downloadPDF = async (
     topicStats: Map<string, { correct: number; wrong: number; empty: number }>,
     template: any,
-    examScore: number | null
+    examScore: number | null,
+    improvement: number | null,
+    classAverage: number
   ) => {
     if (!result) return;
 
@@ -216,10 +232,10 @@ export default function StudentExamResultDetail({
       pdf.setTextColor(255, 255, 255);
       pdf.setFontSize(16);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('SINAV PERFORMANS RAPORU', pageWidth / 2, 12, { align: 'center' });
+      pdf.text(toAscii('SINAV PERFORMANS RAPORU'), pageWidth / 2, 12, { align: 'center' });
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'normal');
-      pdf.text(`${template?.name || ''} - ${new Date(examDate).toLocaleDateString('tr-TR')}`, pageWidth / 2, 22, { align: 'center' });
+      pdf.text(toAscii(`${template?.name || ''} - ${new Date(examDate).toLocaleDateString('tr-TR')}`), pageWidth / 2, 22, { align: 'center' });
 
       pdf.setTextColor(0, 0, 0);
       yPos = 38;
@@ -231,13 +247,13 @@ export default function StudentExamResultDetail({
         pdf.setFontSize(11);
         pdf.setFont('helvetica', 'bold');
         pdf.setTextColor(79, 70, 229);
-        pdf.text('SINAV PUANI:', margin + 4, yPos + 6);
+        pdf.text(toAscii('SINAV PUANI:'), margin + 4, yPos + 6);
         pdf.setFontSize(14);
         pdf.text(`${examScore} / 500`, margin + 45, yPos + 6);
         pdf.setTextColor(0, 0, 0);
         pdf.setFontSize(8);
         pdf.setFont('helvetica', 'normal');
-        pdf.text(`Sinav Turu: ${template?.exam_type || ''}`, margin + contentWidth - 50, yPos + 6);
+        pdf.text(toAscii(`Sinav Turu: ${template?.exam_type || ''}`), margin + contentWidth - 50, yPos + 6);
         yPos += 20;
       }
 
@@ -321,7 +337,7 @@ export default function StudentExamResultDetail({
         pdf.setFontSize(11);
         pdf.setFont('helvetica', 'bold');
         pdf.setTextColor(194, 65, 12);
-        pdf.text('ACIL CALISILMASI GEREKEN KONULAR', margin, yPos);
+        pdf.text(toAscii('ACIL CALISILMASI GEREKEN KONULAR'), margin, yPos);
         pdf.setTextColor(0, 0, 0);
         yPos += 6;
 
@@ -329,7 +345,7 @@ export default function StudentExamResultDetail({
         const weakTopicData = weakTopics.slice(0, 10).map(wt => {
           const isRecurring = recurringWeakTopics.some(r => r.topic === wt.topic);
           return [
-            (isRecurring ? '🔴 ' : '') + wt.topic,
+            (isRecurring ? '* ' : '') + toAscii(wt.topic),
             `${wt.stats.correct}`,
             `${wt.stats.wrong}`,
             `${wt.stats.empty}`,
@@ -339,7 +355,7 @@ export default function StudentExamResultDetail({
 
         autoTable(pdf, {
           startY: yPos,
-          head: [['Konu', 'D', 'Y', 'B', 'Basari']],
+          head: [[toAscii('Konu'), 'D', 'Y', 'B', toAscii('Basari')]],
           body: weakTopicData,
           theme: 'striped',
           styles: {
@@ -370,7 +386,7 @@ export default function StudentExamResultDetail({
           pdf.setFontSize(7);
           pdf.setFont('helvetica', 'italic');
           pdf.setTextColor(220, 38, 38);
-          pdf.text(`🔴 = Bu konu önceki denemede de zayıftı (${recurringWeakTopics.length} tekrarlayan konu)`, margin, yPos);
+          pdf.text(toAscii(`* = Bu konu onceki denemede de zayifti (${recurringWeakTopics.length} tekrarlayan konu)`), margin, yPos);
           pdf.setTextColor(0, 0, 0);
           yPos += 5;
         }
@@ -385,7 +401,7 @@ export default function StudentExamResultDetail({
       // PAGE 2: TOPIC ANALYSIS TABLE
       pdf.setFontSize(11);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('KONU BAZLI DETAYLI ANALIZ', margin, yPos);
+      pdf.text(toAscii('KONU BAZLI DETAYLI ANALIZ'), margin, yPos);
       yPos += 6;
 
       const topicsArray = Array.from(topicStats.entries());
@@ -393,7 +409,7 @@ export default function StudentExamResultDetail({
         const total = stats.correct + stats.wrong + stats.empty;
         const successRate = total > 0 ? (stats.correct / total) * 100 : 0;
         return [
-          topic,
+          toAscii(topic),
           String(stats.correct),
           String(stats.wrong),
           String(stats.empty),
@@ -403,7 +419,7 @@ export default function StudentExamResultDetail({
 
       autoTable(pdf, {
         startY: yPos,
-        head: [['Konu', 'Dogru', 'Yanlis', 'Bos', 'Basari']],
+        head: [[toAscii('Konu'), toAscii('Dogru'), toAscii('Yanlis'), toAscii('Bos'), toAscii('Basari')]],
         body: topicTableData,
         theme: 'grid',
         styles: {
@@ -442,41 +458,132 @@ export default function StudentExamResultDetail({
 
       yPos = (pdf as any).lastAutoTable.finalY + 6;
 
-      // Recommendations
-      if (yPos < pageHeight - 40) {
+      // Smart Recommendations with Topic Frequency Analysis
+      if (yPos < pageHeight - 50) {
         pdf.setFontSize(10);
         pdf.setFont('helvetica', 'bold');
-        pdf.text('ONERILER', margin, yPos);
+        pdf.text(toAscii('KISISELLESTIRILMIS ONERILER VE STRATEJI'), margin, yPos);
         yPos += 5;
 
-        const recommendations = [];
-        if (weakTopics.length > 0) {
-          recommendations.push(`${weakTopics.length} konuda ekstra calisma yapman oneriliyor.`);
+        const recommendations: string[] = [];
+
+        // Analyze topic frequency from examData
+        const examType = template?.exam_type;
+        let subjectKey = '';
+        if (examType === 'TYT' || examType === 'AYT') {
+          // Determine subject based on topics
+          const firstTopic = topicsArray[0]?.[0] || '';
+          if (firstTopic.toLowerCase().includes('matematik') || firstTopic.toLowerCase().includes('geometri')) {
+            subjectKey = examType === 'TYT' ? 'TYT Matematik' : 'AYT Matematik';
+          } else if (firstTopic.toLowerCase().includes('fizik')) {
+            subjectKey = 'TYT Fizik';
+          } else if (firstTopic.toLowerCase().includes('kimya')) {
+            subjectKey = 'TYT Kimya';
+          } else if (firstTopic.toLowerCase().includes('türkçe') || firstTopic.toLowerCase().includes('paragraf')) {
+            subjectKey = 'TYT Turkce';
+          }
         }
+
+        // Check which weak topics have high frequency in recent exams
+        const highFrequencyWeakTopics: { topic: string; count: number }[] = [];
+        if (subjectKey && examData[subjectKey]) {
+          weakTopics.forEach(wt => {
+            const topicData = examData[subjectKey].konular.find(k =>
+              k.konu.toLowerCase().includes(wt.topic.toLowerCase()) ||
+              wt.topic.toLowerCase().includes(k.konu.toLowerCase())
+            );
+            if (topicData) {
+              const recent3Years = parseInt(topicData.yillar['2023'] || '0') +
+                                  parseInt(topicData.yillar['2024'] || '0') +
+                                  parseInt(topicData.yillar['2025'] || '0');
+              if (recent3Years >= 15) {
+                highFrequencyWeakTopics.push({ topic: wt.topic, count: recent3Years });
+              }
+            }
+          });
+        }
+
+        // Priority recommendations based on high-frequency weak topics
+        if (highFrequencyWeakTopics.length > 0) {
+          recommendations.push(toAscii(`🎯 KRITIK: ${highFrequencyWeakTopics[0].topic} konusu son 3 yilda ${highFrequencyWeakTopics[0].count}+ soru cikti! Bu konuya oncelikle calis.`));
+        }
+
+        // Recurring weak topics
         if (recurringWeakTopics.length > 0) {
-          recommendations.push(`${recurringWeakTopics.length} konu surekli zayif kaliyor - bunlara oncelik ver!`);
+          const topics = recurringWeakTopics.slice(0, 2).map(t => toAscii(t.topic)).join(', ');
+          recommendations.push(toAscii(`⚠️ TEKRAR EDEN ZAYIFLIK: ${topics} surekli dusuk kalıyor. Farkli kaynaklardan calis, konu anlatim videolari izle.`));
         }
-        if (result.empty_count > template?.total_questions * 0.1) {
-          recommendations.push(`Bos biraktigin ${result.empty_count} soruyu azaltmaya calis.`);
+
+        // Performance-based recommendations
+        const successRate = (result.correct_count / (result.correct_count + result.wrong_count + result.empty_count)) * 100;
+        if (successRate >= 75) {
+          recommendations.push(toAscii(`✨ MUKEMMEL: %${Math.round(successRate)} basari orani! Suanki tempoyu koruyarak zor sorulara odaklan.`));
+        } else if (successRate >= 60) {
+          recommendations.push(toAscii(`💪 IYI GIDIYORSUN: %${Math.round(successRate)} basari var. Zayif konulara her gun 30 dk ayir.`));
+        } else {
+          recommendations.push(toAscii(`📚 TEMEL GUCLENDIR: %${Math.round(successRate)} basari dusuk. Once temel konulari pekistir, sonra ileri seviyeye gec.`));
         }
-        if (result.wrong_count > result.correct_count * 0.5) {
-          recommendations.push('Yanlis sayini azaltmak icin konu tekrari yap.');
+
+        // Empty answer strategy
+        if (result.empty_count > template?.total_questions * 0.15) {
+          recommendations.push(toAscii(`⏰ ZAMAN YONETIMI: ${result.empty_count} soru bos - tahmin teknikleri calis, zaman yonetimini iyilestir.`));
+        } else if (result.empty_count > 0) {
+          recommendations.push(toAscii(`👍 BOS AZALDI: ${result.empty_count} bos iyi bir seviye. Bilinmeyen sorularda eliminasyon yontemi kullan.`));
         }
-        if (classResults.length > 1 && result.net_score < classAverage) {
-          recommendations.push('Sinif ortalamasini yakalamak icin duzenli calis.');
+
+        // Wrong answer reduction
+        if (result.wrong_count > result.correct_count) {
+          recommendations.push(toAscii(`🔍 YANLIS AZALT: Yanlis sayisi (${result.wrong_count}) cok yuksek. Acele etme, soru koklerini dikkatli oku.`));
+        } else {
+          const netPenalty = Math.round(result.wrong_count * 0.25 * 10) / 10;
+          recommendations.push(toAscii(`📊 NET KAYBI: ${netPenalty} net yanlis yuzunden gitti. Emin olmadan isaretleme!`));
         }
-        if (improvement && improvement > 0) {
-          recommendations.push(`Harika! Onceki denemelere gore ${improvement.toFixed(2)} net ilerleme kaydettin.`);
+
+        // Improvement tracking
+        if (improvement !== null) {
+          if (improvement > 5) {
+            recommendations.push(toAscii(`🚀 SUPER ILERLEME: +${improvement.toFixed(1)} net artis! Bu calisma planini surdurmek kilit.`));
+          } else if (improvement > 0) {
+            recommendations.push(toAscii(`📈 ILERLEME VAR: +${improvement.toFixed(1)} net artis. Tutarli calismayla bu hiz katlanacak.`));
+          } else if (improvement < -3) {
+            recommendations.push(toAscii(`⚡ DIKKAT: ${Math.abs(improvement).toFixed(1)} net dustu. Calisma yontemini gozden gecir, dinlenmeye dikkat et.`));
+          }
         }
-        if (recommendations.length === 0) {
-          recommendations.push('Harika bir performans! Boyle devam et.');
+
+        // Class comparison
+        if (classResults.length > 1) {
+          if (result.net_score > classAverage + 5) {
+            recommendations.push(toAscii(`🏆 SINIF LIDERI: Sinif ortalamasinin ${(result.net_score - classAverage).toFixed(1)} net ustuunde! Hedef daha yuksek!`));
+          } else if (result.net_score > classAverage) {
+            recommendations.push(toAscii(`👏 ORTALAMA USTU: +${(result.net_score - classAverage).toFixed(1)} net avantajlisin. Bu farki acmak icin zor sorulara odaklan.`));
+          } else {
+            recommendations.push(toAscii(`💡 POTANSIYEL VAR: Sinif ort. ${classAverage.toFixed(1)}, sen ${result.net_score.toFixed(1)}. Gunluk duzenli calismayla yakala!`));
+          }
+        }
+
+        // Study plan recommendations
+        if (weakTopics.length >= 10) {
+          recommendations.push(toAscii(`📅 AKILLI PLAN: ${weakTopics.length} zayif konu var. Her gun 2-3 konuya odaklan, hepsini birden yapmaya calisma.`));
+        } else if (weakTopics.length > 0) {
+          recommendations.push(toAscii(`✅ ODAKLI CALIS: ${weakTopics.length} konuya her gun 1 saat ayir. 2 haftada hepsini guclendirebilirsin.`));
+        } else {
+          recommendations.push(toAscii(`🌟 MUKEMMEL DENGE: Tum konularda iyisin! Simdi hiz ve dogru calisarak net sayini artir.`));
+        }
+
+        // Motivational closing
+        if (examScore && examScore >= 400) {
+          recommendations.push(toAscii(`🎓 HEDEF 500: ${examScore} puanla cok yakinsin! Zayif konulari kapatin, 500\'e ulasabilirsin!`));
         }
 
         pdf.setFontSize(7);
         pdf.setFont('helvetica', 'normal');
-        recommendations.forEach((rec, idx) => {
-          pdf.text(`${idx + 1}. ${rec}`, margin + 2, yPos);
-          yPos += 4;
+        recommendations.slice(0, 8).forEach((rec, idx) => {
+          const lines = pdf.splitTextToSize(rec, contentWidth - 4);
+          lines.forEach((line: string) => {
+            if (yPos > pageHeight - 15) return;
+            pdf.text(line, margin + 2, yPos);
+            yPos += 3.5;
+          });
         });
       }
 
@@ -487,12 +594,13 @@ export default function StudentExamResultDetail({
         pdf.setFontSize(7);
         pdf.setFont('helvetica', 'normal');
         pdf.setTextColor(128, 128, 128);
-        pdf.text(`Rapor Tarihi: ${new Date().toLocaleDateString('tr-TR')}`, margin, pageHeight - 8);
-        pdf.text(`Sayfa ${i} / ${pageCount}`, pageWidth / 2, pageHeight - 8, { align: 'center' });
-        pdf.text('Basari Yolu', pageWidth - margin, pageHeight - 8, { align: 'right' });
+        pdf.text(toAscii(`Rapor Tarihi: ${new Date().toLocaleDateString('tr-TR')}`), margin, pageHeight - 8);
+        pdf.text(toAscii(`Sayfa ${i} / ${pageCount}`), pageWidth / 2, pageHeight - 8, { align: 'center' });
+        pdf.text(toAscii('Basari Yolu'), pageWidth - margin, pageHeight - 8, { align: 'right' });
       }
 
-      pdf.save(`Sinav_Raporu_${template?.name || 'Deneme'}_${examDate}.pdf`);
+      const fileName = toAscii(`Sinav_Raporu_${template?.name || 'Deneme'}_${examDate}.pdf`).replace(/\s+/g, '_');
+      pdf.save(fileName);
     } catch (error) {
       console.error('Error generating PDF:', error);
       alert('PDF oluşturulurken bir hata oluştu');
@@ -582,7 +690,7 @@ export default function StudentExamResultDetail({
           Geri Dön
         </button>
         <button
-          onClick={() => downloadPDF(topicStats, template, examScore)}
+          onClick={() => downloadPDF(topicStats, template, examScore, improvement, classAverage)}
           disabled={downloading}
           className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
         >
