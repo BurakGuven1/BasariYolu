@@ -31,6 +31,7 @@ import SoruPortali from './SoruPortali';
 import StudentExamPerformancePanel from './StudentExamPerformancePanel';
 import AIChatPanel from './AIChatPanel';
 import StudentExternalExams from './StudentExternalExams';
+import ErrorBoundary from './ErrorBoundary';
 import type { InstitutionExamBlueprint } from '../lib/institutionQuestionApi';
 import {
   fetchInstitutionStudentPortalData,
@@ -1361,7 +1362,14 @@ export default function StudentDashboard({ authUser }: StudentDashboardProps) {
         )}
         {activeTab === 'ai-chat' && <AIChatPanel />}
         {activeTab === 'soru-portali' && <SoruPortali />}
-        {activeTab === 'kurumsal-sinavlar' && user && <StudentExternalExams userId={user.id} />}
+        {activeTab === 'kurumsal-sinavlar' && user && (
+          <ErrorBoundary>
+            <StudentExternalExams
+              userId={user.id}
+              institutionId={institutionRequest?.institution_id}
+            />
+          </ErrorBoundary>
+        )}
         {activeTab === 'classes' && (
           showInstitutionPortal ? (
             <div className="bg-white rounded-lg p-6 shadow-sm">

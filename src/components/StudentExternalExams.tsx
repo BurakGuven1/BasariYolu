@@ -14,16 +14,19 @@ import {
   submitStudentExamAnswers,
   type StudentExamAssignment,
 } from '../lib/institutionExternalExamApi';
+import StudentExamResultDetail from './StudentExamResultDetail';
 
 interface StudentExternalExamsProps {
   userId: string;
+  institutionId?: string;
 }
 
-export default function StudentExternalExams({ userId }: StudentExternalExamsProps) {
+export default function StudentExternalExams({ userId, institutionId }: StudentExternalExamsProps) {
   const [assignments, setAssignments] = useState<StudentExamAssignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAssignment, setSelectedAssignment] = useState<StudentExamAssignment | null>(null);
   const [showAnswerEntry, setShowAnswerEntry] = useState(false);
+  const [showResults, setShowResults] = useState(false);
 
   useEffect(() => {
     loadAssignments();
@@ -98,8 +101,13 @@ export default function StudentExternalExams({ userId }: StudentExternalExamsPro
 
   const handleAnswerSubmitted = () => {
     setShowAnswerEntry(false);
-    setSelectedAssignment(null);
+    setShowResults(true); // Show results after submission
     loadAssignments(); // Reload to update status
+  };
+
+  const handleViewResults = (assignment: StudentExamAssignment) => {
+    setSelectedAssignment(assignment);
+    setShowResults(true);
   };
 
   if (loading) {
@@ -111,6 +119,23 @@ export default function StudentExternalExams({ userId }: StudentExternalExamsPro
     );
   }
 
+  // Show results view
+  if (showResults && selectedAssignment && institutionId) {
+    return (
+      <StudentExamResultDetail
+        userId={userId}
+        institutionId={institutionId}
+        templateId={selectedAssignment.template_id}
+        examDate={selectedAssignment.exam_date}
+        onBack={() => {
+          setShowResults(false);
+          setSelectedAssignment(null);
+        }}
+      />
+    );
+  }
+
+  // Show answer entry
   if (showAnswerEntry && selectedAssignment) {
     return (
       <StudentAnswerEntry
@@ -210,9 +235,18 @@ export default function StudentExternalExams({ userId }: StudentExternalExamsPro
                     <ChevronRight className="h-5 w-5" />
                   </button>
                 ) : assignment.has_submitted ? (
-                  <div className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-50 text-green-700 rounded-lg font-medium">
-                    <CheckCircle className="h-5 w-5" />
-                    Cevaplar Kaydedildi
+                  <div className="space-y-2">
+                    <div className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-lg font-medium text-sm">
+                      <CheckCircle className="h-4 w-4" />
+                      Cevaplar Kaydedildi
+                    </div>
+                    <button
+                      onClick={() => handleViewResults(assignment)}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                    >
+                      <TrendingUp className="h-5 w-5" />
+                      Performans Analizini Gör
+                    </button>
                   </div>
                 ) : (
                   <div className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 text-gray-600 rounded-lg font-medium">
