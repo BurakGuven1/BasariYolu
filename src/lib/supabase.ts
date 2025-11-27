@@ -11,7 +11,15 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: true
+    detectSessionInUrl: true,
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+    storageKey: 'basariyolu-auth-token',
+    flowType: 'pkce'
+  },
+  global: {
+    headers: {
+      'x-client-info': 'basariyolu-web'
+    }
   }
 });
 
