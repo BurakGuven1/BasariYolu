@@ -11,10 +11,12 @@ import {
   Users,
   BarChart3,
   ArrowLeft,
+  AlertTriangle,
 } from 'lucide-react';
 import { fetchExternalExamResults, type ExternalExamResult } from '../lib/institutionExternalExamApi';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 interface StudentExamResultDetailProps {
   userId: string;
@@ -90,23 +92,42 @@ export default function StudentExamResultDetail({
       const element = document.getElementById('exam-result-content');
       if (!element) return;
 
+      // Optimize html2canvas settings
       const canvas = await html2canvas(element, {
-        scale: 2,
+        scale: 1.5, // Reduce from 2 to 1.5
         useCORS: true,
         logging: false,
+        backgroundColor: '#ffffff',
+        windowWidth: 1200,
+        windowHeight: element.scrollHeight,
       });
 
-      const imgData = canvas.toDataURL('image/png');
+      const imgData = canvas.toDataURL('image/jpeg', 0.7); // Use JPEG with 70% quality
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
         format: 'a4',
+        compress: true, // Enable compression
       });
 
       const imgWidth = 210; // A4 width in mm
+      const pageHeight = 297; // A4 height in mm
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
 
-      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+      // Add first page
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+      heightLeft -= pageHeight;
+
+      // Add additional pages if needed
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+        heightLeft -= pageHeight;
+      }
+
       pdf.save(`Sınav_Raporu_${result.template?.name}_${examDate}.pdf`);
     } catch (error) {
       console.error('Error generating PDF:', error);
@@ -361,13 +382,92 @@ export default function StudentExamResultDetail({
           </div>
         )}
 
-        {/* Topic Analysis */}
+        {/* Weak Topics - Priority */}
+        {(() => {
+          const weakTopics = Array.from(topicStats.entries())
+            .map(([topic, stats]) => {
+              const total = stats.correct + stats.wrong + stats.empty;
+              const successRate = total > 0 ? (stats.correct / total) * 100 : 0;
+              return { topic, stats, total, successRate };
+            })
+            .filter(t => t.successRate < 60)
+            .sort((a, b) => a.successRate - b.successRate);
+
+          return weakTopics.length > 0 ? (
+            <div className="bg-gradient-to-r from-orange-50 to-red-50 border-2 border-orange-300 rounded-xl shadow-md p-6">
+              <h3 className="text-lg font-bold text-orange-900 mb-4 flex items-center gap-2">
+                <AlertTriangle className="h-6 w-6 text-orange-600" />
+                ⚠️ Acil Çalışılması Gereken Konular
+              </h3>
+              <div className="space-y-3">
+                {weakTopics.map(({ topic, stats, total, successRate }) => (
+                  <div key={topic} className="bg-white rounded-lg p-4 border-l-4 border-orange-500">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-bold text-gray-900">{topic}</h4>
+                      <span className="text-lg font-bold text-orange-600">%{Math.round(successRate)}</span>
+                    </div>
+                    <div className="flex items-center gap-4 text-sm">
+                      <span className="text-green-600">✓ {stats.correct}</span>
+                      <span className="text-red-600">✗ {stats.wrong}</span>
+                      <span className="text-gray-500">○ {stats.empty}</span>
+                    </div>
+                    <p className="text-sm text-orange-800 mt-2 font-medium">
+                      → Bu konuya öncelik verin! {total} sorudan sadece {stats.correct} doğru.
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl shadow-md p-6">
+              <h3 className="text-lg font-bold text-green-900 mb-2 flex items-center gap-2">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+                ✓ Harika! Tüm Konularda İyi Durumdasın
+              </h3>
+              <p className="text-green-800">
+                Tüm konularda %60'ın üzerinde başarı gösterdin. Böyle devam et!
+              </p>
+            </div>
+          );
+        })()}
+
+        {/* Topic Analysis with Chart */}
         <div className="bg-white rounded-xl shadow-md p-6">
           <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
             <BarChart3 className="h-6 w-6 text-indigo-600" />
-            Konu Bazlı Analiz
+            Konu Bazlı Detaylı Analiz
           </h3>
 
+          {/* Bar Chart */}
+          <div className="mb-6 h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={Array.from(topicStats.entries()).map(([topic, stats]) => {
+                  const total = stats.correct + stats.wrong + stats.empty;
+                  const successRate = total > 0 ? (stats.correct / total) * 100 : 0;
+                  return {
+                    name: topic.length > 15 ? topic.substring(0, 15) + '...' : topic,
+                    fullName: topic,
+                    'Başarı Oranı': Math.round(successRate),
+                    Doğru: stats.correct,
+                    Yanlış: stats.wrong,
+                    Boş: stats.empty,
+                  };
+                })}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} fontSize={12} />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="Doğru" fill="#10b981" />
+                <Bar dataKey="Yanlış" fill="#ef4444" />
+                <Bar dataKey="Boş" fill="#9ca3af" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Detailed List */}
           <div className="space-y-3">
             {Array.from(topicStats.entries()).map(([topic, stats]) => {
               const total = stats.correct + stats.wrong + stats.empty;
@@ -415,12 +515,6 @@ export default function StudentExamResultDetail({
                       />
                     </div>
                   </div>
-
-                  {successRate < 50 && (
-                    <p className="text-xs text-orange-700 bg-orange-50 rounded p-2 mt-2">
-                      💡 Bu konuyu daha fazla çalışmalısın
-                    </p>
-                  )}
                 </div>
               );
             })}

@@ -10,6 +10,8 @@ import {
   BookOpen,
   Users,
   Calendar,
+  TrendingUp,
+  Eye,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import {
@@ -28,6 +30,7 @@ import {
   type AssignmentWithStats,
 } from '../lib/institutionExternalExamApi';
 import ExamTemplateBuilder from './ExamTemplateBuilder';
+import StudentExamResultDetail from './StudentExamResultDetail';
 
 interface InstitutionExternalExamPanelProps {
   institutionId: string;
@@ -52,6 +55,12 @@ export default function InstitutionExternalExamPanel({
   const [showManagement, setShowManagement] = useState(false);
   const [assignmentSummaries, setAssignmentSummaries] = useState<AssignmentSummary[]>([]);
   const [loadingAssignments, setLoadingAssignments] = useState(false);
+  const [showStudentPerformance, setShowStudentPerformance] = useState(false);
+  const [selectedStudentPerformance, setSelectedStudentPerformance] = useState<{
+    userId: string;
+    templateId: string;
+    examDate: string;
+  } | null>(null);
 
   // Öğrenci listesi (kurum öğrencileri)
   const [students, setStudents] = useState<Array<{ userId: string; name: string }>>([]);
@@ -503,6 +512,31 @@ export default function InstitutionExternalExamPanel({
         </div>
       </div>
 
+      {/* Student Performance Section */}
+      <div className="bg-white rounded-xl shadow-md p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+              <TrendingUp className="h-7 w-7 text-green-600" />
+              Öğrenci Performansları
+            </h2>
+            <p className="text-gray-600 text-sm mt-1">
+              Öğrencilerin sınav sonuçlarını görüntüleyin ve analiz edin
+            </p>
+          </div>
+        </div>
+
+        <StudentPerformanceList
+          institutionId={institutionId}
+          summaries={assignmentSummaries}
+          loading={loadingAssignments}
+          onViewPerformance={(userId, templateId, examDate) => {
+            setSelectedStudentPerformance({ userId, templateId, examDate });
+            setShowStudentPerformance(true);
+          }}
+        />
+      </div>
+
       {/* Assignment Management Section */}
       <div className="bg-white rounded-xl shadow-md p-6">
         <div className="flex items-center justify-between mb-6">
@@ -532,6 +566,24 @@ export default function InstitutionExternalExamPanel({
           />
         )}
       </div>
+
+      {/* Student Performance Modal */}
+      {showStudentPerformance && selectedStudentPerformance && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-auto">
+            <StudentExamResultDetail
+              userId={selectedStudentPerformance.userId}
+              institutionId={institutionId}
+              templateId={selectedStudentPerformance.templateId}
+              examDate={selectedStudentPerformance.examDate}
+              onBack={() => {
+                setShowStudentPerformance(false);
+                setSelectedStudentPerformance(null);
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Assign Exam Modal */}
       {showAssignModal && selectedTemplate && (
@@ -1122,6 +1174,149 @@ function AssignmentDetailsModal({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Öğrenci Performans Listesi
+ */
+interface StudentPerformanceListProps {
+  institutionId: string;
+  summaries: AssignmentSummary[];
+  loading: boolean;
+  onViewPerformance: (userId: string, templateId: string, examDate: string) => void;
+}
+
+function StudentPerformanceList({
+  institutionId,
+  summaries,
+  loading,
+  onViewPerformance,
+}: StudentPerformanceListProps) {
+  const [assignments, setAssignments] = useState<AssignmentWithStats[]>([]);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+
+  useEffect(() => {
+    loadAllAssignments();
+  }, [summaries]);
+
+  const loadAllAssignments = async () => {
+    if (summaries.length === 0) return;
+
+    try {
+      setLoadingDetails(true);
+      const data = await fetchInstitutionAssignments(institutionId);
+      // Only show submitted assignments
+      const submitted = data.filter(a => a.has_submitted);
+      setAssignments(submitted);
+    } catch (error) {
+      console.error('Error loading assignment details:', error);
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
+
+  if (loading || loadingDetails) {
+    return (
+      <div className="text-center py-12">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+        <p className="mt-4 text-gray-600">Öğrenci performansları yükleniyor...</p>
+      </div>
+    );
+  }
+
+  if (assignments.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <TrendingUp className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+        <h3 className="text-xl font-semibold text-gray-900 mb-2">Henüz sonuç girilmemiş</h3>
+        <p className="text-gray-600">
+          Öğrenciler cevaplarını girdikçe burada görünecektir
+        </p>
+      </div>
+    );
+  }
+
+  // Group by template and exam date
+  const groupedByExam = new Map<string, AssignmentWithStats[]>();
+  assignments.forEach((assignment) => {
+    const key = `${assignment.template_id}-${assignment.exam_date}`;
+    if (!groupedByExam.has(key)) {
+      groupedByExam.set(key, []);
+    }
+    groupedByExam.get(key)!.push(assignment);
+  });
+
+  return (
+    <div className="space-y-6">
+      {Array.from(groupedByExam.entries()).map(([key, examAssignments]) => {
+        const firstAssignment = examAssignments[0];
+        const template = firstAssignment.template as any;
+
+        return (
+          <div key={key} className="border border-gray-200 rounded-lg p-5">
+            <div className="mb-4">
+              <h3 className="text-lg font-bold text-gray-900">{template?.name}</h3>
+              <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
+                <span className="font-medium px-2 py-1 bg-gray-100 rounded">{template?.exam_type}</span>
+                <span>Tarih: {new Date(firstAssignment.exam_date).toLocaleDateString('tr-TR')}</span>
+                <span>{examAssignments.length} öğrenci sonuç girdi</span>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Öğrenci Adı
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Gönderim Tarihi
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Durum
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      İşlemler
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {examAssignments.map((assignment) => (
+                    <tr key={assignment.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">{assignment.student_name}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-600">
+                          {new Date(assignment.updated_at).toLocaleDateString('tr-TR')}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                          <CheckCircle className="h-3 w-3" />
+                          Tamamlandı
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button
+                          onClick={() => onViewPerformance(assignment.user_id, assignment.template_id, assignment.exam_date)}
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                        >
+                          <Eye className="h-4 w-4" />
+                          Performans Göster
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
