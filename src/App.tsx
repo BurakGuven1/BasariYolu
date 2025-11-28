@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { BookOpenCheck } from 'lucide-react';
 import ErrorBoundary from './components/ErrorBoundary';
-import { useAuthContext } from './contexts/AuthContext';
+import { useAuth, useNotification } from './contexts/AppProviders';
 import { packages } from './data/packages';
 import Navbar from './components/Navbar';
 import { InstitutionSession } from './lib/institutionApi';
@@ -16,7 +16,6 @@ import {
   getOrganizationStructuredData,
 } from './lib/seo';
 
-import { PomodoroProvider } from './contexts/PomodoroContext';
 import StudentDashboard from './components/StudentDashboard';
 
 // Loading component for Suspense fallbacks
@@ -62,7 +61,7 @@ const Testimonials = lazy(() => import('./components/Testimonials'));
 const INSTITUTION_MODAL_PATHS = ['/institution/login', '/institution/register'];
 
 function App() {
-  const { user, loading, login, logout } = useAuthContext();
+  const { user, loading, login, logout } = useAuth();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [targetUpgradePlan, setTargetUpgradePlan] = useState<any>(null);
   const [showStudentParentLoginModal, setShowStudentParentLoginModal] = useState(false);
@@ -632,13 +631,7 @@ function App() {
 
   return (
     <ErrorBoundary>
-      {isInstitutionDashboardPath ? (
-        appContent
-      ) : (
-        <PomodoroProvider studentId={user?.id}>
-          {appContent}
-        </PomodoroProvider>
-      )}
+      {appContent}
     </ErrorBoundary>
   );
   
