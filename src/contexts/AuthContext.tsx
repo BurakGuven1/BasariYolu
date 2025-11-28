@@ -205,29 +205,65 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     saveSession(authUser);
   }, [saveSession]);
 
-  // Logout function
+  // Logout function - CRITICAL FIX: Stable logout for all user types
   const logout = useCallback(async (options?: LogoutOptions) => {
-    try {
+    console.log('🚪 Logout initiated for user:', user?.userType);
 
-      // Sign out from Supabase (only for student/parent)
+    try {
+      // 1. Sign out from Supabase (only for student/parent)
       if (user?.userType === 'student' || user?.userType === 'parent') {
-        await supabase.auth.signOut();
+        console.log('🔓 Signing out from Supabase...');
+        await supabase.auth.signOut({ scope: 'local' });
       }
 
+      // 2. Clear all user state
+      console.log('🧹 Clearing user state...');
       setUser(null);
       saveSession(null);
 
-      // Clear legacy storage keys
+      // 3. Clear ALL auth-related storage (comprehensive cleanup)
       localStorage.removeItem('institutionSession');
       localStorage.removeItem('classViewerSession');
+      localStorage.removeItem('teacherSession');
+      localStorage.removeItem('parentSession');
 
-      // Redirect
-      window.location.href = options?.redirectTo ?? '/';
+      // Clear any Supabase auth tokens
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('sb-') || key.includes('supabase')) {
+          localStorage.removeItem(key);
+        }
+      });
+
+      console.log('✅ Logout successful, redirecting...');
+
+      // 4. Force redirect using multiple methods for reliability
+      const redirectPath = options?.redirectTo ?? '/';
+
+      // Method 1: Direct window location (most reliable)
+      window.location.replace(redirectPath);
+
+      // Fallback: If replace doesn't work in 100ms
+      setTimeout(() => {
+        window.location.href = redirectPath;
+      }, 100);
+
     } catch (error) {
-      // Force clear and redirect even if error
+      console.error('❌ Logout error:', error);
+
+      // FORCE LOGOUT: Clear everything and redirect even on error
       setUser(null);
       saveSession(null);
-      window.location.href = options?.redirectTo ?? '/';
+
+      // Nuclear option: clear ALL localStorage
+      localStorage.clear();
+
+      // Force redirect
+      const redirectPath = options?.redirectTo ?? '/';
+      window.location.replace(redirectPath);
+
+      setTimeout(() => {
+        window.location.href = redirectPath;
+      }, 100);
     }
   }, [user, saveSession]);
 
