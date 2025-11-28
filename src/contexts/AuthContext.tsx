@@ -259,12 +259,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.warn('localStorage clear error:', e);
     }
 
-    // STEP 3: Sign out from Supabase (async but don't wait)
-    if (user?.userType === 'student' || user?.userType === 'parent') {
-      // Don't await - fire and forget
-      supabase.auth.signOut({ scope: 'local' }).catch(err => {
-        console.warn('Supabase signOut error:', err);
-      });
+    // STEP 3: Sign out from Supabase for everyone (global to avoid ghost sessions)
+    try {
+      await supabase.auth.signOut({ scope: 'global' });
+    } catch (err) {
+      console.warn('Supabase signOut error:', err);
     }
 
     // STEP 4: IMMEDIATE redirect (synchronous)
@@ -272,7 +271,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Small delay to ensure storage is cleared
     setTimeout(() => {
-      window.location.href = redirectPath;
+      window.location.replace(redirectPath);
     }, 50); // 50ms delay to ensure storage cleanup completes
 
   }, [user, saveSession]);
