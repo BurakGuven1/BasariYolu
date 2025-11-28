@@ -270,8 +270,9 @@ export default function InstitutionAnalyticsPanel({ institutionId }: Institution
                   Zaman içinde ortalama sınav puanları
                 </p>
               </div>
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={trends}>
+              <div style={{ width: '100%', height: 300, minHeight: 300 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={trends}>
                   <defs>
                     <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
@@ -306,7 +307,8 @@ export default function InstitutionAnalyticsPanel({ institutionId }: Institution
                     name="Ortalama Puan"
                   />
                 </AreaChart>
-              </ResponsiveContainer>
+                </ResponsiveContainer>
+              </div>
             </div>
           )}
 
@@ -318,8 +320,9 @@ export default function InstitutionAnalyticsPanel({ institutionId }: Institution
                   <h3 className="text-lg font-semibold text-gray-900">Ders Bazlı Performans</h3>
                   <p className="text-sm text-gray-600">Ortalama puanlar</p>
                 </div>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={subjectPerf}>
+                <div style={{ width: '100%', height: 300, minHeight: 300 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={subjectPerf}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                     <XAxis dataKey="subject" stroke="#9ca3af" fontSize={12} />
                     <YAxis stroke="#9ca3af" fontSize={12} domain={[0, 100]} />
@@ -332,7 +335,8 @@ export default function InstitutionAnalyticsPanel({ institutionId }: Institution
                     />
                     <Bar dataKey="averageScore" fill="#3b82f6" name="Ortalama Puan" radius={[8, 8, 0, 0]} />
                   </BarChart>
-                </ResponsiveContainer>
+                  </ResponsiveContainer>
+                </div>
               </div>
 
               <div className="rounded-xl border border-gray-200 bg-white p-6">
@@ -340,8 +344,9 @@ export default function InstitutionAnalyticsPanel({ institutionId }: Institution
                   <h3 className="text-lg font-semibold text-gray-900">Doğru Cevap Oranı</h3>
                   <p className="text-sm text-gray-600">Ders bazlı başarı</p>
                 </div>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
+                <div style={{ width: '100%', height: 300, minHeight: 300 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
                     <Pie
                       data={subjectPerf}
                       cx="50%"
@@ -358,7 +363,8 @@ export default function InstitutionAnalyticsPanel({ institutionId }: Institution
                     </Pie>
                     <Tooltip />
                   </PieChart>
-                </ResponsiveContainer>
+                  </ResponsiveContainer>
+                </div>
               </div>
             </div>
           )}

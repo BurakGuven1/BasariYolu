@@ -306,8 +306,9 @@ export default function ClassPerformancePanel({
         {data.topicPerformances.length === 0 ? (
           <p className="text-gray-500 text-center py-8">Henüz sınav verisi bulunmuyor</p>
         ) : (
-          <ResponsiveContainer width="100%" height={500}>
-            <BarChart
+          <div style={{ width: '100%', height: 500, minHeight: 500 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
               data={data.topicPerformances.slice(0, 15)} // İlk 15 konu
               layout="horizontal"
               margin={{ top: 20, right: 30, left: 150, bottom: 5 }}
@@ -347,7 +348,8 @@ export default function ClassPerformancePanel({
                 ))}
               </Bar>
             </BarChart>
-          </ResponsiveContainer>
+            </ResponsiveContainer>
+          </div>
         )}
       </div>
 

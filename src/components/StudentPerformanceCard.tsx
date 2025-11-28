@@ -395,8 +395,9 @@ export default function StudentPerformanceCard({
         {data.topicPerformances.length === 0 ? (
           <p className="text-gray-500 text-center py-8">Henüz sınav verisi bulunmuyor</p>
         ) : (
-          <ResponsiveContainer width="100%" height={400}>
-            <BarChart
+          <div style={{ width: '100%', height: 400, minHeight: 400 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
               data={data.topicPerformances}
               layout="horizontal"
               margin={{ top: 20, right: 30, left: 150, bottom: 5 }}
@@ -435,7 +436,8 @@ export default function StudentPerformanceCard({
                 ))}
               </Bar>
             </BarChart>
-          </ResponsiveContainer>
+            </ResponsiveContainer>
+          </div>
         )}
       </div>
 
@@ -443,8 +445,9 @@ export default function StudentPerformanceCard({
       {radarData.length > 0 && (
         <div className="bg-white rounded-xl shadow-md p-6">
           <h3 className="text-lg font-bold text-gray-900 mb-4">Genel Performans Haritası</h3>
-          <ResponsiveContainer width="100%" height={400}>
-            <RadarChart data={radarData}>
+          <div style={{ width: '100%', height: 400, minHeight: 400 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <RadarChart data={radarData}>
               <PolarGrid />
               <PolarAngleAxis dataKey="topic" />
               <PolarRadiusAxis angle={90} domain={[0, 100]} />
@@ -457,7 +460,8 @@ export default function StudentPerformanceCard({
               />
               <Tooltip />
             </RadarChart>
-          </ResponsiveContainer>
+            </ResponsiveContainer>
+          </div>
         </div>
       )}
 

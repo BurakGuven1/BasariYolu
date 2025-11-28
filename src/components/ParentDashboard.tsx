@@ -327,8 +327,9 @@ export default function ParentDashboard() {
           <div className="bg-white rounded-lg p-6 shadow-sm">
             <h3 className="text-lg font-semibold mb-4">Son Denemeler İlerlemesi</h3>
             {chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={chartData}>
+              <div style={{ width: '100%', height: 300, minHeight: 300 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" fontSize={12} />
                   <YAxis domain={[100, 500]} />
@@ -348,7 +349,8 @@ export default function ParentDashboard() {
                     activeDot={{ r: 7, stroke: '#3B82F6', strokeWidth: 2 }}
                   />
                 </LineChart>
-              </ResponsiveContainer>
+                </ResponsiveContainer>
+              </div>
             ) : (
               <div className="text-center py-16 text-gray-500">
                 <TrendingUp className="h-12 w-12 mx-auto mb-4 text-gray-300" />
@@ -365,8 +367,9 @@ export default function ParentDashboard() {
           <div className="bg-white rounded-lg p-6 shadow-sm">
             <h3 className="text-lg font-semibold mb-4">Ödev Tamamlama Durumu</h3>
             {homeworkCompletion.length > 0 && stats.totalHomeworks > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
+              <div style={{ width: '100%', height: 300, minHeight: 300 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
                   <Pie
                     data={homeworkCompletion}
                     cx="50%"
@@ -382,7 +385,8 @@ export default function ParentDashboard() {
                   </Pie>
                   <Tooltip />
                 </PieChart>
-              </ResponsiveContainer>
+                </ResponsiveContainer>
+              </div>
             ) : (
               <div className="text-center py-16 text-gray-500">
                 <BookOpen className="h-12 w-12 mx-auto mb-4 text-gray-300" />
