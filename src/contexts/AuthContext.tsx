@@ -55,10 +55,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const initializeAuth = async () => {
       try {
+        // CRITICAL: Check if logout just happened (prevents auto re-login)
+        const logoutFlag = sessionStorage.getItem('logout_in_progress');
+        if (logoutFlag) {
+          sessionStorage.removeItem('logout_in_progress');
+          setLoading(false);
+          setInitialized(true);
+          return; // Don't restore session
+        }
+
         // Get current Supabase session
         const { data: { session }, error } = await supabase.auth.getSession();
 
         if (error) {
+          console.warn('⚠️ Session error:', error);
           setLoading(false);
           setInitialized(true);
           return;
@@ -97,6 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             ...additionalData,
           };
 
+          console.log('✅ Restored Supabase session:', userType);
           setUser(authUser);
           saveSession(authUser);
         } else {
@@ -105,15 +116,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (stored) {
             try {
               const parsedStored = JSON.parse(stored);
+              // ONLY restore if teacher or institution AND session is still valid
               if (parsedStored.userType === 'teacher' || parsedStored.userType === 'institution') {
+                console.log('✅ Restored non-Supabase session:', parsedStored.userType);
                 setUser(parsedStored);
+              } else {
+                // Clear invalid session
+                localStorage.removeItem(AUTH_STORAGE_KEY);
               }
             } catch (e) {
               console.warn('⚠️ Failed to parse stored non-Supabase session');
+              localStorage.removeItem(AUTH_STORAGE_KEY);
             }
           }
         }
       } catch (error) {
+        console.error('❌ Auth initialization error:', error);
       } finally {
         setLoading(false);
         setInitialized(true);
@@ -208,63 +226,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Logout function - CRITICAL FIX: Stable logout for all user types
   const logout = useCallback(async (options?: LogoutOptions) => {
     console.log('🚪 Logout initiated for user:', user?.userType);
+    const redirectPath = options?.redirectTo ?? '/';
 
+    // STEP 0: Set logout flag to prevent auto re-login on redirect
+    sessionStorage.setItem('logout_in_progress', 'true');
+
+    // STEP 1: Clear state IMMEDIATELY to prevent race conditions
+    setUser(null);
+    saveSession(null);
+
+    // STEP 2: Clear ALL localStorage synchronously (no async)
     try {
-      // 1. Sign out from Supabase (only for student/parent)
-      if (user?.userType === 'student' || user?.userType === 'parent') {
-        console.log('🔓 Signing out from Supabase...');
-        await supabase.auth.signOut({ scope: 'local' });
-      }
-
-      // 2. Clear all user state
-      console.log('🧹 Clearing user state...');
-      setUser(null);
-      saveSession(null);
-
-      // 3. Clear ALL auth-related storage (comprehensive cleanup)
+      // Remove auth storage KEY
+      localStorage.removeItem(AUTH_STORAGE_KEY);
       localStorage.removeItem('institutionSession');
       localStorage.removeItem('classViewerSession');
       localStorage.removeItem('teacherSession');
       localStorage.removeItem('parentSession');
 
-      // Clear any Supabase auth tokens
-      Object.keys(localStorage).forEach(key => {
-        if (key.startsWith('sb-') || key.includes('supabase')) {
-          localStorage.removeItem(key);
+      // Clear Supabase tokens
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith('sb-') || key.includes('supabase'))) {
+          keysToRemove.push(key);
         }
-      });
+      }
+      keysToRemove.forEach(key => localStorage.removeItem(key));
 
-      console.log('✅ Logout successful, redirecting...');
-
-      // 4. Force redirect using multiple methods for reliability
-      const redirectPath = options?.redirectTo ?? '/';
-
-      // Method 1: Direct window location (most reliable)
-      window.location.replace(redirectPath);
-
-      // Fallback: If replace doesn't work in 100ms
-      setTimeout(() => {
-        window.location.href = redirectPath;
-      }, 100);
-
-    } catch (error) {
-      console.error('❌ Logout error:', error);
-
-      // FORCE LOGOUT: Clear everything and redirect even on error
-      setUser(null);
-      saveSession(null);
-
-      // Nuclear option: clear ALL localStorage
-      localStorage.clear();
-
-      // Force redirect
-      const redirectPath = options?.redirectTo ?? '/';
-      window.location.replace(redirectPath);
-
-      setTimeout(() => {
-        window.location.href = redirectPath;
-      }, 100);
+      console.log('🧹 LocalStorage cleared');
+    } catch (e) {
+      console.warn('localStorage clear error:', e);
     }
+
+    // STEP 3: Sign out from Supabase for everyone (global to avoid ghost sessions)
+    try {
+      await supabase.auth.signOut({ scope: 'global' });
+    } catch (err) {
+      console.warn('Supabase signOut error:', err);
+    }
+
+    // STEP 4: IMMEDIATE redirect (synchronous)
+    console.log('✅ Redirecting to:', redirectPath);
+
+    // Small delay to ensure storage is cleared
+    setTimeout(() => {
+      window.location.replace(redirectPath);
+    }, 50); // 50ms delay to ensure storage cleanup completes
+
   }, [user, saveSession]);
 
   // Manual refresh session (RARELY NEEDED - Supabase auto-refreshes tokens)
