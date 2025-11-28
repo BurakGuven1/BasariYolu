@@ -46,9 +46,10 @@ export default defineConfig({
             if (id.includes('exceljs') || id.includes('jspdf') || id.includes('html2canvas')) {
               return 'export-libs';
             }
-            // Animations (heavy - lazy loaded)
+            // Animations - Keep with vendor to ensure React is loaded first
+            // FIX: animations chunk was loading before react-vendor causing createContext error
             if (id.includes('lottie') || id.includes('framer-motion')) {
-              return 'animations';
+              return 'vendor';
             }
             // Maps (heavy - lazy loaded)
             if (id.includes('leaflet')) {
