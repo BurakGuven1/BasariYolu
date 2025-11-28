@@ -74,12 +74,15 @@ export function InstitutionProvider({ children }: { children: React.ReactNode })
         .eq('id', institutionId)
         .single();
 
-      if (error) throw error;
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
 
-      setInstitution(data);
+      setInstitution(data || null);
     } catch (err: any) {
       console.error('Error loading institution:', err);
       setError(err.message);
+      // Don't throw - just log and set error state
     }
   }, [institutionId]);
 
@@ -106,7 +109,9 @@ export function InstitutionProvider({ children }: { children: React.ReactNode })
         .eq('institution_id', institutionId)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error && error.code !== 'PGRST116') {
+        console.warn('Students load error:', error);
+      }
 
       const formattedStudents: InstitutionStudent[] = (data || []).map((s: any) => ({
         user_id: s.user_id,
@@ -121,6 +126,7 @@ export function InstitutionProvider({ children }: { children: React.ReactNode })
     } catch (err: any) {
       console.error('Error loading students:', err);
       setError(err.message);
+      // Don't throw - just log and set error state
     }
   }, [institutionId]);
 
@@ -138,12 +144,15 @@ export function InstitutionProvider({ children }: { children: React.ReactNode })
         .eq('institution_id', institutionId)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error && error.code !== 'PGRST116') {
+        console.warn('Teachers load error:', error);
+      }
 
       setTeachers(data || []);
     } catch (err: any) {
       console.error('Error loading teachers:', err);
       setError(err.message);
+      // Don't throw - just log and set error state
     }
   }, [institutionId]);
 

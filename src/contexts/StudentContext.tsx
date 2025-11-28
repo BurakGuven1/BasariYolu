@@ -68,18 +68,34 @@ export function StudentProvider({ children }: { children: React.ReactNode }) {
     setError(null);
 
     try {
-      // Load profile
+      // Load profile from profiles table (NOT student_profiles!)
       const { data: profileData, error: profileError } = await supabase
-        .from('student_profiles')
+        .from('profiles')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('id', user.id)
         .single();
 
       if (profileError && profileError.code !== 'PGRST116') {
-        throw profileError;
+        console.warn('Profile load error:', profileError);
       }
 
-      setProfile(profileData || null);
+      // Map profiles table to StudentProfile format
+      const mappedProfile: StudentProfile | null = profileData ? {
+        id: profileData.id,
+        user_id: profileData.id,
+        full_name: profileData.full_name || '',
+        school: profileData.school,
+        grade: profileData.grade,
+        target_exam: profileData.target_exam,
+        target_university: profileData.target_university,
+        target_department: profileData.target_department,
+        phone: profileData.phone,
+        avatar_url: profileData.avatar_url,
+        created_at: profileData.created_at,
+        updated_at: profileData.updated_at || profileData.created_at,
+      } : null;
+
+      setProfile(mappedProfile);
 
       // Load subscription
       const { data: subData, error: subError } = await supabase
@@ -103,7 +119,7 @@ export function StudentProvider({ children }: { children: React.ReactNode }) {
         features: ['basic_exams', 'limited_ai']
       });
 
-      // Load points
+      // Load points - use student_points table
       const { data: pointsData, error: pointsError } = await supabase
         .from('student_points')
         .select('*')
@@ -124,6 +140,9 @@ export function StudentProvider({ children }: { children: React.ReactNode }) {
     } catch (err: any) {
       console.error('Error loading student data:', err);
       setError(err.message || 'Öğrenci verileri yüklenemedi');
+
+      // Don't throw error - just set error state
+      // This prevents logout on database errors
     } finally {
       setLoading(false);
     }
@@ -141,24 +160,40 @@ export function StudentProvider({ children }: { children: React.ReactNode }) {
 
   // Update profile
   const updateProfile = useCallback(async (updates: Partial<StudentProfile>) => {
-    if (!user || !profile) return;
+    if (!user) return;
 
     try {
       const { data, error } = await supabase
-        .from('student_profiles')
+        .from('profiles')
         .update(updates)
-        .eq('user_id', user.id)
+        .eq('id', user.id)
         .select()
         .single();
 
       if (error) throw error;
 
-      setProfile(data);
+      // Map updated data to StudentProfile format
+      const mappedProfile: StudentProfile = {
+        id: data.id,
+        user_id: data.id,
+        full_name: data.full_name || '',
+        school: data.school,
+        grade: data.grade,
+        target_exam: data.target_exam,
+        target_university: data.target_university,
+        target_department: data.target_department,
+        phone: data.phone,
+        avatar_url: data.avatar_url,
+        created_at: data.created_at,
+        updated_at: data.updated_at || data.created_at,
+      };
+
+      setProfile(mappedProfile);
     } catch (err: any) {
       console.error('Error updating profile:', err);
       throw err;
     }
-  }, [user, profile]);
+  }, [user]);
 
   // Add points
   const addPoints = useCallback(async (pointsToAdd: number, reason: string) => {
