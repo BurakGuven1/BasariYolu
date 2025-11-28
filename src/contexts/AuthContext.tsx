@@ -59,7 +59,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data: { session }, error } = await supabase.auth.getSession();
 
         if (error) {
-          console.error('❌ Error getting session:', error);
           setLoading(false);
           setInitialized(true);
           return;
@@ -98,7 +97,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             ...additionalData,
           };
 
-          console.log('✅ Session initialized:', { userType, email: authUser.email });
           setUser(authUser);
           saveSession(authUser);
         } else {
@@ -108,7 +106,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             try {
               const parsedStored = JSON.parse(stored);
               if (parsedStored.userType === 'teacher' || parsedStored.userType === 'institution') {
-                console.log('✅ Non-Supabase user session restored:', parsedStored.userType);
                 setUser(parsedStored);
               }
             } catch (e) {
@@ -117,7 +114,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
       } catch (error) {
-        console.error('❌ Auth initialization error:', error);
       } finally {
         setLoading(false);
         setInitialized(true);
@@ -130,7 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Listen to Supabase auth changes - THIS HANDLES TOKEN REFRESH AUTOMATICALLY
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('🔐 Auth state change:', event);
+
 
       if (event === 'SIGNED_IN' && session?.user) {
         // Check localStorage for additional info
@@ -164,7 +160,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           ...additionalData,
         };
 
-        console.log('✅ User signed in:', { userType, email: authUser.email });
         setUser(authUser);
         saveSession(authUser);
       } else if (event === 'SIGNED_OUT') {
@@ -175,18 +170,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const parsed = JSON.parse(currentStored);
             // Only clear for student/parent - keep teacher/institution
             if (parsed.userType === 'student' || parsed.userType === 'parent') {
-              console.log('🚪 User signed out');
               setUser(null);
               saveSession(null);
             }
           } catch (e) {
-            console.log('🚪 User signed out (fallback)');
             setUser(null);
             saveSession(null);
           }
         }
       } else if (event === 'TOKEN_REFRESHED') {
-        console.log('🔄 Token refreshed automatically by Supabase');
         // Token refresh successful - Supabase handles this automatically
         // We don't need to do anything!
       } else if (event === 'USER_UPDATED') {
@@ -198,7 +190,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             profile: session.user.user_metadata,
             metadata: session.user.user_metadata,
           };
-          console.log('✏️ User updated');
           setUser(updatedUser);
           saveSession(updatedUser);
         }
@@ -210,7 +201,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Login function
   const login = useCallback((authUser: AuthUser) => {
-    console.log('👤 Login:', { userType: authUser.userType, email: authUser.email });
     setUser(authUser);
     saveSession(authUser);
   }, [saveSession]);
@@ -218,7 +208,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Logout function
   const logout = useCallback(async (options?: LogoutOptions) => {
     try {
-      console.log('🚪 Logging out...');
 
       // Sign out from Supabase (only for student/parent)
       if (user?.userType === 'student' || user?.userType === 'parent') {
@@ -235,7 +224,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Redirect
       window.location.href = options?.redirectTo ?? '/';
     } catch (error) {
-      console.error('❌ Logout error:', error);
       // Force clear and redirect even if error
       setUser(null);
       saveSession(null);
@@ -246,7 +234,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Manual refresh session (RARELY NEEDED - Supabase auto-refreshes tokens)
   const refreshSession = useCallback(async () => {
     try {
-      console.log('🔄 Manual session refresh requested');
 
       // For Supabase users (student/parent)
       if (user?.userType === 'student' || user?.userType === 'parent') {
@@ -267,7 +254,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           };
           setUser(updatedUser);
           saveSession(updatedUser);
-          console.log('✅ Session refreshed successfully');
         }
       }
       // For institution users
@@ -281,7 +267,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             };
             setUser(updatedUser);
             saveSession(updatedUser);
-            console.log('✅ Institution session refreshed');
           }
         } catch (error) {
           console.warn('⚠️ Institution session refresh failed:', error);
@@ -289,7 +274,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
     } catch (error) {
-      console.error('❌ Error refreshing session:', error);
+
       // Keep current user - don't logout on errors
     }
   }, [user, saveSession]);

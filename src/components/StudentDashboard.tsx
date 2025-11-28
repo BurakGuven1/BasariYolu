@@ -6,7 +6,6 @@ import { useStudentData } from '../hooks/useStudentData';
 import ExamForm from './ExamForm';
 import HomeworkForm from './HomeworkForm';
 import ExamTopicsSection from './ExamTopicsSection';
-import AIInsights from './AIInsights';
 import EnhancedAIAnalysis from './EnhancedAIAnalysis';
 import { useFeatureAccess } from '../hooks/useFeatureAccess';
 import ExamLimitBadge from './ExamLimitBadge';
@@ -14,7 +13,6 @@ import FeatureGate from './FeatureGate';
 import ExamCountdown from './ExamCountdown';
 import UpgradeModal from './UpgradeModal';
 import PointsDisplay from './PointsDisplay';
-import AIRecommendations from './AIRecommendations';
 import HistoricalMapsSection from './HistoricalMapsSection';
 import SubscriptionManagement from './SubscriptionManagement';
 import { addStudySessionPoints, completeChallenge, isChallengeCompletedToday } from '../lib/pointsSystem';
@@ -28,7 +26,6 @@ import SelfStudyPlanner from './SelfStudyPlanner';
 import TopicSummariesSection from './TopicSummariesSection';
 import InstitutionStudentPortal from './InstitutionStudentPortal';
 import SoruPortali from './SoruPortali';
-import StudentExamPerformancePanel from './StudentExamPerformancePanel';
 import AIChatPanel from './AIChatPanel';
 import StudentExternalExams from './StudentExternalExams';
 import ErrorBoundary from './ErrorBoundary';
@@ -1039,32 +1036,30 @@ export default function StudentDashboard({ authUser }: StudentDashboardProps) {
               </select>
             </div>
             {chartData.length > 0 ? (
-              <div style={{ width: '100%', height: 250, minHeight: 250 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    {/* Artık "date" anahtarını veride bulabilmek için bu satır doğru çalışacak */}
-                    <XAxis dataKey="date" fontSize={12} />
-                    <YAxis domain={[100, 500]} />
-                    <Tooltip
-                      formatter={(value, _name, props) => [
-                        `${value} puan`,
-                        `${props.payload.examName} (${props.payload.examType})`
-                      ]}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="puan"
-                      stroke="#3B82F6"
-                      strokeWidth={3}
-                      name="Puan"
-                      // Bu noktalar artık veri olduğu için görünecek
-                      dot={{ fill: '#3B82F6', strokeWidth: 2, r: 5 }}
-                      activeDot={{ r: 7, stroke: '#3B82F6', strokeWidth: 2 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
+              <ResponsiveContainer width="100%" height={250}>
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  {/* Artık "date" anahtarını veride bulabilmek için bu satır doğru çalışacak */}
+                  <XAxis dataKey="date" fontSize={12} /> 
+                  <YAxis domain={[100, 500]} />
+                  <Tooltip 
+                    formatter={(value, _name, props) => [
+                      `${value} puan`,
+                      `${props.payload.examName} (${props.payload.examType})`
+                    ]}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="puan" 
+                    stroke="#3B82F6" 
+                    strokeWidth={3} 
+                    name="Puan"
+                    // Bu noktalar artık veri olduğu için görünecek
+                    dot={{ fill: '#3B82F6', strokeWidth: 2, r: 5 }}
+                    activeDot={{ r: 7, stroke: '#3B82F6', strokeWidth: 2 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
             ) : (
               <div className="text-center py-16 text-gray-500">
                 <TrendingUp className="h-12 w-12 mx-auto mb-4 text-gray-300" />

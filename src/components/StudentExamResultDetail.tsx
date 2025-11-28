@@ -16,8 +16,7 @@ import {
 import { fetchExternalExamResults, type ExternalExamResult } from '../lib/institutionExternalExamApi';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import html2canvas from 'html2canvas';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { examData } from '../data/examTopics';
 
 // Helper function to convert Turkish characters for PDF compatibility
@@ -41,186 +40,138 @@ interface StudentExamResultDetailProps {
   onBack: () => void;
 }
 
-// Helper function to calculate exam score based on ÖSYM official formulas
+type QuestionStats = { correct: number; wrong: number; empty: number };
+const normalizeSubject = (value: string) =>
+  (value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/g, '');
+
+
+// Helper function to calculate exam score based on OSYM-style formulas
 const calculateExamScore = (
   template: any,
-  topicStats: Map<string, { correct: number; wrong: number; empty: number }>,
+  subjectStats: Map<string, QuestionStats>,
   netScore: number
 ): number | null => {
   const examType = template?.exam_type;
   if (!examType) return null;
 
-  // Helper function to calculate net score (TYT/AYT: 4 yanlış 1 doğru götürür)
-  const calculateNetScore = (correct: number, wrong: number) => {
-    return Math.max(0, correct - (wrong / 4));
+  const sumStats = (aliases: string[]): QuestionStats => {
+    const combined: QuestionStats = { correct: 0, wrong: 0, empty: 0 };
+    const normalizedAliases = aliases.map(alias => normalizeSubject(alias));
+
+    subjectStats.forEach((stats, subject) => {
+      const key = normalizeSubject(subject);
+      if (normalizedAliases.some(alias => alias && key.includes(alias))) {
+        combined.correct += stats.correct;
+        combined.wrong += stats.wrong;
+        combined.empty += stats.empty;
+      }
+    });
+
+    return combined;
   };
 
-  // Helper function for LGS net (3 yanlış 1 doğru götürür)
-  const calculateLGSNetScore = (correct: number, wrong: number) => {
-    return Math.max(0, correct - (wrong / 3));
-  };
+  const totalQuestions = (stats: QuestionStats) => stats.correct + stats.wrong + stats.empty;
+  const calculateNet = (stats: QuestionStats, wrongPenalty: number) =>
+    Math.max(0, stats.correct - stats.wrong / wrongPenalty);
 
-  // Group topics by subject (using heuristics)
-  const subjectStats = new Map<string, { correct: number; wrong: number; empty: number }>();
-
-  topicStats.forEach((stats, topic) => {
-    const topicLower = topic.toLowerCase();
-    let subject = 'Diğer';
-
-    // Türkçe
-    if (topicLower.includes('türkçe') || topicLower.includes('dil') || topicLower.includes('sözcük') ||
-        topicLower.includes('cümle') || topicLower.includes('paragraf') || topicLower.includes('anlam')) {
-      subject = 'Türkçe';
-    }
-    // Matematik
-    else if (topicLower.includes('matematik') || topicLower.includes('geometri') || topicLower.includes('sayı') ||
-             topicLower.includes('fonksiyon') || topicLower.includes('olasılık') || topicLower.includes('alan')) {
-      subject = 'Matematik';
-    }
-    // Fizik
-    else if (topicLower.includes('fizik')) {
-      subject = 'Fizik';
-    }
-    // Kimya
-    else if (topicLower.includes('kimya')) {
-      subject = 'Kimya';
-    }
-    // Biyoloji
-    else if (topicLower.includes('biyoloji')) {
-      subject = 'Biyoloji';
-    }
-    // Fen (genel)
-    else if (topicLower.includes('fen') || topicLower.includes('bilim')) {
-      subject = 'Fen';
-    }
-    // Sosyal
-    else if (topicLower.includes('sosyal')) {
-      subject = 'Sosyal';
-    }
-    // Tarih
-    else if (topicLower.includes('tarih') || topicLower.includes('inkılap')) {
-      subject = 'Tarih';
-    }
-    // Coğrafya
-    else if (topicLower.includes('coğrafya')) {
-      subject = 'Coğrafya';
-    }
-    // Felsefe
-    else if (topicLower.includes('felsefe')) {
-      subject = 'Felsefe';
-    }
-    // Din
-    else if (topicLower.includes('din') || topicLower.includes('dkab')) {
-      subject = 'Din';
-    }
-    // Edebiyat
-    else if (topicLower.includes('edebiyat') || topicLower.includes('şiir') || topicLower.includes('roman')) {
-      subject = 'Edebiyat';
-    }
-    // İngilizce
-    else if (topicLower.includes('ingilizce') || topicLower.includes('english')) {
-      subject = 'İngilizce';
-    }
-
-    if (!subjectStats.has(subject)) {
-      subjectStats.set(subject, { correct: 0, wrong: 0, empty: 0 });
-    }
-
-    const subjectStat = subjectStats.get(subject)!;
-    subjectStat.correct += stats.correct;
-    subjectStat.wrong += stats.wrong;
-    subjectStat.empty += stats.empty;
-  });
-
-  // ========== TYT PUAN HESAPLAMA (ÖSYM) ==========
+  // TYT: base 100 + weighted nets
   if (examType === 'TYT') {
-    const turkce = subjectStats.get('Türkçe') || { correct: 0, wrong: 0, empty: 0 };
-    const matematik = subjectStats.get('Matematik') || { correct: 0, wrong: 0, empty: 0 };
-    const fen = subjectStats.get('Fen') || { correct: 0, wrong: 0, empty: 0 };
-    const sosyal = subjectStats.get('Sosyal') || { correct: 0, wrong: 0, empty: 0 };
+    // Geometri sorular��n�� matemati��e ekle
+    const turkce = sumStats(['turk', 'turkce']);
+    const matematik = sumStats(['matematik', 'geometri']);
+    const fen = sumStats(['fen', 'fizik', 'kimya', 'biyoloji']);
+    const sosyal = sumStats(['sosyal', 'tarih', 'inkilap', 'cografya', 'felsefe', 'din']);
 
-    const turkceNet = calculateNetScore(turkce.correct, turkce.wrong);
-    const matematikNet = calculateNetScore(matematik.correct, matematik.wrong);
-    const fenNet = calculateNetScore(fen.correct, fen.wrong);
-    const sosyalNet = calculateNetScore(sosyal.correct, sosyal.wrong);
+    const turkceNet = calculateNet(turkce, 4);
+    const matematikNet = calculateNet(matematik, 4);
+    const fenNet = calculateNet(fen, 4);
+    const sosyalNet = calculateNet(sosyal, 4);
 
-    // TYT Katsayıları: Türkçe(1.32), Matematik(1.32), Sosyal(0.44), Fen(0.44)
-    const hamPuan = 100 + (turkceNet * 1.32) + (matematikNet * 1.32) + (sosyalNet * 0.44) + (fenNet * 0.44);
+    const weighted = 100 + turkceNet * 1.32 + matematikNet * 1.32 + sosyalNet * 0.44 + fenNet * 0.44;
+    const totalQ = template?.total_questions || 120;
+    const scaled = 100 + Math.max(0, netScore) * (400 / totalQ);
+    const hamPuan = Math.max(weighted, scaled);
     return Math.min(500, Math.max(100, Math.round(hamPuan * 100) / 100));
   }
 
-  // ========== AYT PUAN HESAPLAMA (ÖSYM) ==========
-  else if (examType === 'AYT') {
-    const matematik = subjectStats.get('Matematik') || { correct: 0, wrong: 0, empty: 0 };
-    const fizik = subjectStats.get('Fizik') || { correct: 0, wrong: 0, empty: 0 };
-    const kimya = subjectStats.get('Kimya') || { correct: 0, wrong: 0, empty: 0 };
-    const biyoloji = subjectStats.get('Biyoloji') || { correct: 0, wrong: 0, empty: 0 };
-    const edebiyat = subjectStats.get('Edebiyat') || { correct: 0, wrong: 0, empty: 0 };
-    const tarih = subjectStats.get('Tarih') || { correct: 0, wrong: 0, empty: 0 };
-    const cografya = subjectStats.get('Coğrafya') || { correct: 0, wrong: 0, empty: 0 };
-    const felsefe = subjectStats.get('Felsefe') || { correct: 0, wrong: 0, empty: 0 };
-    const din = subjectStats.get('Din') || { correct: 0, wrong: 0, empty: 0 };
+  // AYT: SAY / EA / SÖZ katsay��lar��
+  if (examType === 'AYT') {
+    const matematik = sumStats(['matematik', 'geometri']);
+    const fizik = sumStats(['fizik']);
+    const kimya = sumStats(['kimya']);
+    const biyoloji = sumStats(['biyoloji']);
+    const edebiyat = sumStats(['edebiyat']);
+    const tarih = sumStats(['tarih']);
+    const cografya = sumStats(['cografya']);
+    const felsefe = sumStats(['felsefe']);
+    const din = sumStats(['din']);
 
-    const matematikNet = calculateNetScore(matematik.correct, matematik.wrong);
-    const fizikNet = calculateNetScore(fizik.correct, fizik.wrong);
-    const kimyaNet = calculateNetScore(kimya.correct, kimya.wrong);
-    const biyolojiNet = calculateNetScore(biyoloji.correct, biyoloji.wrong);
-    const edebiyatNet = calculateNetScore(edebiyat.correct, edebiyat.wrong);
-    const tarihNet = calculateNetScore(tarih.correct, tarih.wrong);
-    const cografyaNet = calculateNetScore(cografya.correct, cografya.wrong);
-    const felsefeNet = calculateNetScore(felsefe.correct, felsefe.wrong);
-    const dinNet = calculateNetScore(din.correct, din.wrong);
+    const matematikNet = calculateNet(matematik, 4);
+    const fizikNet = calculateNet(fizik, 4);
+    const kimyaNet = calculateNet(kimya, 4);
+    const biyolojiNet = calculateNet(biyoloji, 4);
+    const edebiyatNet = calculateNet(edebiyat, 4);
+    const tarihNet = calculateNet(tarih, 4);
+    const cografyaNet = calculateNet(cografya, 4);
+    const felsefeNet = calculateNet(felsefe, 4);
+    const dinNet = calculateNet(din, 4);
 
-    // Determine AYT type (SAY, EA, or SÖZ) based on which subjects have questions
+    const scienceTotal = totalQuestions(fizik) + totalQuestions(kimya) + totalQuestions(biyoloji);
+    const sozelTotal = totalQuestions(edebiyat) + totalQuestions(tarih) + totalQuestions(cografya) + totalQuestions(felsefe) + totalQuestions(din);
+    const eaTotal = totalQuestions(edebiyat) + totalQuestions(tarih) + totalQuestions(cografya);
+
     let hamPuan = 100;
 
-    if (fizikNet > 0 || kimyaNet > 0 || biyolojiNet > 0) {
-      // AYT-SAY (Sayısal): Mat(3.0), Fizik(2.85), Kimya(3.07), Biyoloji(3.07)
-      hamPuan += (matematikNet * 3.0) + (fizikNet * 2.85) + (kimyaNet * 3.07) + (biyolojiNet * 3.07);
-    } else if (edebiyatNet > 0 && tarihNet > 0 && cografyaNet > 0 && felsefeNet > 0) {
-      // AYT-SÖZ (Sözel): Edebiyat(3.0), Tarih-1(2.8), Coğrafya-1(3.33), Tarih-2(2.91), Coğrafya-2(3.5), Felsefe(3.07), Din(3.07)
-      // Basitleştirilmiş: Edebiyat(3.0), Tarih(2.8), Coğrafya(3.33), Felsefe(3.07), Din(3.07)
-      hamPuan += (edebiyatNet * 3.0) + (tarihNet * 2.8) + (cografyaNet * 3.33) + (felsefeNet * 3.07) + (dinNet * 3.07);
-    } else if (edebiyatNet > 0 || tarihNet > 0 || cografyaNet > 0) {
-      // AYT-EA (Eşit Ağırlık): Mat(3.0), Edebiyat(2.8), Tarih-1(3.33), Coğrafya-1(3.33)
-      hamPuan += (matematikNet * 3.0) + (edebiyatNet * 2.8) + (tarihNet * 3.33) + (cografyaNet * 3.33);
+    if (scienceTotal > 0) {
+      // AYT-SAY
+      hamPuan += matematikNet * 3.0 + fizikNet * 2.85 + kimyaNet * 3.07 + biyolojiNet * 3.07;
+    } else if (sozelTotal > 0) {
+      // AYT-S?Z
+      hamPuan += edebiyatNet * 3.0 + tarihNet * 2.8 + cografyaNet * 3.33 + felsefeNet * 3.07 + dinNet * 3.07;
+    } else if (eaTotal > 0 || totalQuestions(matematik) > 0) {
+      // AYT-EA
+      hamPuan += matematikNet * 3.0 + edebiyatNet * 2.8 + tarihNet * 3.33 + cografyaNet * 3.33;
     } else {
-      // Fallback: use total net
-      hamPuan = (netScore * 5) + 100;
+      hamPuan = netScore * 5 + 100;
     }
 
-    return Math.min(500, Math.max(100, Math.round(hamPuan * 100) / 100));
+    const totalQ = template?.total_questions || 80;
+    const scaled = 100 + Math.max(0, netScore) * (400 / totalQ);
+    const finalScore = Math.max(hamPuan, scaled);
+
+    return Math.min(500, Math.max(100, Math.round(finalScore * 100) / 100));
   }
 
-  // ========== LGS PUAN HESAPLAMA (MEB) ==========
-  else if (examType === 'LGS') {
-    const turkce = subjectStats.get('Türkçe') || { correct: 0, wrong: 0, empty: 0 };
-    const matematik = subjectStats.get('Matematik') || { correct: 0, wrong: 0, empty: 0 };
-    const fen = subjectStats.get('Fen') || { correct: 0, wrong: 0, empty: 0 };
-    const tarih = subjectStats.get('Tarih') || { correct: 0, wrong: 0, empty: 0 };
-    const din = subjectStats.get('Din') || { correct: 0, wrong: 0, empty: 0 };
-    const ingilizce = subjectStats.get('İngilizce') || { correct: 0, wrong: 0, empty: 0 };
+  // LGS: 500'l��k sistem, 3 yanl�� Y 1 do��ru
+  if (examType === 'LGS') {
+    const turkce = sumStats(['turk', 'turkce']);
+    const matematik = sumStats(['matematik', 'geometri']);
+    const fen = sumStats(['fen', 'fenbilimleri', 'fizik', 'kimya', 'biyoloji']);
+    const inkilap = sumStats(['inkilap', 'tarih']);
+    const din = sumStats(['din']);
+    const ingilizce = sumStats(['ingilizce', 'english']);
 
-    // LGS'de 3 yanlış 1 doğruyu götürür
-    const turkceNet = calculateLGSNetScore(turkce.correct, turkce.wrong);
-    const matematikNet = calculateLGSNetScore(matematik.correct, matematik.wrong);
-    const fenNet = calculateLGSNetScore(fen.correct, fen.wrong);
-    const tarihNet = calculateLGSNetScore(tarih.correct, tarih.wrong);
-    const dinNet = calculateLGSNetScore(din.correct, din.wrong);
-    const ingilizceNet = calculateLGSNetScore(ingilizce.correct, ingilizce.wrong);
+    const turkceNet = calculateNet(turkce, 3);
+    const matematikNet = calculateNet(matematik, 3);
+    const fenNet = calculateNet(fen, 3);
+    const inkilapNet = calculateNet(inkilap, 3);
+    const dinNet = calculateNet(din, 3);
+    const ingilizceNet = calculateNet(ingilizce, 3);
 
-    // LGS Katsayıları: Türkçe(4), Mat(4), Fen(4), İnkılap(1), Din(1), İngilizce(1)
-    const katsayiliToplam = (turkceNet * 4) + (matematikNet * 4) + (fenNet * 4) +
-                            (tarihNet * 1) + (dinNet * 1) + (ingilizceNet * 1);
-
-    // MEB 500'lük sisteme ölçekler (maksimum katsayılı toplam ≈ 270)
+    const katsayiliToplam = turkceNet * 4 + matematikNet * 4 + fenNet * 4 + inkilapNet * 1 + dinNet * 1 + ingilizceNet * 1;
     const hamPuan = (katsayiliToplam * 500) / 270;
-    return Math.min(500, Math.max(0, Math.round(hamPuan * 100) / 100));
+    const totalQ = template?.total_questions || 90;
+    const scaled = Math.max(0, netScore) * (500 / totalQ);
+    const finalScore = Math.max(hamPuan, scaled);
+    return Math.min(500, Math.max(0, Math.round(finalScore * 100) / 100));
   }
 
   return null;
 };
-
 export default function StudentExamResultDetail({
   userId,
   institutionId,
@@ -280,7 +231,7 @@ export default function StudentExamResultDetail({
   };
 
   const downloadPDF = async (
-    topicStats: Map<string, { correct: number; wrong: number; empty: number }>,
+    topicStats: Map<string, QuestionStats>,
     template: any,
     examScore: number | null,
     improvement: number | null,
@@ -386,7 +337,7 @@ export default function StudentExamResultDetail({
         const wasWeakBefore = previousResults.some(prevResult => {
           const prevTemplate = prevResult.template as any;
           const prevMapping = prevTemplate?.question_mapping || [];
-          const prevTopicStats = new Map<string, { correct: number; wrong: number; empty: number }>();
+          const prevTopicStats = new Map<string, QuestionStats>();
 
           Object.entries(prevResult.answers).forEach(([qNum, answer]: [string, any]) => {
             const q = prevMapping.find((m: any) => m.questionNumber === parseInt(qNum));
@@ -599,7 +550,7 @@ export default function StudentExamResultDetail({
           recommendations.push({
             icon: '[+]',
             title: toAscii('TEBRIKLER - GUCLU KONULAR'),
-            text: toAscii(`${topStrong} konularinda mukemmel performans! Bu konulardaki basarini koruyarak diger alanlara odaklanabilirsin.`),
+            text: toAscii(`${topStrong} konularında mükemmel performans! Bu konulardaki başarını koruyarak diğer alanlara odaklanabilirsin.`),
             type: 'success'
           });
         }
@@ -608,22 +559,22 @@ export default function StudentExamResultDetail({
         if (successRate >= 75) {
           recommendations.push({
             icon: '[+]',
-            title: toAscii('MUKEMMEL PERFORMANS'),
-            text: toAscii(`%${Math.round(successRate)} basari orani gosterdin! Suanki calisma tempoyu koruyarak daha zor sorulara odaklanabilirsin.`),
+            title: toAscii('MÜKEMMEL PERFORMANS'),
+            text: toAscii(`%${Math.round(successRate)} başarı oranı gösterdin! Şuanki çalışma tempoyu koruyarak daha zor sorulara odaklanabilirsin.`),
             type: 'success'
           });
         } else if (successRate >= 60) {
           recommendations.push({
             icon: '[*]',
-            title: toAscii('IYI GIDIYORSUN'),
-            text: toAscii(`%${Math.round(successRate)} basari oraniyla iyi bir seviyedesin. Zayif konulara gunluk 30-45 dakika ayirarak basari oranini daha da artirabilirsin.`),
+            title: toAscii('İYİ GİDİYORSUN'),
+            text: toAscii(`%${Math.round(successRate)} başarı oranıyla iyi bir seviyedesin. Zayıf konulara günlük 30-45 dakika ayırarak başarı oranını daha da artırabilirsin.`),
             type: 'info'
           });
         } else {
           recommendations.push({
             icon: '[!]',
-            title: toAscii('TEMEL GUCLENDIR'),
-            text: toAscii(`%${Math.round(successRate)} basari orani. Once temel konulari pekistir, konu anlatim videolari izle, sonra soru cozmeye odaklan.`),
+            title: toAscii('TEMEL GÜÇLENDİR'),
+            text: toAscii(`%${Math.round(successRate)} başarı oranı. Önce temel konuları pekiştir, konu anlatım videoları izle, sonra soru çözmeye odaklan.`),
             type: 'warning'
           });
         }
@@ -633,7 +584,7 @@ export default function StudentExamResultDetail({
           recommendations.push({
             icon: '[!]',
             title: toAscii('KRITIK ONCELIK'),
-            text: toAscii(`${highFrequencyWeakTopics[0].topic} konusu son 3 yilda ${highFrequencyWeakTopics[0].count}+ soru cikti ve senin zayif konun! Bu konuya oncelikle calis.`),
+            text: toAscii(`${highFrequencyWeakTopics[0].topic} konusu son 3 yılda ${highFrequencyWeakTopics[0].count}+ soru çıktı ve senin zayıf konun! Bu konuya öncelikle çalış.`),
             type: 'warning'
           });
         }
@@ -644,7 +595,7 @@ export default function StudentExamResultDetail({
           recommendations.push({
             icon: '[!]',
             title: toAscii('TEKRAR EDEN ZAYIFLIK'),
-            text: toAscii(`${topics} konulari birden fazla denemede dusuk. Farkli kaynaklardan calis, konu anlatim videolari izle, alternatif cozum yontemleri ogren.`),
+            text: toAscii(`${topics} konuları birden fazla denemede düşük. Farklı kaynaklardan çalış, konu anlatım videoları izle, alternatif çözüm yöntemleri öğren.`),
             type: 'warning'
           });
         }
@@ -654,15 +605,15 @@ export default function StudentExamResultDetail({
           recommendations.push({
             icon: '[!]',
             title: toAscii('DIKKAT: YANLIS SAYISI YUKSEK'),
-            text: toAscii(`${result.wrong_count} yanlis cevap var. Sorulari aceleye getirme, soru koklerini dikkatli oku, emin olmadigin sorulari bos birak.`),
+            text: toAscii(`${result.wrong_count} yanlış cevap var. Soruları aceleye getirme, soru köklerini dikkatli oku, emin olmadığın soruları boş bırak.`),
             type: 'warning'
           });
         } else if (result.wrong_count > 0) {
-          const netPenalty = Math.round(result.wrong_count * 0.25 * 10) / 10;
+          const netPenalty = Math.round(result.wrong_count * 0.25);
           recommendations.push({
             icon: '[*]',
             title: toAscii('NET KAYBI'),
-            text: toAscii(`${netPenalty} net yanlis cevaplar yuzunden kayip oldu. Emin olmadigin sorularda tahmin yerine bos birakmayi tercih et.`),
+            text: toAscii(`${netPenalty} net yanlış cevaplar yüzünden kayıp oldu. Emin olmadığın sorularda tahmin yerine boş bırakmayı tercih et.`),
             type: 'info'
           });
         }
@@ -671,8 +622,8 @@ export default function StudentExamResultDetail({
         if (result.empty_count > template?.total_questions * 0.15) {
           recommendations.push({
             icon: '[*]',
-            title: toAscii('ZAMAN YONETIMI'),
-            text: toAscii(`${result.empty_count} soru bos kaldi. Zaman yonetimini iyilestir, kolay sorularla baslayip zor sorulara gec, tahmin teknikleri calis.`),
+            title: toAscii('ZAMAN YÖNETİMİ'),
+            text: toAscii(`${result.empty_count} soru boş kaldı. Zaman yönetimini iyileştir, kolay sorularla başlayıp zor sorulara geç, tahmin teknikleri çalış.`),
             type: 'info'
           });
         }
@@ -682,22 +633,22 @@ export default function StudentExamResultDetail({
           if (improvement > 5) {
             recommendations.push({
               icon: '[+]',
-              title: toAscii('SUPER ILERLEME'),
-              text: toAscii(`Onceki denemelere gore +${improvement.toFixed(1)} net artis! Bu calisma planini surdurmek cok onemli, boyle devam et!`),
+              title: toAscii('SÜPER İLERLEME'),
+              text: toAscii(`Önceki denemelere göre +${improvement.toFixed(1)} net artış! Bu çalışma planını sürdürmek çok önemli, böyle devam et!`),
               type: 'success'
             });
           } else if (improvement > 0) {
             recommendations.push({
               icon: '[+]',
-              title: toAscii('ILERLEME KAYDEDIYORSUN'),
-              text: toAscii(`+${improvement.toFixed(1)} net artis gosterdin. Tutarli calismayla bu ilerleme hizi daha da artacak.`),
+              title: toAscii('İLERLEME KAYDEDİYORSUN'),
+              text: toAscii(`+${improvement.toFixed(1)} net artış gösterdin. Tutarlı çalışmayla bu ilerleme hızı daha da artacak.`),
               type: 'success'
             });
           } else if (improvement < -3) {
             recommendations.push({
               icon: '[!]',
-              title: toAscii('DIKKAT: DUSUS VAR'),
-              text: toAscii(`${Math.abs(improvement).toFixed(1)} net azalma olmus. Calisma yontemini gozden gecir, dinlenmeye ve duzene dikkat et, stres yonetimi yap.`),
+              title: toAscii('DİKKAT: DÜŞÜŞ VAR'),
+              text: toAscii(`${Math.abs(improvement).toFixed(1)} net azalma olmuş. Çalışma yöntemini gözden geçir, dinlenmeye ve düzene dikkat et, stres yönetimi yap.`),
               type: 'warning'
             });
           }
@@ -708,22 +659,22 @@ export default function StudentExamResultDetail({
           if (result.net_score > classAverage + 5) {
             recommendations.push({
               icon: '[+]',
-              title: toAscii('SINIF LIDERI'),
-              text: toAscii(`Sinif ortalamasinin ${(result.net_score - classAverage).toFixed(1)} net ustuundesin! Hedeflerini daha yuksek belirleyebilirsin.`),
+              title: toAscii('SINIF LİDERİ'),
+              text: toAscii(`Sınıf ortalamasının ${(result.net_score - classAverage).toFixed(1)} net üstündesin! Hedeflerini daha yüksek belirleyebilirsin.`),
               type: 'success'
             });
           } else if (result.net_score > classAverage) {
             recommendations.push({
               icon: '[+]',
-              title: toAscii('ORTALAMA USTU'),
-              text: toAscii(`Sinif ortalamasindan ${(result.net_score - classAverage).toFixed(1)} net ondesin. Bu farki acmak icin zor sorulara odaklan.`),
+              title: toAscii('ORTALAMA ÜSTÜ'),
+              text: toAscii(`Sınıf ortalamasından ${(result.net_score - classAverage).toFixed(1)} net öndesin. Bu farkı açmak için zor sorulara odaklan.`),
               type: 'success'
             });
           } else if (result.net_score < classAverage - 3) {
             recommendations.push({
               icon: '[*]',
               title: toAscii('POTANSIYEL VAR'),
-              text: toAscii(`Sinif ort. ${classAverage.toFixed(1)}, sen ${result.net_score.toFixed(1)}. Gunluk duzenli calisma ve konu pekistirme ile ortalamaya ulasabilirsin.`),
+              text: toAscii(`Sınıf ort. ${classAverage.toFixed(1)}, sen ${result.net_score.toFixed(1)}. ünlük düzenli çalışma ve konu pekiştirme ile ortalamaya ulaşabilirsin.`),
               type: 'info'
             });
           }
@@ -733,22 +684,22 @@ export default function StudentExamResultDetail({
         if (weakTopics.length >= 10) {
           recommendations.push({
             icon: '[*]',
-            title: toAscii('AKILLI CALISMA PLANI'),
-            text: toAscii(`${weakTopics.length} zayif konu tespit edildi. Gunluk 2-3 konuya odaklan, hepsini birden cozmeye calisma. Once en zayif 5 konuya oncelik ver.`),
+            title: toAscii('AKILLI ÇALIŞMA PLANI'),
+            text: toAscii(`${weakTopics.length} zayıf konu tespit edildi. günlük 2-3 konuya odaklan, hepsini birden çözmeye çalışma. Önce en zayıf 5 konuya öncelik ver.`),
             type: 'info'
           });
         } else if (weakTopics.length > 0) {
           recommendations.push({
             icon: '[*]',
-            title: toAscii('ODAKLI CALISMA PLANI'),
-            text: toAscii(`${weakTopics.length} zayif konuya her gun 45-60 dakika ayir. Konu anlatimi izle, ornekler coz, test coz. 2 haftada tamamini guclendirebilirsin.`),
+            title: toAscii('ODAKLI ÇALIŞMA PLANI'),
+            text: toAscii(`${weakTopics.length} zayıf konuya her gün 45-60 dakika ayır. Konu anlatımı izle, örnekler çöz, test çöz. 2 haftada tamamını güçlendirebilirsin.`),
             type: 'info'
           });
         } else {
           recommendations.push({
             icon: '[+]',
-            title: toAscii('MUKEMMEL DENGE'),
-            text: toAscii(`Tum konularda basariliyiz! Simdi hiz ve dogruluk calismalari yaparak net sayini daha da artir, zaman yonetimini iyilestir.`),
+            title: toAscii('MÜKEMMEL DENGE'),
+            text: toAscii(`Tüm konularda başarılıyız! Şimdi hız ve doğruluk çalışmaları yaparak net sayını daha da artır, zaman yönetimini iyileştir.`),
             type: 'success'
           });
         }
@@ -758,14 +709,14 @@ export default function StudentExamResultDetail({
           recommendations.push({
             icon: '[+]',
             title: toAscii('HEDEF 500 PUAN'),
-            text: toAscii(`${examScore} puanla 500'e cok yakinsin! Zayif konulari kapat, deneme cozmeye devam et. Hedefine ulasabilirsin!`),
+            text: toAscii(`${examScore} puanla 500'e çok yakınsın! Zayıf konuları kapat, deneme çözmeye devam et. Hedefine ulaşabilirsin!`),
             type: 'success'
           });
         }
 
         // Render recommendations with better formatting
         pdf.setFont('helvetica', 'normal');
-        recommendations.slice(0, 8).forEach((rec, idx) => {
+        recommendations.slice(0, 8).forEach((rec) => {
           if (yPos > pageHeight - 20) return;
 
           // Icon and title
@@ -848,7 +799,8 @@ export default function StudentExamResultDetail({
   const questionMapping = template?.question_mapping || [];
 
   // Konu bazlı analiz
-  const topicStats = new Map<string, { correct: number; wrong: number; empty: number }>();
+  const topicStats = new Map<string, QuestionStats>();
+  const subjectStats = new Map<string, QuestionStats>();
 
   Object.entries(result.answers).forEach(([questionNumStr, answer]) => {
     const questionNum = parseInt(questionNumStr);
@@ -856,17 +808,45 @@ export default function StudentExamResultDetail({
 
     if (question) {
       const topic = question.topic;
+      const topicLower = (topic || '').toLowerCase();
+      let subject = question.subject || '';
+
+      // Ders bilgisi yoksa konudan tahmin et
+      if (!subject) {
+        if (topicLower.includes('türk') || topicLower.includes('dil') || topicLower.includes('paragraf')) subject = 'Turkce';
+        else if (topicLower.includes('mat') || topicLower.includes('geo') || topicLower.includes('say')) subject = 'Matematik';
+        else if (topicLower.includes('fiz')) subject = 'Fizik';
+        else if (topicLower.includes('kim')) subject = 'Kimya';
+        else if (topicLower.includes('biyo')) subject = 'Biyoloji';
+        else if (topicLower.includes('fen')) subject = 'Fen';
+        else if (topicLower.includes('tarih') || topicLower.includes('ink')) subject = 'Tarih';
+        else if (topicLower.includes('coğ') || topicLower.includes('cog')) subject = 'Cografya';
+        else if (topicLower.includes('felsefe')) subject = 'Felsefe';
+        else if (topicLower.includes('din') || topicLower.includes('dkab')) subject = 'Din';
+        else if (topicLower.includes('edeb')) subject = 'Edebiyat';
+        else if (topicLower.includes('ing') || topicLower.includes('english')) subject = 'Ingilizce';
+      }
+
+      if (!subject) subject = 'Diger';
+
       if (!topicStats.has(topic)) {
         topicStats.set(topic, { correct: 0, wrong: 0, empty: 0 });
       }
+      if (!subjectStats.has(subject)) {
+        subjectStats.set(subject, { correct: 0, wrong: 0, empty: 0 });
+      }
 
-      const stats = topicStats.get(topic)!;
+      const topicStat = topicStats.get(topic)!;
+      const subjectStat = subjectStats.get(subject)!;
       if (answer.studentAnswer === 'X') {
-        stats.empty++;
+        topicStat.empty++;
+        subjectStat.empty++;
       } else if (answer.isCorrect) {
-        stats.correct++;
+        topicStat.correct++;
+        subjectStat.correct++;
       } else {
-        stats.wrong++;
+        topicStat.wrong++;
+        subjectStat.wrong++;
       }
     }
   });
@@ -888,7 +868,7 @@ export default function StudentExamResultDetail({
   const improvement = previousAverage !== null ? result.net_score - previousAverage : null;
 
   // Calculate exam score using the helper function
-  const examScore = calculateExamScore(template, topicStats, result.net_score);
+  const examScore = calculateExamScore(template, subjectStats, result.net_score);
 
   return (
     <div className="space-y-6">
@@ -1074,7 +1054,7 @@ export default function StudentExamResultDetail({
             <div className="text-sm text-gray-600">
               <p className="mb-2 font-medium">Son 3 Deneme:</p>
               <div className="space-y-2">
-                {previousResults.slice(0, 3).map((prevResult, idx) => (
+                {previousResults.slice(0, 3).map((prevResult) => (
                   <div key={prevResult.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
                     <span>{prevResult.template?.name}</span>
                     <span className="font-semibold">{prevResult.net_score.toFixed(2)} net</span>

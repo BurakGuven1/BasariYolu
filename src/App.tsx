@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { BookOpenCheck } from 'lucide-react';
 import ErrorBoundary from './components/ErrorBoundary';
-import { useAuth, useNotification } from './contexts/AppProviders';
+import { useAuth } from './contexts/AppProviders';
 import { packages } from './data/packages';
 import Navbar from './components/Navbar';
 import { InstitutionSession } from './lib/institutionApi';
@@ -73,7 +73,6 @@ function App() {
   const navigate = useNavigate();
   const isInstitutionLoginPath = location.pathname === '/institution/login';
   const isInstitutionRegisterPath = location.pathname === '/institution/register';
-  const isInstitutionDashboardPath = location.pathname === '/institution';
   const institutionModalReturnPathRef = React.useRef<string | null>(null);
 
   const isInstitutionUser = user?.userType === 'institution';
@@ -255,7 +254,6 @@ function App() {
   };
 
   const handleLogin = (loginUser?: any) => {
-    console.log('handleLogin called', loginUser);
 
     if (loginUser) {
       const normalizedUserType =
@@ -573,7 +571,6 @@ function App() {
               teacherData: teacher,
             });
             navigate('/dashboard');
-            console.log('Teacher login success, navigating to dashboard');
           }}
         />
 

@@ -1,5 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import type { AuthUser } from './AuthContext';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 interface PomodoroSettings {
   focusMinutes: number;
@@ -102,10 +101,8 @@ async function completeTimer() {
         }]);
         
         if (error) {
-          console.error('❌ Error saving session:', error);
         }
       } catch (error) {
-        console.error('❌ Error saving session:', error);
       }
     }
     

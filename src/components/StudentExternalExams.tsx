@@ -53,7 +53,6 @@ export default function StudentExternalExams({ userId, institutionId }: StudentE
 
       setAssignments(data);
     } catch (error: any) {
-      console.error('❌ Error loading assignments:', error);
       if (error.message?.includes('relation') || error.message?.includes('does not exist')) {
         setError('Veritabanı tabloları henüz oluşturulmamış. Lütfen yöneticinize migration dosyasını çalıştırmasını söyleyin.');
       } else {

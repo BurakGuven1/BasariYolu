@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Save, Trash2, Copy, CheckCircle, AlertCircle, BookOpen } from 'lucide-react';
+import { Save, Copy, CheckCircle, AlertCircle, BookOpen } from 'lucide-react';
 import {
   createExternalExamTemplate,
   type ExternalExamQuestionMapping,
@@ -308,7 +308,8 @@ export default function ExamTemplateBuilder({
                   </button>
                 </div>
                 <p className="text-xs text-yellow-700 mt-2">
-                  Örn: Soru 1-40 arası "Matematik" "Sayılar" olarak ayarla
+                  Örn: Soru 1-20 arası "Türkçe" "Paragraf" olarak ayarla
+                  7-19 arasında "Matematik" "Problemler" olarak ayarla
                 </p>
               </div>
 

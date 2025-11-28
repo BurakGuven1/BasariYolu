@@ -109,7 +109,6 @@ export const createStudySchedule = async (scheduleData: StudySchedule): Promise<
 
     return { data: schedule, error: null };
   } catch (error: any) {
-    console.error('❌ Error:', error);
     return { data: null, error };
   }
 };
