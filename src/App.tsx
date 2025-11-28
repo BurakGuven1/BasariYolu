@@ -353,6 +353,13 @@ function App() {
   };
 
   const handleInstitutionLogout = async () => {
+    console.log('🏛️ Institution logout initiated');
+
+    // CRITICAL: Immediately clear institution data before calling logout
+    // This prevents race condition where component tries to render during redirect
+    localStorage.removeItem('institutionSession');
+
+    // Call main logout with institution redirect
     await logout({ redirectTo: '/institution/login' });
   };
 

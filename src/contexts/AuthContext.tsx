@@ -208,63 +208,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Logout function - CRITICAL FIX: Stable logout for all user types
   const logout = useCallback(async (options?: LogoutOptions) => {
     console.log('🚪 Logout initiated for user:', user?.userType);
+    const redirectPath = options?.redirectTo ?? '/';
 
+    // STEP 1: Clear state IMMEDIATELY to prevent race conditions
+    setUser(null);
+    saveSession(null);
+
+    // STEP 2: Clear ALL localStorage synchronously (no async)
     try {
-      // 1. Sign out from Supabase (only for student/parent)
-      if (user?.userType === 'student' || user?.userType === 'parent') {
-        console.log('🔓 Signing out from Supabase...');
-        await supabase.auth.signOut({ scope: 'local' });
-      }
-
-      // 2. Clear all user state
-      console.log('🧹 Clearing user state...');
-      setUser(null);
-      saveSession(null);
-
-      // 3. Clear ALL auth-related storage (comprehensive cleanup)
       localStorage.removeItem('institutionSession');
       localStorage.removeItem('classViewerSession');
       localStorage.removeItem('teacherSession');
       localStorage.removeItem('parentSession');
 
-      // Clear any Supabase auth tokens
-      Object.keys(localStorage).forEach(key => {
-        if (key.startsWith('sb-') || key.includes('supabase')) {
-          localStorage.removeItem(key);
+      // Clear Supabase tokens
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith('sb-') || key.includes('supabase'))) {
+          keysToRemove.push(key);
         }
-      });
-
-      console.log('✅ Logout successful, redirecting...');
-
-      // 4. Force redirect using multiple methods for reliability
-      const redirectPath = options?.redirectTo ?? '/';
-
-      // Method 1: Direct window location (most reliable)
-      window.location.replace(redirectPath);
-
-      // Fallback: If replace doesn't work in 100ms
-      setTimeout(() => {
-        window.location.href = redirectPath;
-      }, 100);
-
-    } catch (error) {
-      console.error('❌ Logout error:', error);
-
-      // FORCE LOGOUT: Clear everything and redirect even on error
-      setUser(null);
-      saveSession(null);
-
-      // Nuclear option: clear ALL localStorage
-      localStorage.clear();
-
-      // Force redirect
-      const redirectPath = options?.redirectTo ?? '/';
-      window.location.replace(redirectPath);
-
-      setTimeout(() => {
-        window.location.href = redirectPath;
-      }, 100);
+      }
+      keysToRemove.forEach(key => localStorage.removeItem(key));
+    } catch (e) {
+      console.warn('localStorage clear error:', e);
     }
+
+    // STEP 3: Sign out from Supabase (async but don't wait)
+    if (user?.userType === 'student' || user?.userType === 'parent') {
+      // Don't await - fire and forget
+      supabase.auth.signOut({ scope: 'local' }).catch(err => {
+        console.warn('Supabase signOut error:', err);
+      });
+    }
+
+    // STEP 4: IMMEDIATE redirect (synchronous)
+    console.log('✅ Redirecting to:', redirectPath);
+
+    // Use href instead of replace for more reliable redirect
+    window.location.href = redirectPath;
+
   }, [user, saveSession]);
 
   // Manual refresh session (RARELY NEEDED - Supabase auto-refreshes tokens)
