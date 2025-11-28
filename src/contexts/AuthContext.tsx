@@ -207,14 +207,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session);
         saveSession(session);
       } else {
-        setUser(null);
-        saveSession(null);
+        // Session expired naturally - only logout if no current user
+        if (!user) {
+          setUser(null);
+          saveSession(null);
+        } else {
+          console.warn('Session refresh failed but keeping current user logged in');
+          // Keep user logged in but log warning
+        }
       }
     } catch (error) {
       console.error('Error refreshing session:', error);
-      // On error, keep current user state but log the issue
+      // On error, KEEP current user state - don't logout
+      // This prevents accidental logouts due to network errors or DB issues
     }
-  }, [loadSession, saveSession]);
+  }, [loadSession, saveSession, user]);
 
   // Handle visibility change - refresh session when user returns to tab
   useEffect(() => {

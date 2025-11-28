@@ -1039,30 +1039,32 @@ export default function StudentDashboard({ authUser }: StudentDashboardProps) {
               </select>
             </div>
             {chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={250}>
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  {/* Artık "date" anahtarını veride bulabilmek için bu satır doğru çalışacak */}
-                  <XAxis dataKey="date" fontSize={12} /> 
-                  <YAxis domain={[100, 500]} />
-                  <Tooltip 
-                    formatter={(value, _name, props) => [
-                      `${value} puan`,
-                      `${props.payload.examName} (${props.payload.examType})`
-                    ]}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="puan" 
-                    stroke="#3B82F6" 
-                    strokeWidth={3} 
-                    name="Puan"
-                    // Bu noktalar artık veri olduğu için görünecek
-                    dot={{ fill: '#3B82F6', strokeWidth: 2, r: 5 }}
-                    activeDot={{ r: 7, stroke: '#3B82F6', strokeWidth: 2 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+              <div style={{ width: '100%', height: 250, minHeight: 250 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    {/* Artık "date" anahtarını veride bulabilmek için bu satır doğru çalışacak */}
+                    <XAxis dataKey="date" fontSize={12} />
+                    <YAxis domain={[100, 500]} />
+                    <Tooltip
+                      formatter={(value, _name, props) => [
+                        `${value} puan`,
+                        `${props.payload.examName} (${props.payload.examType})`
+                      ]}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="puan"
+                      stroke="#3B82F6"
+                      strokeWidth={3}
+                      name="Puan"
+                      // Bu noktalar artık veri olduğu için görünecek
+                      dot={{ fill: '#3B82F6', strokeWidth: 2, r: 5 }}
+                      activeDot={{ r: 7, stroke: '#3B82F6', strokeWidth: 2 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
             ) : (
               <div className="text-center py-16 text-gray-500">
                 <TrendingUp className="h-12 w-12 mx-auto mb-4 text-gray-300" />
