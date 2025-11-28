@@ -49,91 +49,75 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Load session from localStorage
-  const loadSession = useCallback(async (): Promise<AuthUser | null> => {
-    try {
-      const stored = localStorage.getItem(AUTH_STORAGE_KEY);
-      if (!stored) return null;
-
-      const session: AuthUser = JSON.parse(stored);
-
-      // Validate session based on user type
-      switch (session.userType) {
-        case 'institution':
-          // Refresh institution session
-          try {
-            const institutionSession = await refreshInstitutionSession();
-            if (institutionSession) {
-              return {
-                ...session,
-                institutionSession,
-              };
-            }
-            return null;
-          } catch {
-            return null;
-          }
-
-        case 'teacher':
-          // Validate teacher session
-          // Teacher data is already in session, just verify it's still valid
-          if (session.teacherData) {
-            return session;
-          }
-          return null;
-
-        case 'student':
-        case 'parent':
-          // Validate Supabase session
-          const { data: { session: supabaseSession } } = await supabase.auth.getSession();
-          if (supabaseSession?.user) {
-            return {
-              ...session,
-              id: supabaseSession.user.id,
-              email: supabaseSession.user.email || session.email,
-            };
-          }
-          return null;
-
-        default:
-          return null;
-      }
-    } catch (error) {
-      console.error('Error loading session:', error);
-      return null;
-    }
-  }, []);
-
-  // Initialize auth state
+  // Initialize auth state with Supabase session
   useEffect(() => {
     if (initialized) return;
 
     const initializeAuth = async () => {
-      setLoading(true);
       try {
-        // Try to load from localStorage first
-        const storedSession = await loadSession();
-        if (storedSession) {
-          setUser(storedSession);
+        // Get current Supabase session
+        const { data: { session }, error } = await supabase.auth.getSession();
+
+        if (error) {
+          console.error('❌ Error getting session:', error);
           setLoading(false);
           setInitialized(true);
           return;
         }
 
-        // If no stored session, check Supabase auth for student/parent
-        const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
+          // Check localStorage for additional user type info
+          const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+          let userType: UserType = 'student';
+          let additionalData: any = {};
+
+          if (stored) {
+            try {
+              const parsedStored = JSON.parse(stored);
+              userType = parsedStored.userType || 'student';
+              additionalData = {
+                isParentLogin: parsedStored.isParentLogin,
+                connectedStudents: parsedStored.connectedStudents,
+                teacherData: parsedStored.teacherData,
+                institutionSession: parsedStored.institutionSession,
+              };
+            } catch (e) {
+              console.warn('⚠️ Failed to parse stored session');
+            }
+          } else {
+            // Fallback to user metadata
+            userType = session.user.user_metadata?.user_type || 'student';
+          }
+
           const authUser: AuthUser = {
             id: session.user.id,
             email: session.user.email || '',
-            userType: session.user.user_metadata?.user_type || 'student',
+            userType,
             profile: session.user.user_metadata,
+            metadata: session.user.user_metadata,
+            ...additionalData,
           };
+
+          console.log('✅ Session initialized:', { userType, email: authUser.email });
           setUser(authUser);
           saveSession(authUser);
+        } else {
+          // Check localStorage for non-Supabase users (teacher/institution)
+          const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+          if (stored) {
+            try {
+              const parsedStored = JSON.parse(stored);
+              if (parsedStored.userType === 'teacher' || parsedStored.userType === 'institution') {
+                console.log('✅ Non-Supabase user session restored:', parsedStored.userType);
+                setUser(parsedStored);
+              }
+            } catch (e) {
+              console.warn('⚠️ Failed to parse stored non-Supabase session');
+            }
+          }
         }
       } catch (error) {
-        console.error('Auth initialization error:', error);
+        console.error('❌ Auth initialization error:', error);
       } finally {
         setLoading(false);
         setInitialized(true);
@@ -141,39 +125,92 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     initializeAuth();
-  }, [initialized, loadSession, saveSession]);
+  }, [initialized, saveSession]);
 
-  // Listen to Supabase auth changes (for student/parent)
+  // Listen to Supabase auth changes - THIS HANDLES TOKEN REFRESH AUTOMATICALLY
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('🔐 Auth state change:', event);
+
       if (event === 'SIGNED_IN' && session?.user) {
-        // Only update if it's a student/parent login (not teacher/institution)
-        if (user?.userType === 'teacher' || user?.userType === 'institution') {
-          return;
+        // Check localStorage for additional info
+        const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+        let userType: UserType = 'student';
+        let additionalData: any = {};
+
+        if (stored) {
+          try {
+            const parsedStored = JSON.parse(stored);
+            userType = parsedStored.userType || session.user.user_metadata?.user_type || 'student';
+            additionalData = {
+              isParentLogin: parsedStored.isParentLogin,
+              connectedStudents: parsedStored.connectedStudents,
+              teacherData: parsedStored.teacherData,
+              institutionSession: parsedStored.institutionSession,
+            };
+          } catch (e) {
+            userType = session.user.user_metadata?.user_type || 'student';
+          }
+        } else {
+          userType = session.user.user_metadata?.user_type || 'student';
         }
 
         const authUser: AuthUser = {
           id: session.user.id,
           email: session.user.email || '',
-          userType: session.user.user_metadata?.user_type || 'student',
+          userType,
           profile: session.user.user_metadata,
+          metadata: session.user.user_metadata,
+          ...additionalData,
         };
+
+        console.log('✅ User signed in:', { userType, email: authUser.email });
         setUser(authUser);
         saveSession(authUser);
       } else if (event === 'SIGNED_OUT') {
-        // Only clear if it's not a teacher/institution session
-        if (user?.userType === 'student' || user?.userType === 'parent') {
-          setUser(null);
-          saveSession(null);
+        // Only clear if it's a Supabase student/parent logout
+        const currentStored = localStorage.getItem(AUTH_STORAGE_KEY);
+        if (currentStored) {
+          try {
+            const parsed = JSON.parse(currentStored);
+            // Only clear for student/parent - keep teacher/institution
+            if (parsed.userType === 'student' || parsed.userType === 'parent') {
+              console.log('🚪 User signed out');
+              setUser(null);
+              saveSession(null);
+            }
+          } catch (e) {
+            console.log('🚪 User signed out (fallback)');
+            setUser(null);
+            saveSession(null);
+          }
+        }
+      } else if (event === 'TOKEN_REFRESHED') {
+        console.log('🔄 Token refreshed automatically by Supabase');
+        // Token refresh successful - Supabase handles this automatically
+        // We don't need to do anything!
+      } else if (event === 'USER_UPDATED') {
+        // User metadata updated
+        if (session?.user && user) {
+          const updatedUser: AuthUser = {
+            ...user,
+            email: session.user.email || user.email,
+            profile: session.user.user_metadata,
+            metadata: session.user.user_metadata,
+          };
+          console.log('✏️ User updated');
+          setUser(updatedUser);
+          saveSession(updatedUser);
         }
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [user?.userType, saveSession]);
+  }, [user, saveSession]);
 
   // Login function
   const login = useCallback((authUser: AuthUser) => {
+    console.log('👤 Login:', { userType: authUser.userType, email: authUser.email });
     setUser(authUser);
     saveSession(authUser);
   }, [saveSession]);
@@ -181,86 +218,81 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Logout function
   const logout = useCallback(async (options?: LogoutOptions) => {
     try {
-      await supabase.auth.signOut();
+      console.log('🚪 Logging out...');
+
+      // Sign out from Supabase (only for student/parent)
+      if (user?.userType === 'student' || user?.userType === 'parent') {
+        await supabase.auth.signOut();
+      }
+
       setUser(null);
       saveSession(null);
 
       // Clear legacy storage keys
       localStorage.removeItem('institutionSession');
       localStorage.removeItem('classViewerSession');
-      // Redirect to home or custom path
+
+      // Redirect
       window.location.href = options?.redirectTo ?? '/';
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('❌ Logout error:', error);
       // Force clear and redirect even if error
       setUser(null);
       saveSession(null);
       window.location.href = options?.redirectTo ?? '/';
     }
-  }, [saveSession]);
+  }, [user, saveSession]);
 
-  // Refresh session
+  // Manual refresh session (RARELY NEEDED - Supabase auto-refreshes tokens)
   const refreshSession = useCallback(async () => {
     try {
-      const session = await loadSession();
-      if (session) {
-        setUser(session);
-        saveSession(session);
-      } else {
-        // Session expired naturally - only logout if no current user
-        if (!user) {
-          setUser(null);
-          saveSession(null);
-        } else {
-          console.warn('Session refresh failed but keeping current user logged in');
-          // Keep user logged in but log warning
+      console.log('🔄 Manual session refresh requested');
+
+      // For Supabase users (student/parent)
+      if (user?.userType === 'student' || user?.userType === 'parent') {
+        const { data: { session }, error } = await supabase.auth.getSession();
+
+        if (error) {
+          console.warn('⚠️ Session refresh error:', error);
+          return; // Keep current user - don't logout
+        }
+
+        if (session?.user) {
+          const updatedUser: AuthUser = {
+            ...user,
+            id: session.user.id,
+            email: session.user.email || user.email,
+            profile: session.user.user_metadata,
+            metadata: session.user.user_metadata,
+          };
+          setUser(updatedUser);
+          saveSession(updatedUser);
+          console.log('✅ Session refreshed successfully');
+        }
+      }
+      // For institution users
+      else if (user?.userType === 'institution') {
+        try {
+          const institutionSession = await refreshInstitutionSession();
+          if (institutionSession) {
+            const updatedUser: AuthUser = {
+              ...user,
+              institutionSession,
+            };
+            setUser(updatedUser);
+            saveSession(updatedUser);
+            console.log('✅ Institution session refreshed');
+          }
+        } catch (error) {
+          console.warn('⚠️ Institution session refresh failed:', error);
+          // Keep current user
         }
       }
     } catch (error) {
-      console.error('Error refreshing session:', error);
-      // On error, KEEP current user state - don't logout
-      // This prevents accidental logouts due to network errors or DB issues
+      console.error('❌ Error refreshing session:', error);
+      // Keep current user - don't logout on errors
     }
-  }, [loadSession, saveSession, user]);
-
-  // Handle visibility change - refresh session when user returns to tab
-  useEffect(() => {
-    const handleVisibilityChange = async () => {
-      if (document.visibilityState === 'visible' && user) {
-        // Only refresh if we have a user and tab becomes visible
-        try {
-          await refreshSession();
-        } catch (error) {
-          console.error('Failed to refresh session on visibility change:', error);
-        }
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [user, refreshSession]);
-
-  // Handle page focus - additional safety net for session refresh
-  useEffect(() => {
-    const handleFocus = async () => {
-      if (user) {
-        try {
-          await refreshSession();
-        } catch (error) {
-          console.error('Failed to refresh session on focus:', error);
-        }
-      }
-    };
-
-    window.addEventListener('focus', handleFocus);
-
-    return () => {
-      window.removeEventListener('focus', handleFocus);
-    };
-  }, [user, refreshSession]);
+  }, [user, saveSession]);
 
   const value: AuthContextType = {
     user,
