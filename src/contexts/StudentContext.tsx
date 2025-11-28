@@ -97,20 +97,35 @@ export function StudentProvider({ children }: { children: React.ReactNode }) {
 
       setProfile(mappedProfile);
 
-      // Load subscription
+      // Load subscription - use user_subscriptions table (NOT subscriptions!)
       const { data: subData, error: subError } = await supabase
-        .from('subscriptions')
-        .select('*')
+        .from('user_subscriptions')
+        .select(`
+          *,
+          plan:subscription_plans!user_subscriptions_plan_id_fkey(*)
+        `)
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
+        .eq('status', 'active')
+        .maybeSingle();
 
       if (subError && subError.code !== 'PGRST116') {
         console.warn('Subscription load error:', subError);
       }
 
-      setSubscription(subData || {
+      // Map to StudentSubscription format
+      const mappedSubscription: StudentSubscription | null = subData ? {
+        id: subData.id,
+        user_id: subData.user_id,
+        plan: subData.plan?.name || 'free',
+        status: subData.status,
+        start_date: subData.current_period_start,
+        end_date: subData.current_period_end,
+        features: Object.keys(subData.plan?.features || {}).filter(
+          key => (subData.plan?.features as any)[key] === true
+        )
+      } : null;
+
+      setSubscription(mappedSubscription || {
         id: 'free',
         user_id: user.id,
         plan: 'free',
