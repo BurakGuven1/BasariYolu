@@ -134,23 +134,50 @@ export function StudentProvider({ children }: { children: React.ReactNode }) {
         features: ['basic_exams', 'limited_ai']
       });
 
-      // Load points - use student_points table
-      const { data: pointsData, error: pointsError } = await supabase
-        .from('student_points')
-        .select('*')
-        .eq('student_id', user.id)
-        .single();
+      // Load points - CRITICAL FIX: student_points uses profile.id (student_id), NOT user.id
+      // We need to get the student record first
+      if (mappedProfile) {
+        const { data: studentRecord } = await supabase
+          .from('students')
+          .select('id')
+          .eq('user_id', user.id)
+          .single();
 
-      if (pointsError && pointsError.code !== 'PGRST116') {
-        console.warn('Points load error:', pointsError);
+        if (studentRecord) {
+          const { data: pointsData, error: pointsError } = await supabase
+            .from('student_points')
+            .select('*')
+            .eq('student_id', studentRecord.id)
+            .maybeSingle();
+
+          if (pointsError && pointsError.code !== 'PGRST116') {
+            console.warn('Points load error:', pointsError);
+          }
+
+          setPoints(pointsData || {
+            total_points: 0,
+            level: 1,
+            streak_days: 0,
+            achievements: []
+          });
+        } else {
+          // No student record, set default points
+          setPoints({
+            total_points: 0,
+            level: 1,
+            streak_days: 0,
+            achievements: []
+          });
+        }
+      } else {
+        // No profile, set default points
+        setPoints({
+          total_points: 0,
+          level: 1,
+          streak_days: 0,
+          achievements: []
+        });
       }
-
-      setPoints(pointsData || {
-        total_points: 0,
-        level: 1,
-        streak_days: 0,
-        achievements: []
-      });
 
     } catch (err: any) {
       console.error('Error loading student data:', err);
