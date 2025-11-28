@@ -5,7 +5,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 import 'leaflet/dist/leaflet.css';
-import { ParentSessionProvider } from './contexts/ParentSessionContext';
+import { AppProviders } from './contexts/AppProviders';
 
 const queryClient = new QueryClient();
 
@@ -13,9 +13,9 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <ParentSessionProvider>
+        <AppProviders>
           <App />
-        </ParentSessionProvider>
+        </AppProviders>
       </BrowserRouter>
     </QueryClientProvider>
   </StrictMode>

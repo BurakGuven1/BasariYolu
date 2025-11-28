@@ -1,11 +1,16 @@
 
 import { useMemo, useState, type ComponentType } from 'react';
-import { Building2, Users, FileSpreadsheet, ClipboardList, ShieldCheck, LogOut, Mail, CheckCircle2, Layers, Copy } from 'lucide-react';
+import { Building2, Users, FileSpreadsheet, ClipboardList, ShieldCheck, LogOut, Mail, CheckCircle2, Layers, Copy, Download, BarChart3, Calendar, Award, Upload } from 'lucide-react';
 import { InstitutionSession } from '../lib/institutionApi';
 import InstitutionQuestionBankPanel from './InstitutionQuestionBankPanel';
 import InstitutionStudentApprovalPanel from './InstitutionStudentApprovalPanel';
 import InstitutionEngagementPanel from './InstitutionEngagementPanel';
 import InstitutionTeacherManagementPanel from './InstitutionTeacherManagementPanel';
+import InstitutionAnalyticsPanel from './InstitutionAnalyticsPanel';
+import InstitutionScheduleManagement from './InstitutionScheduleManagement';
+import ClassPerformancePanel from './ClassPerformancePanel';
+import InstitutionExternalExamPanel from './InstitutionExternalExamPanel';
+import { exportStudentsToExcel, exportExamResultsToExcel, exportPerformanceReportToExcel } from '../lib/institutionExportUtils';
 
 interface InstitutionDashboardProps {
   session: InstitutionSession;
@@ -40,7 +45,7 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
   const isTeacherRole = session.role === 'teacher';
   const canManageInstitution = ['owner', 'manager'].includes(session.role);
   const canAccessQuestionBank = canManageInstitution || isTeacherRole;
-  type PanelKey = 'overview' | 'question-bank' | 'teachers' | 'students' | 'engagement';
+  type PanelKey = 'overview' | 'analytics' | 'performance' | 'external-exams' | 'question-bank' | 'schedule' | 'teachers' | 'students' | 'engagement';
   const [activePanel, setActivePanel] = useState<PanelKey>('overview');
 
   type PanelItem = {
@@ -61,11 +66,39 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
         visible: true,
       },
       {
+        key: 'analytics',
+        label: 'Analitik Dashboard',
+        description: 'Performans metrikleri ve analizler',
+        icon: BarChart3,
+        visible: canManageInstitution && isActive,
+      },
+      {
+        key: 'performance',
+        label: 'Performans Raporları',
+        description: 'Öğrenci ve sınıf performans analizi',
+        icon: Award,
+        visible: canManageInstitution && isActive,
+      },
+      {
+        key: 'external-exams',
+        label: 'Fiziksel Sınav Sonuçları',
+        description: 'Yayınevi denemeleri ve harici sınavlar',
+        icon: Upload,
+        visible: canManageInstitution && isActive,
+      },
+      {
         key: 'question-bank',
         label: 'Soru Bankası',
         description: 'Sorular ve sınav taslakları',
         icon: ClipboardList,
         visible: canAccessQuestionBank,
+      },
+      {
+        key: 'schedule',
+        label: 'Ders Programı',
+        description: 'Haftalık ders programı ve zaman çizelgesi',
+        icon: Calendar,
+        visible: canManageInstitution && isActive,
       },
       {
         key: 'teachers',
@@ -118,6 +151,68 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
       setTeacherCodeCopyMessage('Kod kopyalanamadı, lütfen tekrar deneyin.');
     } finally {
       setTimeout(() => setTeacherCodeCopyMessage(null), 2500);
+    }
+  };
+
+  // Export handlers
+  const [exportLoading, setExportLoading] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [exportSuccess, setExportSuccess] = useState<string | null>(null);
+
+  const handleExportStudents = async () => {
+    setExportLoading('students');
+    setExportError(null);
+    setExportSuccess(null);
+    try {
+      const result = await exportStudentsToExcel(session.institution.id, 'approved');
+      setExportSuccess(`✓ ${result.filename} başarıyla indirildi!`);
+    } catch (error) {
+      console.error('Export error:', error);
+      setExportError('Öğrenci listesi dışa aktarılırken bir hata oluştu.');
+    } finally {
+      setExportLoading(null);
+      setTimeout(() => {
+        setExportError(null);
+        setExportSuccess(null);
+      }, 5000);
+    }
+  };
+
+  const handleExportExamResults = async () => {
+    setExportLoading('exams');
+    setExportError(null);
+    setExportSuccess(null);
+    try {
+      const result = await exportExamResultsToExcel(session.institution.id);
+      setExportSuccess(`✓ ${result.filename} başarıyla indirildi!`);
+    } catch (error) {
+      console.error('Export error:', error);
+      setExportError('Sınav sonuçları dışa aktarılırken bir hata oluştu.');
+    } finally {
+      setExportLoading(null);
+      setTimeout(() => {
+        setExportError(null);
+        setExportSuccess(null);
+      }, 5000);
+    }
+  };
+
+  const handleExportPerformanceReport = async () => {
+    setExportLoading('performance');
+    setExportError(null);
+    setExportSuccess(null);
+    try {
+      const result = await exportPerformanceReportToExcel(session.institution.id);
+      setExportSuccess(`✓ ${result.filename} başarıyla indirildi!`);
+    } catch (error) {
+      console.error('Export error:', error);
+      setExportError('Performans raporu dışa aktarılırken bir hata oluştu.');
+    } finally {
+      setExportLoading(null);
+      setTimeout(() => {
+        setExportError(null);
+        setExportSuccess(null);
+      }, 5000);
     }
   };
 
@@ -461,6 +556,91 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
                 </section>
               )}
 
+              {canManageInstitution && (
+                <section className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50 p-6 shadow-sm">
+                  <div className="mb-4 flex items-center gap-3">
+                    <div className="rounded-lg bg-emerald-100 p-2">
+                      <FileSpreadsheet className="h-6 w-6 text-emerald-700" />
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-semibold text-gray-900">Raporlar</h2>
+                      <p className="text-sm text-gray-600">Verilerinizi Excel formatında dışa aktarın</p>
+                    </div>
+                  </div>
+
+                  {exportSuccess && (
+                    <div className="mb-4 rounded-lg bg-green-100 border border-green-300 px-4 py-3 text-sm text-green-800">
+                      {exportSuccess}
+                    </div>
+                  )}
+
+                  {exportError && (
+                    <div className="mb-4 rounded-lg bg-red-100 border border-red-300 px-4 py-3 text-sm text-red-800">
+                      {exportError}
+                    </div>
+                  )}
+
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <button
+                      onClick={handleExportStudents}
+                      disabled={exportLoading === 'students'}
+                      className="group flex flex-col items-start gap-3 rounded-xl border-2 border-emerald-200 bg-white p-4 text-left transition-all hover:border-emerald-400 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <div className="flex w-full items-center justify-between">
+                        <div className="rounded-lg bg-blue-100 p-2">
+                          <Users className="h-5 w-5 text-blue-700" />
+                        </div>
+                        <Download className="h-5 w-5 text-gray-400 transition-transform group-hover:scale-110 group-hover:text-emerald-600" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900">Öğrenci Listesi</p>
+                        <p className="mt-1 text-xs text-gray-600">
+                          {exportLoading === 'students' ? 'İndiriliyor...' : 'Onaylı öğrencilerin listesini Excel olarak indirin'}
+                        </p>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={handleExportExamResults}
+                      disabled={exportLoading === 'exams'}
+                      className="group flex flex-col items-start gap-3 rounded-xl border-2 border-emerald-200 bg-white p-4 text-left transition-all hover:border-emerald-400 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <div className="flex w-full items-center justify-between">
+                        <div className="rounded-lg bg-purple-100 p-2">
+                          <ClipboardList className="h-5 w-5 text-purple-700" />
+                        </div>
+                        <Download className="h-5 w-5 text-gray-400 transition-transform group-hover:scale-110 group-hover:text-emerald-600" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900">Sınav Sonuçları</p>
+                        <p className="mt-1 text-xs text-gray-600">
+                          {exportLoading === 'exams' ? 'İndiriliyor...' : 'Tüm sınav sonuçlarını detaylı olarak indirin'}
+                        </p>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={handleExportPerformanceReport}
+                      disabled={exportLoading === 'performance'}
+                      className="group flex flex-col items-start gap-3 rounded-xl border-2 border-emerald-200 bg-white p-4 text-left transition-all hover:border-emerald-400 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <div className="flex w-full items-center justify-between">
+                        <div className="rounded-lg bg-orange-100 p-2">
+                          <CheckCircle2 className="h-5 w-5 text-orange-700" />
+                        </div>
+                        <Download className="h-5 w-5 text-gray-400 transition-transform group-hover:scale-110 group-hover:text-emerald-600" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900">Performans Raporu</p>
+                        <p className="mt-1 text-xs text-gray-600">
+                          {exportLoading === 'performance' ? 'İndiriliyor...' : 'Öğrenci başarı ve performans analizini indirin'}
+                        </p>
+                      </div>
+                    </button>
+                  </div>
+                </section>
+              )}
+
               {canManageInstitution && session.institution.teacher_invite_code && (
                 <section className="rounded-2xl border border-blue-100 bg-white p-6 shadow-sm">
                   <div className="flex flex-wrap items-start justify-between gap-4">
@@ -527,11 +707,33 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
             </div>
           )}
 
+          {resolvedPanel === 'analytics' &&
+            (canManageInstitution ? (
+              isActive ? (
+                <InstitutionAnalyticsPanel institutionId={session.institution.id} />
+              ) : (
+                renderPanelMessage('Kurum onayı tamamlandığında analitik dashboard aktifleştirilecek.')
+              )
+            ) : (
+              renderPanelMessage('Analitik dashboard yalnızca kurum yöneticilerine açıktır.')
+            ))}
+
           {resolvedPanel === 'question-bank' &&
             (canAccessQuestionBank ? (
               <InstitutionQuestionBankPanel session={session} />
             ) : (
               renderPanelMessage('Soru bankasına erişim için kurum yönetici rolü gerekir.')
+            ))}
+
+          {resolvedPanel === 'schedule' &&
+            (canManageInstitution ? (
+              isActive ? (
+                <InstitutionScheduleManagement institutionId={session.institution.id} />
+              ) : (
+                renderPanelMessage('Ders programı yalnızca aktif kurumlar için kullanılabilir.')
+              )
+            ) : (
+              renderPanelMessage('Ders programı yönetimi yalnızca kurum yöneticilerine açıktır.')
             ))}
 
           {resolvedPanel === 'teachers' &&
@@ -546,6 +748,28 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
               <InstitutionStudentApprovalPanel institutionId={session.institution.id} />
             ) : (
               renderPanelMessage('Öğrenci başvurularını yalnızca kurum yöneticileri görüntüleyebilir.')
+            ))}
+
+          {resolvedPanel === 'performance' &&
+            (canManageInstitution ? (
+              isActive ? (
+                <ClassPerformancePanel institutionId={session.institution.id} />
+              ) : (
+                renderPanelMessage('Kurum onayı tamamlandığında performans raporları aktifleştirilecek.')
+              )
+            ) : (
+              renderPanelMessage('Performans raporları yalnızca kurum yöneticilerine açıktır.')
+            ))}
+
+          {resolvedPanel === 'external-exams' &&
+            (canManageInstitution ? (
+              isActive ? (
+                <InstitutionExternalExamPanel institutionId={session.institution.id} userId={session.user.id} />
+              ) : (
+                renderPanelMessage('Kurum onayı tamamlandığında harici sınav yüklemesi aktifleştirilecek.')
+              )
+            ) : (
+              renderPanelMessage('Harici sınav yüklemesi yalnızca kurum yöneticilerine açıktır.')
             ))}
 
           {resolvedPanel === 'engagement' &&

@@ -120,7 +120,6 @@ export const addPoints = async (
         .maybeSingle();
 
       if (studentError) {
-        console.error('❌ Error finding student:', studentError);
         return { success: false, error: 'Student not found' };
       }
 
@@ -144,7 +143,6 @@ export const addPoints = async (
       });
 
     if (error) {
-      console.error('❌ Error adding points:', error);
       return { success: false, error: error.message };
     }
 

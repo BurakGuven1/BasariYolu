@@ -132,6 +132,7 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
     const parentUser = {
       id: `parent_${student.id}_${Date.now()}`,
       email: `parent_${student.id}@temp.com`,
+      userType: 'parent' as const,
       profile: {
         full_name: 'Veli',
         user_type: 'parent'
@@ -180,9 +181,17 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
     try {
       const { data, error } = await signIn(formData.email, formData.password);
       if (error) throw error;
-      
+
       if (data.user) {
-        onLogin(data.user);
+        // Create AuthUser object with proper userType
+        const studentUser = {
+          id: data.user.id,
+          email: data.user.email || '',
+          userType: 'student' as const,
+          profile: data.user.user_metadata,
+        };
+
+        onLogin(studentUser);
         onClose();
         // Reset form
         setFormData({

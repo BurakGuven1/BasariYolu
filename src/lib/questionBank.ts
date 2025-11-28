@@ -43,6 +43,8 @@ export interface QuestionRecord {
   owner_type: 'platform' | 'institution' | 'teacher';
   owner_id: string | null;
   visibility: 'private' | 'institution_only' | 'public';
+  page_number?: number | null;
+  page_image_url?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -92,15 +94,19 @@ const normalizeRequest = (request: QuestionRequest) => {
     owner_scope: merged.ownerScope ?? 'all',
   };
 
-  if (merged.subjects?.length) payload.subjects = merged.subjects;
-  else if (merged.subject) payload.subject = merged.subject;
+  // Don't normalize subject names - use them as-is from database
+  if (merged.subjects?.length) {
+    payload.subjects = merged.subjects;
+  } else if (merged.subject) {
+    payload.subject = merged.subject;
+  }
 
   if (merged.topics?.length) payload.topics = merged.topics;
   else if (merged.topic) payload.topic = merged.topic;
 
   if (merged.tags?.length) payload.tags = merged.tags;
   if (merged.levels?.length) {
-    payload.tags = [...(payload.tags ?? []), ...merged.levels];
+    payload.tags = [...(Array.isArray(payload.tags) ? payload.tags : []), ...merged.levels];
   }
 
   if (merged.difficulties?.length) payload.difficulties = merged.difficulties;
@@ -170,6 +176,8 @@ export async function fetchQuestionSets(filters: QuestionSetFilters = {}) {
     query = query.eq('visibility', 'public');
   }
 
+  const { data, error } = await query;
+
   if (error) {
     throw error;
   }
@@ -187,25 +195,61 @@ const SUBJECT_ALIAS: Record<string, string> = {
   'Din Kultur ve Ahlak Bilgisi': 'Din',
   'Edebiyat': 'Edebiyat',
   'Türkçe': 'Turkce',
+  'Turkce': 'Turkce',
+  'turkce': 'Turkce',
+  'TURKCE': 'Turkce',
   'Ingilizce': 'Ingilizce',
   'İngilizce': 'Ingilizce',
   'Sosyal Bilgiler': 'Sosyal',
   'Sosyal Bilimler': 'Sosyal',
+  'sosyal': 'Sosyal',
+  'SOSYAL': 'Sosyal',
+  'Matematik': 'Matematik',
+  'matematik': 'Matematik',
+  'MATEMATIK': 'Matematik',
+  'Mat': 'Matematik',
+  'MAT': 'Matematik',
+  'Fen': 'Fen',
+  'fen': 'Fen',
+  'FEN': 'Fen',
 };
 
-const canonicalSubject = (subject: string) => {
+// Export for use in other files
+export const canonicalSubject = (subject: string) => {
+  if (!subject) return subject;
   let result = subject.trim();
+
+  // Remove common prefixes
   SUBJECT_PREFIXES.forEach((prefix) => {
     if (result.toUpperCase().startsWith(prefix.trim().toUpperCase())) {
       result = result.slice(prefix.length).trim();
     }
   });
-  result = result
+
+  // Try direct alias lookup first
+  if (SUBJECT_ALIAS[result]) {
+    return SUBJECT_ALIAS[result];
+  }
+
+  // Normalize Turkish characters
+  const normalized = result
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/ı/g, 'i')
-    .replace(/İ/g, 'I');
-  return SUBJECT_ALIAS[result] ?? result;
+    .replace(/İ/g, 'I')
+    .replace(/ğ/g, 'g')
+    .replace(/Ğ/g, 'G')
+    .replace(/ş/g, 's')
+    .replace(/Ş/g, 'S')
+    .replace(/ç/g, 'c')
+    .replace(/Ç/g, 'C')
+    .replace(/ö/g, 'o')
+    .replace(/Ö/g, 'O')
+    .replace(/ü/g, 'u')
+    .replace(/Ü/g, 'U');
+
+  // Try alias lookup with normalized version
+  return SUBJECT_ALIAS[normalized] ?? result;
 };
 
 const subjectTopicWeights: Record<string, Record<string, number>> = {};
