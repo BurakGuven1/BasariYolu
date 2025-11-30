@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Mail, Lock, User, Phone } from 'lucide-react';
 import { signUp, signIn, createProfile, createStudentRecord, createParentRecord, supabase } from '../lib/supabase';
+import * as authApi from '../lib/authApi';
 import PaymentPage from './PaymentPage';
 import ClassCodeLogin from './ClassCodeLogin';
 
@@ -177,18 +178,21 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
   return;
 }
 
-    // Student login
+    // Student login - Using secure Worker API with HTTP-only cookies
     try {
-      const { data, error } = await signIn(formData.email, formData.password);
-      if (error) throw error;
+      console.log('🔐 Secure login with authApi (HTTP-only cookies)');
+      const { user, access_token } = await authApi.login(formData.email, formData.password);
 
-      if (data.user) {
+      if (user) {
+        console.log('✅ Login successful, access token stored in sessionStorage');
+
         // Create AuthUser object with proper userType
         const studentUser = {
-          id: data.user.id,
-          email: data.user.email || '',
+          id: user.id,
+          email: user.email || '',
           userType: 'student' as const,
-          profile: data.user.user_metadata,
+          profile: user.user_metadata || {},
+          metadata: user.user_metadata || {},
         };
 
         onLogin(studentUser);
@@ -209,7 +213,7 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
         });
       }
     } catch (error: any) {
-      console.error('Login error:', error);
+      console.error('❌ Login error:', error);
       alert('Giriş hatası: ' + (error.message || 'Bilinmeyen hata'));
     } finally {
       setLoading(false);
