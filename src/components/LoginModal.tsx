@@ -178,23 +178,45 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
   return;
 }
 
-    // Student login - Using secure Worker API with HTTP-only cookies
+    // Student login - Try Worker API first, fallback to Supabase
     try {
-      console.log('🔐 Secure login with authApi (HTTP-only cookies)');
-      const { user, access_token } = await authApi.login(formData.email, formData.password);
+      let studentUser;
 
-      if (user) {
-        console.log('✅ Login successful, access token stored in sessionStorage');
+      // Try Worker API (HTTP-only cookies) if available
+      try {
+        console.log('🔐 Attempting secure login with Worker API (HTTP-only cookies)');
+        const { user, access_token } = await authApi.login(formData.email, formData.password);
 
-        // Create AuthUser object with proper userType
-        const studentUser = {
-          id: user.id,
-          email: user.email || '',
-          userType: 'student' as const,
-          profile: user.user_metadata || {},
-          metadata: user.user_metadata || {},
-        };
+        if (user) {
+          console.log('✅ Worker API login successful');
+          studentUser = {
+            id: user.id,
+            email: user.email || '',
+            userType: 'student' as const,
+            profile: user.user_metadata || {},
+            metadata: user.user_metadata || {},
+          };
+        }
+      } catch (workerError: any) {
+        console.warn('⚠️ Worker API unavailable, falling back to Supabase:', workerError.message);
 
+        // Fallback to Supabase direct auth
+        const { data, error } = await signIn(formData.email, formData.password);
+        if (error) throw error;
+
+        if (data.user) {
+          console.log('✅ Supabase fallback login successful');
+          studentUser = {
+            id: data.user.id,
+            email: data.user.email || '',
+            userType: 'student' as const,
+            profile: data.user.user_metadata || {},
+            metadata: data.user.user_metadata || {},
+          };
+        }
+      }
+
+      if (studentUser) {
         onLogin(studentUser);
         onClose();
         // Reset form
