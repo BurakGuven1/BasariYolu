@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
 
+// Base path: /api/auth (route'tan gelen path)
 const app = new Hono().basePath('/api/auth');
 
 // CORS - Frontend'e izin ver

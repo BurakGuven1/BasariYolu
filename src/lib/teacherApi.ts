@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { supabase } from './supabase';
 import { PACKAGE_OPTIONS } from '../types/teacher';
+import * as authApi from './authApi';
 
 const hashPassword = (password: string): Promise<string> =>
   new Promise((resolve, reject) => {
@@ -138,16 +139,15 @@ export const registerTeacher = async (teacherData: {
 };
 
 export const loginTeacher = async (email: string, password: string) => {
-  const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-    email,
-    password
-  });
+  // Use secure Worker API with HTTP-only cookies
+  console.log('🔐 Teacher login with authApi (HTTP-only cookies)');
+  const { user: authUser } = await authApi.login(email, password);
 
-  if (authError || !authData.user) {
-    throw new Error(authError?.message || 'Email veya sifre hatali');
+  if (!authUser) {
+    throw new Error('Email veya şifre hatalı');
   }
 
-  const authUser = authData.user;
+  console.log('✅ Auth successful, fetching teacher record');
 
   let { data: teacher, error: teacherError } = await supabase
     .from('teachers')
