@@ -1,0 +1,17 @@
+name = "basariyolu-auth"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+# Environment variables (production)
+# Development için: wrangler dev --var SUPABASE_URL:xxx
+# Production için: Cloudflare Dashboard'dan ayarlanacak
+
+[vars]
+# Public variables (görülebilir)
+# SUPABASE_URL = "https://xsgbtofqgcmbtncinyzn.supabase.co"
+
+# Secret variables - Cloudflare Dashboard'dan eklenecek:
+# SUPABASE_SERVICE_ROLE_KEY = "secret-key"
+
+# Routes - basariyolum.com/api/auth/* isteklerini bu worker'a yönlendir
+# Cloudflare Dashboard'dan manuel eklenecek
