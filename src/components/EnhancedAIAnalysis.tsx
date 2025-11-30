@@ -26,8 +26,8 @@ interface QuickStats {
   avgScore: number;
   trend: 'up' | 'down' | 'stable';
   trendValue: number;
-  bestSubject: { name: string; avg: number };
-  worstSubject: { name: string; avg: number };
+  bestSubject: { key: string; label: string; avg: number };
+  worstSubject: { key: string; label: string; avg: number };
 }
 
 export default function EnhancedAIAnalysis({ studentId, examResults }: EnhancedAIAnalysisProps) {
@@ -80,55 +80,85 @@ export default function EnhancedAIAnalysis({ studentId, examResults }: EnhancedA
       else if (trendValue < -5) trend = 'down';
     }
 
-    // En iyi/kötü ders
+    // En iyi/k?t? ders (rate = net/soru say?s?)
     const examType = recentExams[0]?.exam_type || 'TYT';
-    const subjects = examType === 'LGS'
-      ? ['Türkçe', 'Matematik', 'Fen', 'İnkılap', 'İngilizce', 'Din']
-      : ['Türkçe', 'Matematik', 'Fen', 'Sosyal'];
+    const subjects = getSubjectConfigs(examType);
 
-    const subjectAvgs: Record<string, number> = {};
-    subjects.forEach(subject => {
-      const nets = recentExams.map(exam => getSubjectNet(exam, subject)).filter(n => n !== null) as number[];
-      if (nets.length > 0) {
-        subjectAvgs[subject] = nets.reduce((sum, n) => sum + n, 0) / nets.length;
+    const subjectAvgs: { key: string; label: string; avgNet: number; avgRate: number }[] = [];
+    subjects.forEach(({ key, label, prefix, totalQuestions }) => {
+      const metrics = recentExams
+        .map(exam => getSubjectMetrics(exam, prefix, totalQuestions))
+        .filter(Boolean) as { net: number; rate: number }[];
+
+      if (metrics.length > 0) {
+        const avgNet = metrics.reduce((sum, m) => sum + m.net, 0) / metrics.length;
+        const avgRate = metrics.reduce((sum, m) => sum + m.rate, 0) / metrics.length;
+        subjectAvgs.push({ key, label, avgNet, avgRate });
       }
     });
 
-    const entries = Object.entries(subjectAvgs);
-    const bestSubject = entries.reduce((a, b) => a[1] > b[1] ? a : b);
-    const worstSubject = entries.reduce((a, b) => a[1] < b[1] ? a : b);
+    if (subjectAvgs.length === 0) {
+      return {
+        totalExams: exams.length,
+        avgScore: parseFloat(avgScore.toFixed(1)),
+        trend,
+        trendValue: parseFloat(trendValue.toFixed(1)),
+        bestSubject: { key: '-', label: '-', avg: 0 },
+        worstSubject: { key: '-', label: '-', avg: 0 }
+      };
+    }
 
+    const bestSubject = subjectAvgs.reduce((a, b) => (a.avgRate > b.avgRate ? a : b));
+    const worstSubject = subjectAvgs.reduce((a, b) => (a.avgRate < b.avgRate ? a : b));
     return {
       totalExams: exams.length,
       avgScore: parseFloat(avgScore.toFixed(1)),
       trend,
       trendValue: parseFloat(trendValue.toFixed(1)),
-      bestSubject: { name: bestSubject[0], avg: parseFloat(bestSubject[1].toFixed(1)) },
-      worstSubject: { name: worstSubject[0], avg: parseFloat(worstSubject[1].toFixed(1)) }
+      bestSubject: { key: bestSubject.key, label: bestSubject.label, avg: parseFloat(bestSubject.avgNet.toFixed(1)) },
+      worstSubject: { key: worstSubject.key, label: worstSubject.label, avg: parseFloat(worstSubject.avgNet.toFixed(1)) }
     };
   };
 
-  const getSubjectNet = (exam: any, subject: string): number | null => {
+
+  const getSubjectMetrics = (
+    exam: any,
+    prefix: string,
+    totalQuestions: number
+  ): { net: number; rate: number } | null => {
     if (!exam.exam_details) return null;
     const details = typeof exam.exam_details === 'string' ? JSON.parse(exam.exam_details) : exam.exam_details;
 
-    const examType = exam.exam_type || 'TYT';
-    let correct = 0, wrong = 0;
+    const correct = parseInt(details[prefix + '_dogru'] || 0);
+    const wrong = parseInt(details[prefix + '_yanlis'] || 0);
+    const net = Math.max(0, correct - wrong / 4);
+    const rate = totalQuestions > 0 ? net / totalQuestions : 0;
 
-    if (examType === 'LGS') {
-      const prefix = 'lgs_' + subject.toLowerCase().replace('İ', 'i').replace('ı', 'i');
-      correct = parseInt(details[prefix + '_dogru'] || 0);
-      wrong = parseInt(details[prefix + '_yanlis'] || 0);
-    } else {
-      const prefix = 'tyt_' + subject.toLowerCase().replace('İ', 'i').replace('ı', 'i');
-      correct = parseInt(details[prefix + '_dogru'] || 0);
-      wrong = parseInt(details[prefix + '_yanlis'] || 0);
-    }
-
-    return Math.max(0, correct - (wrong / 4));
+    return { net, rate };
   };
 
-  const loadPriorityTopics = async (): Promise<WeakTopicWithPriority[]> => {
+  const getSubjectConfigs = (examType: string) => {
+    if (examType === 'LGS') {
+      return [
+        { key: 'turkce', label: 'Türkçe', prefix: 'lgs_turkce', totalQuestions: 20 },
+        { key: 'matematik', label: 'Matematik', prefix: 'lgs_matematik', totalQuestions: 20 },
+        { key: 'fen', label: 'Fen', prefix: 'lgs_fen', totalQuestions: 20 },
+        { key: 'inkilap', label: 'İnkılap', prefix: 'lgs_inkilap', totalQuestions: 10 },
+        { key: 'ingilizce', label: 'İngilizce', prefix: 'lgs_ingilizce', totalQuestions: 10 },
+        { key: 'din', label: 'Din', prefix: 'lgs_din', totalQuestions: 10 },
+      ];
+    }
+
+    // Default TYT
+    return [
+      { key: 'turkce', label: 'Türkçe', prefix: 'tyt_turkce', totalQuestions: 40 },
+      { key: 'matematik', label: 'Matematik', prefix: 'tyt_matematik', totalQuestions: 40 },
+      { key: 'fen', label: 'Fen', prefix: 'tyt_fen', totalQuestions: 20 },
+      { key: 'sosyal', label: 'Sosyal', prefix: 'tyt_sosyal', totalQuestions: 20 },
+    ];
+  };
+
+const loadPriorityTopics = async (): Promise<WeakTopicWithPriority[]> => {
     // exam_weak_topics ve topic_recommendations'ı birleştir
     const { data: weakTopicsData, error: weakError } = await supabase
       .from('exam_weak_topics')
@@ -296,7 +326,7 @@ export default function EnhancedAIAnalysis({ studentId, examResults }: EnhancedA
             <span className="text-sm text-gray-600">En İyi Ders</span>
             <CheckCircle className="h-5 w-5 text-green-500" />
           </div>
-          <p className="text-lg font-bold text-gray-900">{quickStats.bestSubject.name}</p>
+          <p className="text-lg font-bold text-gray-900">{quickStats.bestSubject.label}</p>
           <p className="text-sm text-green-600">{quickStats.bestSubject.avg} net ortalama</p>
         </div>
 
@@ -305,7 +335,7 @@ export default function EnhancedAIAnalysis({ studentId, examResults }: EnhancedA
             <span className="text-sm text-gray-600">Geliştirilecek</span>
             <AlertCircle className="h-5 w-5 text-orange-500" />
           </div>
-          <p className="text-lg font-bold text-gray-900">{quickStats.worstSubject.name}</p>
+          <p className="text-lg font-bold text-gray-900">{quickStats.worstSubject.label}</p>
           <p className="text-sm text-orange-600">{quickStats.worstSubject.avg} net ortalama</p>
         </div>
       </div>

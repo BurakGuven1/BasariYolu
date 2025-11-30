@@ -21,53 +21,9 @@ export default defineConfig({
         safari10: true, // Fix Safari 10 bugs
       },
     },
+    // Let Vite handle chunk splitting to avoid loader order issues
     rollupOptions: {
       output: {
-        manualChunks: (id) => {
-          // Split vendor libraries into separate chunks
-          if (id.includes('node_modules')) {
-            // React core
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-is') || id.includes('scheduler')) {
-              return 'react-vendor';
-            }
-            // Router
-            if (id.includes('react-router')) {
-              return 'react-vendor';
-            }
-            // Supabase
-            if (id.includes('@supabase')) {
-              return 'supabase';
-            }
-            // Charts (heavy - lazy loaded)
-            if (id.includes('recharts') || id.includes('d3-')) {
-              return 'charts';
-            }
-            // Excel/PDF export libraries (very heavy - lazy loaded)
-            if (id.includes('exceljs') || id.includes('jspdf') || id.includes('html2canvas')) {
-              return 'export-libs';
-            }
-            // Animations - Keep with vendor to ensure React is loaded first
-            // FIX: animations chunk was loading before react-vendor causing createContext error
-            if (id.includes('lottie') || id.includes('framer-motion')) {
-              return 'vendor';
-            }
-            // Maps (heavy - lazy loaded)
-            if (id.includes('leaflet')) {
-              return 'maps';
-            }
-            // Markdown/Rich text (heavy - lazy loaded)
-            if (id.includes('react-markdown') || id.includes('katex') || id.includes('dompurify') || id.includes('@uiw/react-md-editor')) {
-              return 'rich-text';
-            }
-            // PDF.js (very heavy - lazy loaded)
-            if (id.includes('pdfjs')) {
-              return 'pdf-libs';
-            }
-            // Other vendor code
-            return 'vendor';
-          }
-        },
-        // Better file naming for caching
         entryFileNames: 'assets/[name]-[hash].js',
         chunkFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name]-[hash].[ext]',

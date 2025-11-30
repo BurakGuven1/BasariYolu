@@ -278,7 +278,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Small delay to ensure storage is cleared
     setTimeout(() => {
-      window.location.href = redirectPath;
+      window.location.replace(redirectPath);
     }, 50); // 50ms delay to ensure storage cleanup completes
 
   }, [user, saveSession]);
