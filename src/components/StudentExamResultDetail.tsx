@@ -33,12 +33,19 @@ const toAscii = (text: string): string => {
   return text.split('').map(char => charMap[char] || char).join('');
 };
 
+interface InstitutionInfo {
+  name: string;
+  studentName: string;
+  studentEmail: string;
+}
+
 interface StudentExamResultDetailProps {
   userId: string;
   institutionId: string;
   templateId: string;
   examDate: string;
   onBack: () => void;
+  institutionInfo?: InstitutionInfo;
 }
 
 // Helper function to calculate exam score based on ÖSYM official formulas
@@ -227,6 +234,7 @@ export default function StudentExamResultDetail({
   templateId,
   examDate,
   onBack,
+  institutionInfo,
 }: StudentExamResultDetailProps) {
   const [result, setResult] = useState<ExternalExamResult | null>(null);
   const [classResults, setClassResults] = useState<ExternalExamResult[]>([]);
@@ -307,7 +315,7 @@ export default function StudentExamResultDetail({
       // PAGE 1: HEADER & STATISTICS
       // Header with gradient effect
       pdf.setFillColor(79, 70, 229);
-      pdf.rect(0, 0, pageWidth, 30, 'F');
+      pdf.rect(0, 0, pageWidth, institutionInfo ? 38 : 30, 'F');
       pdf.setTextColor(255, 255, 255);
       pdf.setFontSize(16);
       pdf.setFont('helvetica', 'bold');
@@ -316,8 +324,16 @@ export default function StudentExamResultDetail({
       pdf.setFont('helvetica', 'normal');
       pdf.text(toAscii(`${template?.name || ''} - ${new Date(examDate).toLocaleDateString('tr-TR')}`), pageWidth / 2, 22, { align: 'center' });
 
+      // Kurum bilgileri varsa ekle
+      if (institutionInfo) {
+        pdf.setFontSize(9);
+        pdf.setFont('helvetica', 'italic');
+        pdf.text(toAscii(institutionInfo.name), pageWidth / 2, 30, { align: 'center' });
+        pdf.text(toAscii(`Ogrenci: ${institutionInfo.studentName}`), pageWidth / 2, 36, { align: 'center' });
+      }
+
       pdf.setTextColor(0, 0, 0);
-      yPos = 38;
+      yPos = institutionInfo ? 46 : 38;
 
       // Exam Score Box (prominent)
       if (examScore !== null) {
