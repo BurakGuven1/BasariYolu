@@ -4,6 +4,7 @@ import { Building2, Users, FileSpreadsheet, ClipboardList, ShieldCheck, LogOut, 
 import { InstitutionSession } from '../lib/institutionApi';
 import InstitutionQuestionBankPanel from './InstitutionQuestionBankPanel';
 import InstitutionStudentApprovalPanel from './InstitutionStudentApprovalPanel';
+import InstitutionStudentListPanel from './InstitutionStudentListPanel';
 import InstitutionEngagementPanel from './InstitutionEngagementPanel';
 import InstitutionTeacherManagementPanel from './InstitutionTeacherManagementPanel';
 import InstitutionAnalyticsPanel from './InstitutionAnalyticsPanel';
@@ -45,7 +46,7 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
   const isTeacherRole = session.role === 'teacher';
   const canManageInstitution = ['owner', 'manager'].includes(session.role);
   const canAccessQuestionBank = canManageInstitution || isTeacherRole;
-  type PanelKey = 'overview' | 'analytics' | 'performance' | 'external-exams' | 'question-bank' | 'schedule' | 'teachers' | 'students' | 'engagement';
+  type PanelKey = 'overview' | 'analytics' | 'performance' | 'external-exams' | 'question-bank' | 'schedule' | 'teachers' | 'students' | 'student-list' | 'engagement';
   const [activePanel, setActivePanel] = useState<PanelKey>('overview');
 
   type PanelItem = {
@@ -109,10 +110,17 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
       },
       {
         key: 'students',
-        label: 'Öğrenciler',
-        description: 'Başvurular ve kodlar',
+        label: 'Öğrenci Başvuruları',
+        description: 'Başvuru onayları ve davet kodları',
         icon: Layers,
         visible: canManageInstitution,
+      },
+      {
+        key: 'student-list',
+        label: 'Öğrenci Listesi',
+        description: 'Onaylı öğrenciler ve performans analizi',
+        icon: Users,
+        visible: canManageInstitution && isActive,
       },
       {
         key: 'engagement',
@@ -229,42 +237,6 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
     statusMessage = 'Başvurunuz inceleniyor.';
     statusHint = 'Onay sonrası tüm kurum özellikleri otomatik açılacak. Durumu aşağıdaki düğmeden yenileyebilirsiniz.';
   }
-
-  const quickActions = canManageInstitution
-    ? [
-        {
-          key: 'question-bank',
-          icon: ClipboardList,
-          title: 'Soru Bankası',
-          description: 'Kendi sorularınızı kaydedin, ders ve zorluk seviyesine göre etiketleyin.',
-        },
-        {
-          key: 'exam-builder',
-          icon: FileSpreadsheet,
-          title: 'Sınav Oluştur',
-          description: 'Test, yazılı veya deneme sınavları hazırlayın ve sınıflara atayın.',
-        },
-        {
-          key: 'team',
-          icon: Users,
-          title: 'Ekip & Roller',
-          description: 'Öğretmenleri kurumunuza ekleyin ve yetkilerini yönetin.',
-        },
-      ]
-    : [
-        {
-          key: 'question-bank',
-          icon: ClipboardList,
-          title: 'Soru Bankası',
-          description: 'Yeni sorular ekleyin, yayımlayın ve mevcutları düzenleyin.',
-        },
-        {
-          key: 'exam-builder',
-          icon: FileSpreadsheet,
-          title: 'Sınav Taslakları',
-          description: 'Size atanan sınavları hazırlayıp öğrencilere açın.',
-        },
-      ];
 
   const onboardingSteps = [
     {
@@ -477,85 +449,6 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
                 </section>
               )}
 
-              <section className="grid gap-6 lg:grid-cols-3">
-                {quickActions.map((action) => {
-                  const Icon = action.icon;
-                  return (
-                    <button
-                      key={action.key}
-                      type="button"
-                      disabled={!isActive}
-                      className="group flex h-full flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-5 text-left transition hover:-translate-y-1 hover:border-blue-400 hover:shadow-lg disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-50 disabled:text-gray-400"
-                    >
-                      <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600 group-disabled:bg-gray-200 group-disabled:text-gray-400">
-                        <Icon className="h-5 w-5" />
-                      </span>
-                      <div>
-                        <p className="text-sm font-semibold text-gray-900 group-disabled:text-gray-500">{action.title}</p>
-                        <p className="mt-1 text-xs text-gray-600 group-disabled:text-gray-400">{action.description}</p>
-                      </div>
-                      {!isActive && (
-                        <span className="mt-auto inline-flex w-max items-center justify-center rounded-full bg-gray-200 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-gray-600">
-                          Onay sonrasında açılacak
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </section>
-
-              {canManageInstitution && (
-                <section className="grid gap-6 lg:grid-cols-[1.2fr,1fr]">
-                  <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-                    <h2 className="mb-3 text-lg font-semibold text-gray-900">Kurum özetiniz</h2>
-                    <div className="grid gap-4 sm:grid-cols-3">
-                      <div className="rounded-xl bg-gray-50 p-4">
-                        <p className="text-xs uppercase tracking-wide text-gray-500">Öğrenci</p>
-                        <p className="mt-2 text-xl font-semibold text-gray-900">Yakında</p>
-                        <p className="mt-1 text-xs text-gray-500">Öğrencileri sınıflara göre yönetin ve ilerlemelerini izleyin.</p>
-                      </div>
-                      <div className="rounded-xl bg-gray-50 p-4">
-                        <p className="text-xs uppercase tracking-wide text-gray-500">Öğretmen</p>
-                        <p className="mt-2 text-xl font-semibold text-gray-900">Yakında</p>
-                        <p className="mt-1 text-xs text-gray-500">Yetki atayın, soru yazma görevleri oluşturun.</p>
-                      </div>
-                      <div className="rounded-xl bg-gray-50 p-4">
-                        <p className="text-xs uppercase tracking-wide text-gray-500">Sınav</p>
-                        <p className="mt-2 text-xl font-semibold text-gray-900">Yakında</p>
-                        <p className="mt-1 text-xs text-gray-500">Deneme, quiz ve yazılı sınav sonuçlarını tek panelde takip edin.</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-                    <h2 className="mb-3 text-lg font-semibold text-gray-900">Yaklaşan modüller</h2>
-                    <div className="space-y-4 text-sm text-gray-600">
-                      <div className="flex items-start gap-3">
-                        <Layers className="mt-0.5 h-5 w-5 text-blue-500" />
-                        <div>
-                          <p className="font-medium text-gray-800">Soru bankası kategorileri</p>
-                          <p className="text-xs text-gray-500">Ders, konu ve kazanım bazlı soru arşivi ile gelişmiş filtreleme.</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <ShieldCheck className="mt-0.5 h-5 w-5 text-blue-500" />
-                        <div>
-                          <p className="font-medium text-gray-800">Velilere sonuç paylaşımı</p>
-                          <p className="text-xs text-gray-500">Veli paneliyle sınav sonuçlarını güvenle iletin.</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <Building2 className="mt-0.5 h-5 w-5 text-blue-500" />
-                        <div>
-                          <p className="font-medium text-gray-800">Kampüs içi duyurular</p>
-                          <p className="text-xs text-gray-500">Kurum içi haber akışı ile öğretmen ve öğrencileri bilgilendirin.</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </section>
-              )}
-
               {canManageInstitution && (
                 <section className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50 p-6 shadow-sm">
                   <div className="mb-4 flex items-center gap-3">
@@ -748,6 +641,17 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
               <InstitutionStudentApprovalPanel institutionId={session.institution.id} />
             ) : (
               renderPanelMessage('Öğrenci başvurularını yalnızca kurum yöneticileri görüntüleyebilir.')
+            ))}
+
+          {resolvedPanel === 'student-list' &&
+            (canManageInstitution ? (
+              isActive ? (
+                <InstitutionStudentListPanel institutionId={session.institution.id} />
+              ) : (
+                renderPanelMessage('Öğrenci listesi yalnızca aktif kurumlar için kullanılabilir.')
+              )
+            ) : (
+              renderPanelMessage('Öğrenci listesi yalnızca kurum yöneticilerine açıktır.')
             ))}
 
           {resolvedPanel === 'performance' &&
