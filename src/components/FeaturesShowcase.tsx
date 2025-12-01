@@ -17,7 +17,6 @@ import {
   Clock,
   Brain,
   Sparkles,
-  Shield,
   Zap,
   Heart,
   BarChart3,
@@ -509,14 +508,19 @@ export default function FeaturesShowcase() {
         animationData={institution}
         features={[
           {
-            icon: <Shield className="w-6 h-6 text-white" />,
-            title: 'Kapsamlı Soru Bankası',
-            text: 'Binlerce soruyu kategorize edin, özel sınavlar oluşturun',
+            icon: <Award className="w-6 h-6 text-white" />,
+            title: 'Öğrenciye özel deneme performans raporu',
+            text: 'Kurum içi yaptığınız denemelerde her öğrenciye özel konu konu performans raporu',
           },
           {
             icon: <BarChart3 className="w-6 h-6 text-white" />,
             title: 'Detaylı Raporlama',
             text: 'Öğrenci başarılarını, öğretmen performansını anlık takip edin',
+          },
+          {
+            icon: <Brain className="w-6 h-6 text-white" />,
+            title: 'Öğrencileriniz ücretsiz bir şekilde platformun gelişmiş özelliklerine erişebilir.',
+            text: 'Öğrencileriniz yapay zeka destekli kişiselleştirilmiş öğrenme deneyiminden faydalansın',
           },
           {
             icon: <Zap className="w-6 h-6 text-white" />,
