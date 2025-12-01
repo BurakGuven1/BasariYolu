@@ -363,7 +363,7 @@ function FeatureHighlight({ reverse, badge, title, description, features, gradie
 // Stats Section
 function StatsSection() {
   const stats = [
-    { value: '10,000+', label: 'Aktif Öğrenci' },
+    { value: '1,000+', label: 'Aktif Öğrenci' },
     { value: '120+', label: 'Öğretmen' },
     { value: '10+', label: 'Kurum' },
     { value: '%95', label: 'Memnuniyet' },
