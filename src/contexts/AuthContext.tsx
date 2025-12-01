@@ -260,14 +260,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.warn('localStorage clear error:', e);
     }
 
-    // STEP 3: Sign out from backend (Worker API + Supabase)
-    if (user?.userType === 'student' || user?.userType === 'parent') {
-      // Call Worker API to clear HTTP-only cookie (fire and forget)
-      authApi.logout().catch(err => {
-        console.warn('Worker logout error:', err);
-      });
+    // STEP 3: Sign out from backend (Worker API + Supabase) for ALL user types
+    // Call Worker API to clear HTTP-only cookie (fire and forget)
+    authApi.logout().catch(err => {
+      console.warn('Worker logout error:', err);
+    });
 
-      // Also sign out from Supabase (fire and forget)
+    // Also sign out from Supabase if needed (fire and forget)
+    if (user?.userType === 'student' || user?.userType === 'parent' || user?.userType === 'teacher' || user?.userType === 'institution') {
       supabase.auth.signOut({ scope: 'local' }).catch(err => {
         console.warn('Supabase signOut error:', err);
       });

@@ -139,9 +139,30 @@ export const registerTeacher = async (teacherData: {
 };
 
 export const loginTeacher = async (email: string, password: string) => {
-  // Use secure Worker API with HTTP-only cookies
-  console.log('🔐 Teacher login with authApi (HTTP-only cookies)');
-  const { user: authUser } = await authApi.login(email, password);
+  let authUser;
+
+  // Try Worker API first, fallback to Supabase
+  try {
+    console.log('🔐 Teacher login with Worker API (HTTP-only cookies)');
+    const { user } = await authApi.login(email, password);
+    authUser = user;
+    console.log('✅ Worker API login successful');
+  } catch (workerError: any) {
+    console.warn('⚠️ Worker API unavailable, falling back to Supabase:', workerError.message);
+
+    // Fallback to Supabase direct auth
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (authError || !authData.user) {
+      throw new Error(authError?.message || 'Email veya şifre hatalı');
+    }
+
+    authUser = authData.user;
+    console.log('✅ Supabase fallback login successful');
+  }
 
   if (!authUser) {
     throw new Error('Email veya şifre hatalı');

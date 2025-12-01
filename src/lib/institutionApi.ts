@@ -1,5 +1,6 @@
 ﻿import { supabase, SUPABASE_URL } from './supabase';
 import type { InstitutionExamResult } from './institutionStudentApi';
+import * as authApi from './authApi';
 const STUDENT_ARTIFACT_BUCKET = 'student-exam-artifacts';
 const ALLOWED_ARTIFACT_MIME_TYPES = [
   'application/pdf',
@@ -483,27 +484,51 @@ export const registerInstitutionAccount = async ({
 };
 
 export const loginInstitutionAccount = async (email: string, password: string): Promise<InstitutionSession> => {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+  let authUser;
 
-  if (error) {
-    throw error;
+  // Try Worker API first, fallback to Supabase
+  try {
+    console.log('[Institution] 🔐 Attempting login with Worker API (HTTP-only cookies)');
+    const { user } = await authApi.login(email, password);
+    authUser = user;
+    console.log('[Institution] ✅ Worker API login successful');
+  } catch (workerError: any) {
+    console.warn('[Institution] ⚠️ Worker API unavailable, falling back to Supabase:', workerError.message);
+
+    // Fallback to Supabase direct auth
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    if (!data.user) {
+      console.error('[Institution] login: user not returned from auth');
+      throw new Error('Kullanıcı bulunamadı.');
+    }
+
+    authUser = data.user;
+    console.log('[Institution] ✅ Supabase fallback login successful');
   }
 
-  if (!data.user) {
-    console.error('[Institution] login: user not returned from auth');
+  if (!authUser) {
     throw new Error('Kullanıcı bulunamadı.');
   }
 
-  console.log('[Institution] login auth user:', data.user.id);
+  console.log('[Institution] login auth user:', authUser.id);
 
-  const context = await getInstitutionSessionForUser(data.user.id);
+  const context = await getInstitutionSessionForUser(authUser.id);
 
   if (!context) {
     console.warn('[Institution] login: no institution context found');
+
+    // Try to sign out from both Worker API and Supabase
+    authApi.logout().catch(() => {});
     await supabase.auth.signOut();
+
     throw new Error('Bu kullanıcıya bağlı bir kurum kaydı bulunamadı.');
   }
 
