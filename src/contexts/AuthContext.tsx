@@ -145,7 +145,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Listen to Supabase auth changes - THIS HANDLES TOKEN REFRESH AUTOMATICALLY
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-
+      // CRITICAL: Don't process auth events during logout
+      const logoutInProgress = sessionStorage.getItem('logout_in_progress');
+      if (logoutInProgress) {
+        console.log('⚠️ Ignoring auth event during logout:', event);
+        return; // Skip all events during logout
+      }
 
       if (event === 'SIGNED_IN' && session?.user) {
         // Check localStorage for additional info
@@ -266,20 +271,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.warn('Worker logout error:', err);
     });
 
-    // Also sign out from Supabase if needed (fire and forget)
+    // STEP 4: Sign out from Supabase BEFORE redirect (CRITICAL for institution)
     if (user?.userType === 'student' || user?.userType === 'parent' || user?.userType === 'teacher' || user?.userType === 'institution') {
-      supabase.auth.signOut({ scope: 'local' }).catch(err => {
-        console.warn('Supabase signOut error:', err);
-      });
+      console.log('🔐 Signing out from Supabase before redirect...');
+
+      // WAIT for Supabase signOut to complete (max 2 seconds)
+      const signOutPromise = supabase.auth.signOut({ scope: 'local' });
+      const timeoutPromise = new Promise(resolve => setTimeout(resolve, 2000));
+
+      Promise.race([signOutPromise, timeoutPromise])
+        .catch(err => {
+          console.warn('Supabase signOut error:', err);
+        })
+        .finally(() => {
+          console.log('✅ Redirecting to:', redirectPath);
+          // Redirect after Supabase signOut completes
+          window.location.replace(redirectPath);
+        });
+    } else {
+      // For parent or other non-Supabase users, redirect immediately
+      console.log('✅ Redirecting to:', redirectPath);
+      setTimeout(() => {
+        window.location.replace(redirectPath);
+      }, 50);
     }
-
-    // STEP 4: IMMEDIATE redirect (synchronous)
-    console.log('✅ Redirecting to:', redirectPath);
-
-    // Small delay to ensure storage is cleared
-    setTimeout(() => {
-      window.location.replace(redirectPath);
-    }, 50); // 50ms delay to ensure storage cleanup completes
 
   }, [user, saveSession]);
 
