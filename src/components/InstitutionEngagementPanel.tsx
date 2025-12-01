@@ -1,18 +1,15 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import { Download, Loader2, Megaphone, NotebookPen, PieChart, RefreshCw, Save } from 'lucide-react';
-import jsPDF from 'jspdf';
+import { Loader2, Megaphone, NotebookPen, RefreshCw, Save } from 'lucide-react';
 import {
   createInstitutionAnnouncement,
   createInstitutionAssignment,
   deleteInstitutionAnnouncement,
   deleteInstitutionAssignment,
-  fetchInstitutionStudentPerformance,
   InstitutionAnnouncementInput,
   InstitutionAnnouncementRecord,
   InstitutionAssignmentInput,
   InstitutionAssignmentRecord,
-  InstitutionStudentPerformance,
   listInstitutionAnnouncements,
   listInstitutionAssignments,
   updateInstitutionAnnouncement,
@@ -24,7 +21,7 @@ interface InstitutionEngagementPanelProps {
   userId: string;
 }
 
-type EngagementTab = 'performance' | 'announcements' | 'assignments';
+type EngagementTab = 'announcements' | 'assignments';
 
 const ANNOUNCEMENT_TYPES: Array<{ value: NonNullable<InstitutionAnnouncementInput['type']>; label: string }> = [
   { value: 'info', label: 'Bilgilendirme' },
@@ -82,10 +79,9 @@ const defaultAssignmentForm: InstitutionAssignmentInput = {
 };
 
 export default function InstitutionEngagementPanel({ institutionId, userId }: InstitutionEngagementPanelProps) {
-  const [activeTab, setActiveTab] = useState<EngagementTab>('performance');
+  const [activeTab, setActiveTab] = useState<EngagementTab>('announcements');
   const [announcements, setAnnouncements] = useState<InstitutionAnnouncementRecord[]>([]);
   const [assignments, setAssignments] = useState<InstitutionAssignmentRecord[]>([]);
-  const [students, setStudents] = useState<InstitutionStudentPerformance[]>([]);
   const [announcementForm, setAnnouncementForm] = useState<InstitutionAnnouncementInput>(defaultAnnouncementForm);
   const [assignmentForm, setAssignmentForm] = useState<InstitutionAssignmentInput>(defaultAssignmentForm);
   const [announcementEditingId, setAnnouncementEditingId] = useState<string | null>(null);
@@ -93,20 +89,17 @@ export default function InstitutionEngagementPanel({ institutionId, userId }: In
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const [pdfGenerating, setPdfGenerating] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     try {
       setError(null);
       setLoading(true);
-      const [announcementRows, assignmentRows, performanceRows] = await Promise.all([
+      const [announcementRows, assignmentRows] = await Promise.all([
         listInstitutionAnnouncements(institutionId),
         listInstitutionAssignments(institutionId),
-        fetchInstitutionStudentPerformance(institutionId),
       ]);
       setAnnouncements(announcementRows);
       setAssignments(assignmentRows);
-      setStudents(performanceRows);
     } catch (err: any) {
       console.error('[InstitutionEngagementPanel] loadData', err);
       setError(err?.message ?? 'Veriler alınırken bir hata oluştu.');
@@ -123,18 +116,6 @@ export default function InstitutionEngagementPanel({ institutionId, userId }: In
     setMessage(text);
     setTimeout(() => setMessage(null), 3000);
   };
-
-  const performanceSummary = useMemo(() => {
-    if (!students.length) {
-      return { total: 0, avgScore: 0 };
-    }
-    const total = students.length;
-    const avg = students.reduce((sum, student) => sum + student.averageScore, 0) / total;
-    return {
-      total,
-      avgScore: Number(avg.toFixed(1)),
-    };
-  }, [students]);
 
   const formatDisplayDate = (value?: string | null, options?: Intl.DateTimeFormatOptions) => {
     if (!value) return '-';
@@ -267,53 +248,6 @@ export default function InstitutionEngagementPanel({ institutionId, userId }: In
     }
   };
 
-  const handleExportStudentPdf = async (student: InstitutionStudentPerformance) => {
-    setPdfGenerating(student.profile_id);
-    try {
-      const doc = new jsPDF();
-      doc.setFontSize(16);
-      doc.text('Kurum Performans Raporu', 14, 20);
-      doc.setFontSize(12);
-      doc.text(`Öğrenci: ${student.full_name ?? 'Bilinmiyor'}`, 14, 32);
-      doc.text(`E-posta: ${student.email ?? '-'}`, 14, 40);
-      doc.text(`Telefon: ${student.phone ?? '-'}`, 14, 48);
-      doc.text(
-        `Katılım: ${student.joined_at ? new Date(student.joined_at).toLocaleDateString('tr-TR') : '-'}`,
-        14,
-        56,
-      );
-      doc.text(`Gözlenen sınav sayısı: ${student.examsTaken}`, 14, 64);
-      doc.text(`Ortalama skor: %${student.averageScore}`, 14, 72);
-
-      if (student.lastExam) {
-        doc.text(
-          `Son sınav: ${student.lastExam.name ?? '-'} (%${student.lastExam.score ?? 0}, ${
-            student.lastExam.date ? new Date(student.lastExam.date).toLocaleDateString('tr-TR') : '-'
-          })`,
-          14,
-          80,
-        );
-      }
-
-      doc.text('Son sonuçlar', 14, 92);
-      let y = 102;
-      student.recentResults.forEach((result) => {
-        doc.text(
-          `• ${result.name ?? 'Bilinmeyen'} - %${result.score ?? 0} (${new Date(result.created_at).toLocaleDateString(
-            'tr-TR',
-          )})`,
-          16,
-          y,
-        );
-        y += 8;
-      });
-
-      doc.save(`kurum-raporu-${student.full_name ?? student.profile_id}.pdf`);
-    } finally {
-      setPdfGenerating(null);
-    }
-  };
-
   const handleResourceChange = (index: number, field: 'label' | 'url', value: string) => {
     setAssignmentForm((prev) => {
       const nextResources = [...(prev.resources ?? [])];
@@ -338,98 +272,9 @@ export default function InstitutionEngagementPanel({ institutionId, userId }: In
   };
 
   const tabs: Array<{ key: EngagementTab; label: string; icon: LucideIcon }> = [
-    { key: 'performance', label: 'Öğrenci performansı', icon: PieChart },
     { key: 'announcements', label: 'Duyurular', icon: Megaphone },
     { key: 'assignments', label: 'Ödevler', icon: NotebookPen },
   ];
-
-  const renderPerformanceTab = () => (
-    <div className="rounded-2xl border border-gray-200 bg-white p-6">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <p className="text-xs uppercase tracking-wide text-gray-500">Öğrenci performansı</p>
-          <h3 className="text-xl font-semibold text-gray-900">Analiz ve raporlar</h3>
-        </div>
-        <div className="flex gap-4">
-          <div className="rounded-xl border border-gray-200 px-4 py-2 text-center">
-            <p className="text-xs text-gray-500">Aktif öğrenci</p>
-            <p className="text-lg font-semibold text-gray-900">{performanceSummary.total}</p>
-          </div>
-          <div className="rounded-xl border border-gray-200 px-4 py-2 text-center">
-            <p className="text-xs text-gray-500">Ortalama skor</p>
-            <p className="text-lg font-semibold text-emerald-600">%{performanceSummary.avgScore}</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                Öğrenci
-              </th>
-              <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                Sınav sayısı
-              </th>
-              <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                Ortalama
-              </th>
-              <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
-                Son sınav
-              </th>
-              <th className="px-4 py-2" />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {students.map((student) => (
-              <tr key={student.profile_id} className="hover:bg-gray-50">
-                <td className="px-4 py-3">
-                  <p className="text-sm font-semibold text-gray-900">{student.full_name ?? 'İsimsiz öğrenci'}</p>
-                  <p className="text-xs text-gray-500">{student.email ?? 'E-posta yok'}</p>
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-700">{student.examsTaken}</td>
-                <td className="px-4 py-3 text-sm font-semibold text-emerald-600">
-                  %{student.averageScore}
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-600">
-                  {student.lastExam ? (
-                    <>
-                      {student.lastExam.name ?? 'Sınav'}
-                      <span className="ml-1 text-xs text-gray-500">
-                        (%{student.lastExam.score ?? 0},{' '}
-                        {student.lastExam.date ? new Date(student.lastExam.date).toLocaleDateString('tr-TR') : '-'})
-                      </span>
-                    </>
-                  ) : (
-                    'Veri yok'
-                  )}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <button
-                    type="button"
-                    onClick={() => handleExportStudentPdf(student)}
-                    disabled={pdfGenerating === student.profile_id}
-                    className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 transition hover:border-blue-500 hover:text-blue-600"
-                  >
-                    {pdfGenerating === student.profile_id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                    PDF indir
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {students.length === 0 && (
-              <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-500">
-                  Henüz kurumunuza bağlı öğrenci performans verisi bulunmuyor.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
 
   const renderAnnouncementsTab = () => (
     <div className="rounded-2xl border border-gray-200 bg-white p-6">
@@ -809,7 +654,6 @@ export default function InstitutionEngagementPanel({ institutionId, userId }: In
         </p>
       )}
 
-      {activeTab === 'performance' && renderPerformanceTab()}
       {activeTab === 'announcements' && renderAnnouncementsTab()}
       {activeTab === 'assignments' && renderAssignmentsTab()}
     </section>

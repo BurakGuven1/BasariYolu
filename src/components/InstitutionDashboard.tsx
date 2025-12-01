@@ -1,6 +1,6 @@
 
 import { useMemo, useState, type ComponentType } from 'react';
-import { Building2, Users, FileSpreadsheet, ClipboardList, ShieldCheck, LogOut, Mail, CheckCircle2, Layers, Copy, Download, BarChart3, Calendar, Award, Upload } from 'lucide-react';
+import { Building2, Users, FileSpreadsheet, ClipboardList, ShieldCheck, LogOut, Mail, CheckCircle2, Layers, Copy, Download, BarChart3, Calendar, Award, Upload, Phone, Check, X } from 'lucide-react';
 import { InstitutionSession } from '../lib/institutionApi';
 import InstitutionQuestionBankPanel from './InstitutionQuestionBankPanel';
 import InstitutionStudentApprovalPanel from './InstitutionStudentApprovalPanel';
@@ -167,6 +167,12 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
   const [exportError, setExportError] = useState<string | null>(null);
   const [exportSuccess, setExportSuccess] = useState<string | null>(null);
 
+  // Phone editing
+  const [editingPhone, setEditingPhone] = useState(false);
+  const [phoneValue, setPhoneValue] = useState(session.institution.contact_phone || '');
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [phoneSaving, setPhoneSaving] = useState(false);
+
   const handleExportStudents = async () => {
     setExportLoading('students');
     setExportError(null);
@@ -222,6 +228,40 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
         setExportSuccess(null);
       }, 5000);
     }
+  };
+
+  const handleSavePhone = async () => {
+    if (!phoneValue.trim()) {
+      setPhoneError('Telefon numarası boş olamaz.');
+      return;
+    }
+
+    setPhoneSaving(true);
+    setPhoneError(null);
+
+    try {
+      const { supabase } = await import('../lib/supabase');
+      const { error } = await supabase
+        .from('institutions')
+        .update({ contact_phone: phoneValue.trim() })
+        .eq('id', session.institution.id);
+
+      if (error) throw error;
+
+      session.institution.contact_phone = phoneValue.trim();
+      setEditingPhone(false);
+    } catch (error) {
+      console.error('Phone update error:', error);
+      setPhoneError('Telefon numarası güncellenemedi.');
+    } finally {
+      setPhoneSaving(false);
+    }
+  };
+
+  const handleCancelPhoneEdit = () => {
+    setPhoneValue(session.institution.contact_phone || '');
+    setEditingPhone(false);
+    setPhoneError(null);
   };
 
   let statusMessage = '';
@@ -361,7 +401,51 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
                           İletişim
                         </p>
                         <p className="mt-2 text-sm text-blue-900">{session.institution.contact_email || 'E-posta ekleyin'}</p>
-                        <p className="text-xs text-blue-800">{session.institution.contact_phone || 'Telefon bilgisi ekleyin'}</p>
+
+                        {editingPhone ? (
+                          <div className="mt-2 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Phone className="h-3 w-3 text-blue-600" />
+                              <input
+                                type="tel"
+                                value={phoneValue}
+                                onChange={(e) => setPhoneValue(e.target.value)}
+                                placeholder="5XX XXX XX XX"
+                                className="flex-1 rounded border border-blue-300 px-2 py-1 text-xs text-gray-900 focus:border-blue-500 focus:outline-none"
+                                disabled={phoneSaving}
+                              />
+                            </div>
+                            {phoneError && (
+                              <p className="text-xs text-red-600">{phoneError}</p>
+                            )}
+                            <div className="flex gap-2">
+                              <button
+                                onClick={handleSavePhone}
+                                disabled={phoneSaving}
+                                className="inline-flex items-center gap-1 rounded bg-blue-600 px-2 py-1 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                              >
+                                <Check className="h-3 w-3" />
+                                Kaydet
+                              </button>
+                              <button
+                                onClick={handleCancelPhoneEdit}
+                                disabled={phoneSaving}
+                                className="inline-flex items-center gap-1 rounded border border-gray-300 bg-white px-2 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                              >
+                                <X className="h-3 w-3" />
+                                İptal
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setEditingPhone(true)}
+                            className="mt-1 flex items-center gap-1 text-xs text-blue-800 hover:text-blue-900 hover:underline"
+                          >
+                            <Phone className="h-3 w-3" />
+                            {session.institution.contact_phone || 'Telefon bilgisi ekleyin'}
+                          </button>
+                        )}
                       </div>
 
                       <div className="rounded-xl bg-green-50 p-4">
@@ -473,7 +557,7 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
                     </div>
                   )}
 
-                  <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="grid gap-4 sm:grid-cols-2">
                     <button
                       onClick={handleExportStudents}
                       disabled={exportLoading === 'students'}
@@ -489,25 +573,6 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
                         <p className="font-semibold text-gray-900">Öğrenci Listesi</p>
                         <p className="mt-1 text-xs text-gray-600">
                           {exportLoading === 'students' ? 'İndiriliyor...' : 'Onaylı öğrencilerin listesini Excel olarak indirin'}
-                        </p>
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={handleExportExamResults}
-                      disabled={exportLoading === 'exams'}
-                      className="group flex flex-col items-start gap-3 rounded-xl border-2 border-emerald-200 bg-white p-4 text-left transition-all hover:border-emerald-400 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <div className="flex w-full items-center justify-between">
-                        <div className="rounded-lg bg-purple-100 p-2">
-                          <ClipboardList className="h-5 w-5 text-purple-700" />
-                        </div>
-                        <Download className="h-5 w-5 text-gray-400 transition-transform group-hover:scale-110 group-hover:text-emerald-600" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-gray-900">Sınav Sonuçları</p>
-                        <p className="mt-1 text-xs text-gray-600">
-                          {exportLoading === 'exams' ? 'İndiriliyor...' : 'Tüm sınav sonuçlarını detaylı olarak indirin'}
                         </p>
                       </div>
                     </button>

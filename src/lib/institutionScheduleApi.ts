@@ -344,19 +344,29 @@ export const getScheduleByDay = (entries: FullScheduleEntry[]): Record<number, F
 
 export const checkScheduleConflict = (
   entries: ScheduleEntry[] | TeacherPersonalSchedule[],
-  newEntry: { day_of_week: number; start_time: string; end_time: string },
+  newEntry: { day_of_week: number; start_time: string; end_time: string; teacher_id?: string | null },
   excludeId?: string
 ): boolean => {
   return entries.some(entry => {
     if (excludeId && entry.id === excludeId) return false;
     if (entry.day_of_week !== newEntry.day_of_week) return false;
 
+    // Farklı öğretmenler aynı saatte farklı sınıflara ders verebilir
+    // Sadece aynı öğretmenin aynı saatte çakışması engellenmelidir
+    const entryTeacherId = 'teacher_id' in entry ? entry.teacher_id : undefined;
+    const newTeacherId = newEntry.teacher_id;
+
+    // Eğer öğretmenler farklıysa çakışma yok
+    if (entryTeacherId && newTeacherId && entryTeacherId !== newTeacherId) {
+      return false;
+    }
+
     const existingStart = entry.start_time;
     const existingEnd = entry.end_time;
     const newStart = newEntry.start_time;
     const newEnd = newEntry.end_time;
 
-    // Çakışma kontrolü
+    // Zaman çakışması kontrolü (sadece aynı öğretmen için)
     return (
       (newStart >= existingStart && newStart < existingEnd) ||
       (newEnd > existingStart && newEnd <= existingEnd) ||

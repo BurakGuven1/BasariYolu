@@ -190,12 +190,12 @@ export async function exportPerformanceReportToExcel(institutionId: string) {
     }
 
     // Fetch exam results for all students
-    const studentIds = students.map(s => s.id);
+    const userIds = students.map(s => s.user_id);
     const { data: examResults, error: resultsError } = await supabase
       .from('institution_exam_results')
-      .select('student_id, correct_count, wrong_count, empty_count, score, completed_at')
+      .select('user_id, correct_count, wrong_count, empty_count, score, completed_at')
       .eq('institution_id', institutionId)
-      .in('student_id', studentIds);
+      .in('user_id', userIds);
 
     if (resultsError) {
       throw resultsError;
@@ -235,7 +235,7 @@ export async function exportPerformanceReportToExcel(institutionId: string) {
     let successRateSum = 0;
 
     students.forEach(student => {
-      const studentResults = examResults?.filter(r => r.student_id === student.id) || [];
+      const studentResults = examResults?.filter(r => r.user_id === student.user_id) || [];
 
       const totalExams = studentResults.length;
       const totalCorrect = studentResults.reduce((sum, r) => sum + r.correct_count, 0);
