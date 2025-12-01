@@ -118,6 +118,9 @@ export async function submitInstitutionStudentSignup({
   password,
 }: InstitutionStudentSignupPayload) {
   const normalizedInviteCode = inviteCode.trim().toUpperCase();
+  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedFullName = fullName.trim();
+  const normalizedPhone = phone?.trim() || null;
 
   const { data: institution, error: institutionError } = await supabase
     .from('institutions')
@@ -140,12 +143,12 @@ export async function submitInstitutionStudentSignup({
   }
 
   const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-    email,
+    email: normalizedEmail,
     password,
     options: {
       data: {
-        full_name: fullName,
-        phone,
+        full_name: normalizedFullName,
+        phone: normalizedPhone,
         user_type: 'institution_student',
         institution_id: institution.id,
       },
@@ -167,9 +170,9 @@ export async function submitInstitutionStudentSignup({
       institution_id: institution.id,
       user_id: user.id,
       invite_code: normalizedInviteCode,
-      full_name: fullName,
-      email,
-      phone,
+      full_name: normalizedFullName,
+      email: normalizedEmail,
+      phone: normalizedPhone,
       status: 'pending',
     },
   ]);

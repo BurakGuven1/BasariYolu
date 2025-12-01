@@ -163,6 +163,7 @@ export default function InstitutionStudentAccessModal({ open, onClose }: Institu
                   value={signupForm.fullName}
                   onChange={(event) => setSignupForm((prev) => ({ ...prev, fullName: event.target.value }))}
                   required
+                  autoComplete="name"
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   placeholder="Adınızı ve soyadınızı giriniz"
                 />
@@ -177,9 +178,11 @@ export default function InstitutionStudentAccessModal({ open, onClose }: Institu
                 <div className="relative">
                   <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
                   <input
+                    type="tel"
                     value={signupForm.phone}
                     onChange={(event) => setSignupForm((prev) => ({ ...prev, phone: event.target.value }))}
                     required
+                    autoComplete="tel"
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     placeholder="0 507 XXX XX XX"
                   />
@@ -197,6 +200,7 @@ export default function InstitutionStudentAccessModal({ open, onClose }: Institu
                     value={signupForm.email}
                     onChange={(event) => setSignupForm((prev) => ({ ...prev, email: event.target.value }))}
                     required
+                    autoComplete="email"
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     placeholder="ornek@email.com"
                   />
@@ -215,6 +219,7 @@ export default function InstitutionStudentAccessModal({ open, onClose }: Institu
                   value={signupForm.password}
                   onChange={(event) => setSignupForm((prev) => ({ ...prev, password: event.target.value }))}
                   required
+                  autoComplete="new-password"
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   placeholder="Şifrenizi giriniz"
                 />
