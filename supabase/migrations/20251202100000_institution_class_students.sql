@@ -23,10 +23,7 @@ CREATE TABLE IF NOT EXISTS institution_class_students (
 
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-  created_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
-
-  -- Bir öğrenci bir kurumda sadece 1 aktif sınıfta olabilir
-  CONSTRAINT unique_active_student_per_institution UNIQUE(institution_id, student_id) WHERE (is_active = true)
+  created_by UUID REFERENCES profiles(id) ON DELETE SET NULL
 );
 
 -- Indexes for performance
@@ -40,6 +37,11 @@ CREATE INDEX IF NOT EXISTS idx_class_students_active
   ON institution_class_students(is_active) WHERE is_active = true;
 CREATE INDEX IF NOT EXISTS idx_class_students_class_active
   ON institution_class_students(class_id, is_active) WHERE is_active = true;
+
+-- Partial unique index: Bir öğrenci bir kurumda sadece 1 aktif sınıfta olabilir
+CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_active_student_per_institution
+  ON institution_class_students(institution_id, student_id)
+  WHERE is_active = true;
 
 -- Enable Row Level Security
 ALTER TABLE institution_class_students ENABLE ROW LEVEL SECURITY;
