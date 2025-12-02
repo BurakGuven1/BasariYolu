@@ -7,8 +7,7 @@ import { sendAnnouncementNotification } from '../lib/notificationApi';
 import { supabase } from '../lib/supabase';
 import InstitutionQuestionBankPanel from './InstitutionQuestionBankPanel';
 import InstitutionStudentExamPanel from './InstitutionStudentExamPanel';
-import TeacherScheduleView from './TeacherScheduleView';
-import TeacherAttendancePanel from './TeacherAttendancePanel';
+import TeacherSchedulePanel from './TeacherSchedulePanel';
 import {
   acceptInstitutionTeacherInvite,
   listTeacherInstitutionRequests,
@@ -44,7 +43,7 @@ export default function TeacherDashboard({ teacherUser, onLogout }: TeacherDashb
   });
   const [createLoading, setCreateLoading] = useState(false);
 
-  type PanelKey = 'overview' | 'classes' | 'institutions' | 'attendance';
+  type PanelKey = 'overview' | 'classes' | 'institutions' | 'schedule';
   const [activePanel, setActivePanel] = useState<PanelKey>('overview');
   const [institutionMemberships, setInstitutionMemberships] = useState<TeacherInstitutionMembership[]>([]);
   const [institutionsLoading, setInstitutionsLoading] = useState(false);
@@ -328,9 +327,9 @@ useEffect(() => {
         visible: true,
       },
       {
-        key: 'attendance',
-        label: 'Yoklama',
-        description: 'Öğrenci yoklama ve devamsızlık takibi',
+        key: 'schedule',
+        label: 'Ders Programım',
+        description: 'Haftalık ders programı ve yoklama',
         icon: UserCheck,
         visible: true,
       },
@@ -1052,10 +1051,10 @@ useEffect(() => {
             </div>
           )}
 
-          {resolvedPanel === 'attendance' && teacher && (
-            <TeacherAttendancePanel
+          {resolvedPanel === 'schedule' && teacher && selectedMembership?.institution?.id && (
+            <TeacherSchedulePanel
               teacherId={teacher.id}
-              institutionId={selectedMembership?.institution?.id || ''}
+              institutionId={selectedMembership.institution.id}
             />
           )}
 
