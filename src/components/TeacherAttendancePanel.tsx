@@ -96,11 +96,12 @@ export default function TeacherAttendancePanel({ teacherId, institutionId }: Tea
 
       if (error) throw error;
 
-      const studentRows: StudentRow[] = (classStudents || []).map(cs => {
+      const studentRows: StudentRow[] = (classStudents || []).map((cs: any) => {
         const existing = attendanceMap.get(cs.student_id);
+        const studentProfile = Array.isArray(cs.student?.profile) ? cs.student.profile[0] : cs.student?.profile;
         return {
           student_id: cs.student_id,
-          student_name: cs.student?.profile?.full_name || 'İsimsiz',
+          student_name: studentProfile?.full_name || 'İsimsiz',
           status: existing?.status || 'present',
           notes: existing?.notes || '',
           existing_record: existing
@@ -151,11 +152,11 @@ export default function TeacherAttendancePanel({ teacherId, institutionId }: Tea
         student_id: student.student_id,
         teacher_id: teacherId,
         attendance_date: selectedDate,
-        lesson_time: lessonTime || null,
-        subject: subject || null,
+        lesson_time: lessonTime || undefined,
+        subject: subject || undefined,
         status: student.status,
-        notes: student.notes || null,
-        excuse_reason: student.status === 'excused' ? student.notes : null
+        notes: student.notes || undefined,
+        excuse_reason: student.status === 'excused' ? student.notes : undefined
       }));
 
       const { error } = await recordBulkAttendance(attendanceRecords);
