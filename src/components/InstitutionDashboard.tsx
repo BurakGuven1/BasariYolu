@@ -12,6 +12,7 @@ import InstitutionScheduleManagement from './InstitutionScheduleManagement';
 import ClassPerformancePanel from './ClassPerformancePanel';
 import InstitutionExternalExamPanel from './InstitutionExternalExamPanel';
 import InstitutionParentsPanel from './InstitutionParentsPanel';
+import InstitutionClassManagementPanel from './InstitutionClassManagementPanel';
 import { exportStudentsToExcel, exportExamResultsToExcel, exportPerformanceReportToExcel } from '../lib/institutionExportUtils';
 
 interface InstitutionDashboardProps {
@@ -47,7 +48,7 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
   const isTeacherRole = session.role === 'teacher';
   const canManageInstitution = ['owner', 'manager'].includes(session.role);
   const canAccessQuestionBank = canManageInstitution || isTeacherRole;
-  type PanelKey = 'overview' | 'analytics' | 'performance' | 'external-exams' | 'question-bank' | 'schedule' | 'teachers' | 'students' | 'student-list' | 'engagement' | 'parents';
+  type PanelKey = 'overview' | 'analytics' | 'performance' | 'external-exams' | 'question-bank' | 'schedule' | 'teachers' | 'students' | 'student-list' | 'engagement' | 'parents' | 'class-management';
   const [activePanel, setActivePanel] = useState<PanelKey>('overview');
 
   type PanelItem = {
@@ -135,6 +136,13 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
         label: 'Veli Yönetimi',
         description: 'Veli listesi ve iletişim bilgileri',
         icon: UserCheck,
+        visible: canManageInstitution && isActive,
+      },
+      {
+        key: 'class-management',
+        label: 'Sınıf Öğrencileri',
+        description: 'Öğrencileri sınıflara atama ve yönetim',
+        icon: Users,
         visible: canManageInstitution && isActive,
       },
     ],
@@ -766,6 +774,17 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
                 <InstitutionParentsPanel institutionId={session.institution.id} />
               ) : (
                 renderPanelMessage('Kurum onayı tamamlandığında veli yönetimi aktifleştirilecek.')
+              )
+            ) : (
+              renderPanelMessage('Bu ekran yalnızca kurum yöneticilerine açıktır.')
+            ))}
+
+          {resolvedPanel === 'class-management' &&
+            (canManageInstitution ? (
+              isActive ? (
+                <InstitutionClassManagementPanel institutionId={session.institution.id} />
+              ) : (
+                renderPanelMessage('Kurum onayı tamamlandığında sınıf yönetimi aktifleştirilecek.')
               )
             ) : (
               renderPanelMessage('Bu ekran yalnızca kurum yöneticilerine açıktır.')

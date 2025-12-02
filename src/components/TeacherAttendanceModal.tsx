@@ -40,20 +40,71 @@ export default function TeacherAttendanceModal({
   const loadClassStudents = async () => {
     setLoading(true);
     try {
-      // Get all approved students for this institution
-      // Note: In the future, we can filter by class_name if class_students table is added
-      const { data: approvedStudents, error } = await supabase
-        .from('institution_student_requests')
-        .select('user_id, full_name')
+      // Get students enrolled in this specific class
+      const { data: classEnrollments, error: enrollmentError } = await supabase
+        .from('institution_class_students')
+        .select(`
+          student_id,
+          student:profiles!institution_class_students_student_id_fkey(
+            id,
+            full_name
+          )
+        `)
         .eq('institution_id', institutionId)
-        .eq('status', 'approved')
-        .order('full_name');
+        .eq('is_active', true);
 
-      if (error) throw error;
+      if (enrollmentError) throw enrollmentError;
 
-      const studentRows: StudentRow[] = (approvedStudents || []).map((student: any) => ({
-        student_id: student.user_id,
-        student_name: student.full_name || 'İsimsiz Öğrenci',
+      // Filter by class_name from lesson
+      // Since we don't have class_id directly, we need to get the class first
+      const { data: institutionClass, error: classError } = await supabase
+        .from('institution_classes')
+        .select('id')
+        .eq('institution_id', institutionId)
+        .eq('class_name', lesson.class_name)
+        .single();
+
+      if (classError) {
+        console.warn('Class not found, showing all students:', classError);
+        // Fallback: show all approved students
+        const { data: allStudents } = await supabase
+          .from('institution_student_requests')
+          .select('user_id, full_name')
+          .eq('institution_id', institutionId)
+          .eq('status', 'approved')
+          .order('full_name');
+
+        const studentRows: StudentRow[] = (allStudents || []).map((student: any) => ({
+          student_id: student.user_id,
+          student_name: student.full_name || 'İsimsiz Öğrenci',
+          status: 'present' as AttendanceStatus,
+          notes: ''
+        }));
+
+        setStudents(studentRows);
+        setLoading(false);
+        return;
+      }
+
+      // Get students for this specific class
+      const { data: classStudents, error: studentsError } = await supabase
+        .from('institution_class_students')
+        .select(`
+          student_id,
+          student:profiles!institution_class_students_student_id_fkey(
+            id,
+            full_name
+          )
+        `)
+        .eq('class_id', institutionClass.id)
+        .eq('is_active', true)
+        .order('student(full_name)');
+
+      if (studentsError) throw studentsError;
+
+      const studentRows: StudentRow[] = (classStudents || []).map((cs: any) => ({
+        student_id: cs.student_id,
+        student_name: cs.student?.full_name || 'İsimsiz Öğrenci',
         status: 'present' as AttendanceStatus,
         notes: ''
       }));
