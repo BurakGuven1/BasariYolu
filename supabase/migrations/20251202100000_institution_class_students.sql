@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS institution_class_students (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   institution_id UUID NOT NULL REFERENCES institutions(id) ON DELETE CASCADE,
   class_id UUID NOT NULL REFERENCES institution_classes(id) ON DELETE CASCADE,
-  student_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  student_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
 
   -- Tarihler
   enrollment_date DATE DEFAULT CURRENT_DATE,
@@ -23,10 +23,10 @@ CREATE TABLE IF NOT EXISTS institution_class_students (
 
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
 
-  -- Bir öğrenci bir sınıfta sadece 1 kez aktif olabilir
-  UNIQUE(institution_id, class_id, student_id, is_active) DEFERRABLE INITIALLY DEFERRED
+  -- Bir öğrenci bir kurumda sadece 1 aktif sınıfta olabilir
+  CONSTRAINT unique_active_student_per_institution UNIQUE(institution_id, student_id) WHERE (is_active = true)
 );
 
 -- Indexes for performance
@@ -115,6 +115,15 @@ CREATE TRIGGER trigger_update_institution_class_students_updated_at
 
 -- Comments
 COMMENT ON TABLE institution_class_students IS 'Öğrencilerin kurum sınıflarına atanması';
-COMMENT ON COLUMN institution_class_students.student_id IS 'References auth.users.id (student user ID)';
+COMMENT ON COLUMN institution_class_students.student_id IS 'References profiles.id (student profile ID)';
 COMMENT ON COLUMN institution_class_students.is_active IS 'Aktif kayıt - öğrenci şu anda bu sınıfta mı?';
 COMMENT ON COLUMN institution_class_students.exit_date IS 'Sınıftan ayrılma tarihi (sınıf değiştirme için)';
+
+-- Create foreign key constraint name for Supabase to recognize
+-- This helps PostgREST API to auto-join
+ALTER TABLE institution_class_students
+  DROP CONSTRAINT IF EXISTS institution_class_students_student_id_fkey;
+
+ALTER TABLE institution_class_students
+  ADD CONSTRAINT institution_class_students_student_id_fkey
+  FOREIGN KEY (student_id) REFERENCES profiles(id) ON DELETE CASCADE;
