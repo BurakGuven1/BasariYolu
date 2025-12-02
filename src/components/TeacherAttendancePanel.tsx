@@ -35,6 +35,7 @@ export default function TeacherAttendancePanel({ teacherId, institutionId }: Tea
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [lessonTime, setLessonTime] = useState<string>('');
   const [subject, setSubject] = useState<string>('');
+  const [subjectOptions, setSubjectOptions] = useState<string[]>([]);
 
   const [students, setStudents] = useState<StudentRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -49,8 +50,34 @@ export default function TeacherAttendancePanel({ teacherId, institutionId }: Tea
     if (selectedClassId) {
       loadClassStudents();
       loadAttendanceSummary();
+      loadTeacherSubjectsForClass();
     }
   }, [selectedClassId, selectedDate]);
+
+  const loadTeacherSubjectsForClass = async () => {
+    try {
+      // Get teacher's subjects for this class from institution schedule
+      const { data, error } = await supabase
+        .from('institution_schedule_entries')
+        .select('subject')
+        .eq('institution_id', institutionId)
+        .eq('teacher_id', teacherId)
+        .eq('is_active', true);
+
+      if (error) throw error;
+
+      // Get unique subjects
+      const uniqueSubjects = Array.from(new Set(data?.map(s => s.subject) || []));
+      setSubjectOptions(uniqueSubjects);
+
+      // Auto-select first subject if none selected
+      if (uniqueSubjects.length > 0 && !subject) {
+        setSubject(uniqueSubjects[0]);
+      }
+    } catch (error) {
+      console.error('Error loading teacher subjects:', error);
+    }
+  };
 
   const loadTeacherClasses = async () => {
     try {
@@ -264,13 +291,28 @@ export default function TeacherAttendancePanel({ teacherId, institutionId }: Tea
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Ders
             </label>
-            <input
-              type="text"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              placeholder="Matematik, Fizik, vb."
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
-            />
+            {subjectOptions.length > 0 ? (
+              <select
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+              >
+                <option value="">Ders Seçiniz</option>
+                {subjectOptions.map((subj) => (
+                  <option key={subj} value={subj}>
+                    {subj}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="text"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                placeholder="Matematik, Fizik, vb."
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+              />
+            )}
           </div>
         </div>
 

@@ -29,24 +29,40 @@ export const getInstitutionParents = async (
   institutionId: string
 ): Promise<{ data: ParentContact[] | null; error: any }> => {
   try {
-    const { data, error } = await supabase
+    // First get parent contacts
+    const { data: parentData, error: parentError } = await supabase
       .from('parent_contacts')
-      .select(`
-        *,
-        student:students!parent_contacts_student_id_fkey(
-          id,
-          profile:profiles!students_profile_id_fkey(
-            full_name
-          )
-        )
-      `)
+      .select('*')
       .eq('institution_id', institutionId)
       .eq('is_active', true)
       .order('parent_name', { ascending: true });
 
-    if (error) throw error;
+    if (parentError) throw parentError;
+    if (!parentData || parentData.length === 0) {
+      return { data: [], error: null };
+    }
 
-    return { data: data as ParentContact[], error: null };
+    // Get student profiles for these parents
+    const studentIds = parentData.map(p => p.student_id);
+    const { data: profiles, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, full_name')
+      .in('id', studentIds);
+
+    if (profileError) {
+      console.warn('Could not fetch student profiles:', profileError);
+    }
+
+    // Merge student profile data with parent contacts
+    const parentsWithStudents = parentData.map(parent => ({
+      ...parent,
+      student: {
+        id: parent.student_id,
+        profile: profiles?.find(p => p.id === parent.student_id) || null
+      }
+    }));
+
+    return { data: parentsWithStudents as ParentContact[], error: null };
   } catch (error: any) {
     console.error('Error fetching institution parents:', error);
     return { data: null, error };
@@ -88,6 +104,20 @@ export const createParentContact = async (
       return {
         data: null,
         error: { message: 'Telefon veya email bilgisi zorunludur' }
+      };
+    }
+
+    if (!parentData.student_id || parentData.student_id.trim() === '') {
+      return {
+        data: null,
+        error: { message: 'Öğrenci seçimi zorunludur' }
+      };
+    }
+
+    if (!parentData.parent_name || parentData.parent_name.trim() === '') {
+      return {
+        data: null,
+        error: { message: 'Veli adı zorunludur' }
       };
     }
 
