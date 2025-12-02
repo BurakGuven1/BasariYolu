@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Trophy, Award, Lock, Sparkles } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import CertificateGenerator from './CertificateGenerator';
@@ -124,14 +124,14 @@ export default function AchievementsPanel({ studentId, studentName }: Achievemen
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+      <div className="bg-white rounded-xl shadow-lg p-6">
         <div className="flex items-center gap-3 mb-6">
           <Trophy className="w-6 h-6 text-yellow-500" />
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Başarılarım</h2>
+          <h2 className="text-2xl font-bold text-gray-900 ">Başarılarım</h2>
         </div>
         <div className="text-center py-8">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="text-gray-600 dark:text-gray-400 mt-4">Yükleniyor...</p>
+          <p className="text-gray-600  mt-4">Yükleniyor...</p>
         </div>
       </div>
     );
@@ -139,30 +139,30 @@ export default function AchievementsPanel({ studentId, studentName }: Achievemen
 
   return (
     <>
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+      <div className="bg-white rounded-xl shadow-lg p-6">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <Trophy className="w-6 h-6 text-yellow-500" />
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Başarılarım</h2>
+            <h2 className="text-2xl font-bold text-gray-900 ">Başarılarım</h2>
           </div>
-          <div className="bg-blue-100 dark:bg-blue-900 px-4 py-2 rounded-lg">
-            <p className="text-sm text-blue-600 dark:text-blue-300 font-semibold">
+          <div className="bg-blue-100  px-4 py-2 rounded-lg">
+            <p className="text-sm text-blue-600 font-semibold">
               {achievements.length} Başarı Kazanıldı
             </p>
           </div>
         </div>
 
         {/* Current Progress */}
-        <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-700 dark:to-gray-600 rounded-lg p-4 mb-6">
+        <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4 mb-6">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <span className="text-sm font-medium text-gray-700">
               Toplam Çözülen Soru
             </span>
-            <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+            <span className="text-2xl font-bold text-blue-600">
               {questionCount}
             </span>
           </div>
-          <p className="text-xs text-gray-600 dark:text-gray-400">
+          <p className="text-xs text-gray-600 ">
             Bir sonraki başarıya {Math.max(0, 500 - questionCount)} soru kaldı!
           </p>
         </div>
@@ -180,7 +180,7 @@ export default function AchievementsPanel({ studentId, studentName }: Achievemen
                 className={`relative rounded-xl p-4 border-2 transition-all ${
                   unlocked
                     ? 'border-yellow-400 bg-gradient-to-br ' + achievement.color
-                    : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700'
+                    : 'border-gray-200 bg-gray-50'
                 }`}
               >
                 {/* Lock overlay for locked achievements */}
@@ -203,7 +203,7 @@ export default function AchievementsPanel({ studentId, studentName }: Achievemen
                       className={`font-bold mb-1 ${
                         unlocked
                           ? 'text-white'
-                          : 'text-gray-900 dark:text-white'
+                          : 'text-gray-900 '
                       }`}
                     >
                       {achievement.title}
@@ -212,7 +212,7 @@ export default function AchievementsPanel({ studentId, studentName }: Achievemen
                       className={`text-sm mb-3 ${
                         unlocked
                           ? 'text-white text-opacity-90'
-                          : 'text-gray-600 dark:text-gray-400'
+                          : 'text-gray-600 '
                       }`}
                     >
                       {achievement.description}
@@ -220,7 +220,7 @@ export default function AchievementsPanel({ studentId, studentName }: Achievemen
 
                     {/* Progress bar */}
                     <div className="mb-2">
-                      <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                      <div className="w-full bg-gray-200 rounded-full h-2">
                         <div
                           className={`h-2 rounded-full transition-all ${
                             unlocked ? 'bg-white' : 'bg-blue-600'
@@ -230,7 +230,7 @@ export default function AchievementsPanel({ studentId, studentName }: Achievemen
                       </div>
                       <p
                         className={`text-xs mt-1 ${
-                          unlocked ? 'text-white' : 'text-gray-600 dark:text-gray-400'
+                          unlocked ? 'text-white' : 'text-gray-600 '
                         }`}
                       >
                         {questionCount} / {achievement.requiredCount}
@@ -261,11 +261,11 @@ export default function AchievementsPanel({ studentId, studentName }: Achievemen
 
         {/* Motivational message */}
         {questionCount < 500 && (
-          <div className="mt-6 text-center p-4 bg-blue-50 dark:bg-blue-900 rounded-lg">
-            <p className="text-blue-800 dark:text-blue-200 font-medium">
+          <div className="mt-6 text-center p-4 bg-blue-50  rounded-lg">
+            <p className="text-blue-800 font-medium">
               💪 İlk sertifikana sadece {500 - questionCount} soru kaldı!
             </p>
-            <p className="text-sm text-blue-600 dark:text-blue-300 mt-1">
+            <p className="text-sm text-blue-600 mt-1">
               Sertifikalarını Instagram'da paylaşmayı unutma!
             </p>
           </div>

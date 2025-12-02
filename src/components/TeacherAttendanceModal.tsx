@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { X, CheckCircle, XCircle, Clock, AlertCircle, Save } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { recordBulkAttendance, AttendanceStatus } from '../lib/attendanceApi';
@@ -206,15 +206,15 @@ export default function TeacherAttendanceModal({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+        <div className="p-6 border-b border-gray-200">
           <div className="flex items-start justify-between">
             <div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
                 Yoklama Al - {lesson.subject}
               </h3>
-              <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
+              <div className="space-y-1 text-sm text-gray-600 ">
                 <p>Sınıf: {lesson.class_name}</p>
                 <p>Saat: {lesson.start_time} - {lesson.end_time}</p>
                 <p>Tarih: {new Date(selectedDate).toLocaleDateString('tr-TR')}</p>
@@ -222,7 +222,7 @@ export default function TeacherAttendanceModal({
             </div>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              className="text-gray-400 hover:text-gray-600 "
             >
               <X className="w-6 h-6" />
             </button>
@@ -230,31 +230,31 @@ export default function TeacherAttendanceModal({
 
           {/* Stats */}
           <div className="mt-4 grid grid-cols-5 gap-3">
-            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-2 text-center">
-              <div className="text-lg font-bold text-gray-900 dark:text-white">{stats.total}</div>
-              <div className="text-xs text-gray-600 dark:text-gray-400">Toplam</div>
+            <div className="bg-gray-50 rounded-lg p-2 text-center">
+              <div className="text-lg font-bold text-gray-900">{stats.total}</div>
+              <div className="text-xs text-gray-600">Toplam</div>
             </div>
-            <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-2 text-center">
+            <div className="bg-green-50 rounded-lg p-2 text-center">
               <div className="text-lg font-bold text-green-600">{stats.present}</div>
-              <div className="text-xs text-green-700 dark:text-green-400">Geldi</div>
+              <div className="text-xs text-green-700">Geldi</div>
             </div>
-            <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-2 text-center">
+            <div className="bg-red-50 rounded-lg p-2 text-center">
               <div className="text-lg font-bold text-red-600">{stats.absent}</div>
-              <div className="text-xs text-red-700 dark:text-red-400">Gelmedi</div>
+              <div className="text-xs text-red-700">Gelmedi</div>
             </div>
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-2 text-center">
+            <div className="bg-yellow-50 rounded-lg p-2 text-center">
               <div className="text-lg font-bold text-yellow-600">{stats.late}</div>
-              <div className="text-xs text-yellow-700 dark:text-yellow-400">Geç</div>
+              <div className="text-xs text-yellow-700">Geç</div>
             </div>
-            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-2 text-center">
+            <div className="bg-blue-50 rounded-lg p-2 text-center">
               <div className="text-lg font-bold text-blue-600">{stats.excused}</div>
-              <div className="text-xs text-blue-700 dark:text-blue-400">Mazeretli</div>
+              <div className="text-xs text-blue-700">Mazeretli</div>
             </div>
           </div>
 
           {/* Bulk Actions */}
           <div className="mt-4 flex items-center space-x-2">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Toplu İşlem:</span>
+            <span className="text-sm font-medium text-gray-700 ">Toplu İşlem:</span>
             <button
               onClick={() => handleBulkStatus('present')}
               className="px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 text-sm"
@@ -281,12 +281,12 @@ export default function TeacherAttendanceModal({
               {students.map((student) => (
                 <div
                   key={student.student_id}
-                  className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4"
+                  className="bg-gray-50 rounded-lg p-4"
                 >
                   <div className="flex items-start space-x-4">
                     {/* Student Name */}
                     <div className="flex-1">
-                      <div className="font-medium text-gray-900 dark:text-white">
+                      <div className="font-medium text-gray-900">
                         {student.student_name}
                       </div>
                     </div>
@@ -298,7 +298,7 @@ export default function TeacherAttendanceModal({
                         className={`p-2 rounded-lg transition-colors ${
                           student.status === 'present'
                             ? 'bg-green-500 text-white'
-                            : 'bg-white dark:bg-gray-600 text-gray-400 hover:text-green-500'
+                            : 'bg-white text-gray-400 hover:text-green-500'
                         }`}
                         title="Geldi"
                       >
@@ -309,7 +309,7 @@ export default function TeacherAttendanceModal({
                         className={`p-2 rounded-lg transition-colors ${
                           student.status === 'absent'
                             ? 'bg-red-500 text-white'
-                            : 'bg-white dark:bg-gray-600 text-gray-400 hover:text-red-500'
+                            : 'bg-white text-gray-400 hover:text-red-500'
                         }`}
                         title="Gelmedi"
                       >
@@ -320,7 +320,7 @@ export default function TeacherAttendanceModal({
                         className={`p-2 rounded-lg transition-colors ${
                           student.status === 'late'
                             ? 'bg-yellow-500 text-white'
-                            : 'bg-white dark:bg-gray-600 text-gray-400 hover:text-yellow-500'
+                            : 'bg-white text-gray-400 hover:text-yellow-500'
                         }`}
                         title="Geç Geldi"
                       >
@@ -331,7 +331,7 @@ export default function TeacherAttendanceModal({
                         className={`p-2 rounded-lg transition-colors ${
                           student.status === 'excused'
                             ? 'bg-blue-500 text-white'
-                            : 'bg-white dark:bg-gray-600 text-gray-400 hover:text-blue-500'
+                            : 'bg-white text-gray-400 hover:text-blue-500'
                         }`}
                         title="Mazeretli"
                       >
@@ -348,7 +348,7 @@ export default function TeacherAttendanceModal({
                         value={student.notes}
                         onChange={(e) => handleNotesChange(student.student_id, e.target.value)}
                         placeholder="Not ekleyin (opsiyonel)"
-                        className="w-full px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-600 dark:text-white"
+                        className="w-full px-3 py-1 text-sm border border-gray-300 rounded"
                       />
                     </div>
                   )}
@@ -359,7 +359,7 @@ export default function TeacherAttendanceModal({
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-gray-200 dark:border-gray-700">
+        <div className="p-6 border-t border-gray-200">
           <div className="flex items-center justify-between">
             <label className="flex items-center space-x-2">
               <input
@@ -368,7 +368,7 @@ export default function TeacherAttendanceModal({
                 onChange={(e) => setNotifyParents(e.target.checked)}
                 className="rounded border-gray-300"
               />
-              <span className="text-sm text-gray-700 dark:text-gray-300">
+              <span className="text-sm text-gray-700">
                 Gelmeyenlerin velilerine WhatsApp ile bildir (günde 1 mesaj)
               </span>
             </label>
@@ -376,7 +376,7 @@ export default function TeacherAttendanceModal({
             <div className="flex space-x-3">
               <button
                 onClick={onClose}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
               >
                 İptal
               </button>

@@ -544,6 +544,11 @@ export default function FeaturesShowcase() {
             text: 'Sınıflarınızı, ödevlerinizi ve sınavlarınızı kolayca organize edin',
           },
           {
+            icon: <HandCoins className="w-6 h-6 text-white" />,
+            title: 'Sınıfa ve Öğrenciye Özel Ders Çalışma Programı Oluşturma',
+            text: 'Her öğrenciye veya sınıfa özel ders çalışma programları hazırlayın ve geri bildirimler alın',
+          },
+          {
             icon: <Award className="w-6 h-6 text-white" />,
             title: 'Öğrenci Gelişim Takibi',
             text: 'Her öğrencinin ilerlemesini detaylı raporlarla izleyin',

@@ -71,8 +71,8 @@ export default function InstitutionParentsPanel({ institutionId }: InstitutionPa
         <div className="flex items-center space-x-3">
           <Users className="w-8 h-8 text-purple-600" />
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Veli Yönetimi</h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <h2 className="text-2xl font-bold text-gray-900">Veli Yönetimi</h2>
+            <p className="text-sm text-gray-600">
               Toplam {parents.length} veli kaydı
             </p>
           </div>
@@ -81,7 +81,7 @@ export default function InstitutionParentsPanel({ institutionId }: InstitutionPa
         <div className="flex space-x-3">
           <button
             onClick={() => downloadParentXLSXTemplate()}
-            className="flex items-center space-x-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            className="flex items-center space-x-2 px-4 py-2 border border-gray-300  rounded-lg hover:bg-gray-50 transition-colors"
           >
             <Download className="w-4 h-4" />
             <span>Excel Şablon İndir</span>
@@ -114,7 +114,7 @@ export default function InstitutionParentsPanel({ institutionId }: InstitutionPa
           placeholder="Veli adı, öğrenci adı, telefon veya email ile ara..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white"
+          className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 "
         />
       </div>
 
@@ -126,64 +126,64 @@ export default function InstitutionParentsPanel({ institutionId }: InstitutionPa
       ) : filteredParents.length === 0 ? (
         <div className="text-center py-12">
           <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-gray-600">
             {searchQuery ? 'Arama sonucu bulunamadı' : 'Henüz veli kaydı yok'}
           </p>
         </div>
       ) : (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+        <div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-gray-700">
+              <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Veli Adı
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Öğrenci
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     İletişim
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Tercih
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Yakınlık
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     İşlemler
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+              <tbody className="divide-y divide-gray-200">
                 {filteredParents.map((parent) => (
-                  <tr key={parent.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <tr key={parent.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="font-medium text-gray-900 dark:text-white">
+                      <div className="font-medium text-gray-900">
                         {parent.parent_name}
                       </div>
                       {parent.notes && (
-                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        <div className="text-xs text-gray-500 mt-1">
                           {parent.notes}
                         </div>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900 dark:text-white">
+                      <div className="text-sm text-gray-900">
                         {parent.student?.profile?.full_name || '-'}
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="space-y-1">
                         {parent.phone && (
-                          <div className="flex items-center text-sm text-gray-600 dark:text-gray-300">
+                          <div className="flex items-center text-sm text-gray-600">
                             <Phone className="w-4 h-4 mr-2" />
                             {parent.phone}
                           </div>
                         )}
                         {parent.email && (
-                          <div className="flex items-center text-sm text-gray-600 dark:text-gray-300">
+                          <div className="flex items-center text-sm text-gray-600">
                             <Mail className="w-4 h-4 mr-2" />
                             {parent.email}
                           </div>
@@ -193,16 +193,16 @@ export default function InstitutionParentsPanel({ institutionId }: InstitutionPa
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                         parent.preferred_contact_method === 'whatsapp'
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                          ? 'bg-green-100 text-green-800'
                           : parent.preferred_contact_method === 'email'
-                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                          : 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-purple-100 text-purple-800'
                       }`}>
                         {parent.preferred_contact_method === 'whatsapp' ? 'WhatsApp' :
                          parent.preferred_contact_method === 'email' ? 'Email' : 'Her İkisi'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                       {parent.relation || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -211,13 +211,13 @@ export default function InstitutionParentsPanel({ institutionId }: InstitutionPa
                           setEditingParent(parent);
                           setShowAddModal(true);
                         }}
-                        className="text-blue-600 hover:text-blue-900 dark:text-blue-400 mr-3"
+                        className="text-blue-600 hover:text-blue-900 mr-3"
                       >
                         <Edit2 className="w-4 h-4 inline" />
                       </button>
                       <button
                         onClick={() => handleDeleteParent(parent.id!)}
-                        className="text-red-600 hover:text-red-900 dark:text-red-400"
+                        className="text-red-600 hover:text-red-900"
                       >
                         <Trash2 className="w-4 h-4 inline" />
                       </button>
@@ -337,28 +337,28 @@ function AddEditParentModal({ institutionId, parent, onClose, onSuccess }: AddEd
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
-        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">
+      <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
+        <h3 className="text-xl font-bold text-gray-900 mb-6">
           {parent ? 'Veli Düzenle' : 'Yeni Veli Ekle'}
         </h3>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Veli Ad Soyad *
               </label>
               <input
                 type="text"
                 value={formData.parent_name}
                 onChange={(e) => setFormData({ ...formData, parent_name: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Telefon
               </label>
               <input
@@ -366,24 +366,24 @@ function AddEditParentModal({ institutionId, parent, onClose, onSuccess }: AddEd
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 placeholder="05XX XXX XX XX"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Email
               </label>
               <input
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
               />
             </div>
 
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Öğrenci *
               </label>
               {loadingStudents ? (
@@ -392,7 +392,7 @@ function AddEditParentModal({ institutionId, parent, onClose, onSuccess }: AddEd
                 <select
                   value={formData.student_id}
                   onChange={(e) => setFormData({ ...formData, student_id: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                   required
                 >
                   <option value="">Öğrenci Seçiniz</option>
@@ -406,13 +406,13 @@ function AddEditParentModal({ institutionId, parent, onClose, onSuccess }: AddEd
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 İletişim Tercihi
               </label>
               <select
                 value={formData.preferred_contact_method}
                 onChange={(e) => setFormData({ ...formData, preferred_contact_method: e.target.value as any })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
               >
                 <option value="whatsapp">WhatsApp</option>
                 <option value="email">Email</option>
@@ -421,7 +421,7 @@ function AddEditParentModal({ institutionId, parent, onClose, onSuccess }: AddEd
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Yakınlık
               </label>
               <input
@@ -429,19 +429,19 @@ function AddEditParentModal({ institutionId, parent, onClose, onSuccess }: AddEd
                 value={formData.relation}
                 onChange={(e) => setFormData({ ...formData, relation: e.target.value })}
                 placeholder="Anne, Baba, Vasi, vb."
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
               />
             </div>
 
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Notlar
               </label>
               <textarea
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg"
               />
             </div>
           </div>
@@ -450,7 +450,7 @@ function AddEditParentModal({ institutionId, parent, onClose, onSuccess }: AddEd
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
             >
               İptal
             </button>
@@ -513,14 +513,14 @@ function ImportParentsModal({ institutionId, onClose, onSuccess }: ImportParents
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl max-w-2xl w-full p-6">
-        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">
+      <div className="bg-white rounded-xl max-w-2xl w-full p-6">
+        <h3 className="text-xl font-bold text-gray-900 mb-6">
           Excel/CSV ile Toplu Veli Ekleme
         </h3>
 
         <div className="space-y-4">
-          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-            <p className="text-sm text-blue-800 dark:text-blue-200">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p className="text-sm text-blue-800">
               <strong>Adımlar:</strong>
               <ol className="list-decimal list-inside mt-2 space-y-1">
                 <li>"Şablon İndir" butonu ile örnek Excel dosyasını indirin</li>
@@ -531,35 +531,35 @@ function ImportParentsModal({ institutionId, onClose, onSuccess }: ImportParents
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               CSV/Excel Dosyası Seç
             </label>
             <input
               type="file"
               accept=".csv,.xlsx,.xls"
               onChange={handleFileChange}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
             />
           </div>
 
           {result && (
             <div className={`rounded-lg p-4 ${
               result.failed === 0
-                ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
-                : 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800'
+                ? 'bg-green-50 border border-green-200'
+                : 'bg-yellow-50 border border-yellow-200'
             }`}>
               <div className="flex items-start space-x-3">
                 {result.failed === 0 ? (
-                  <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                  <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
                 ) : (
-                  <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+                  <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
                 )}
                 <div className="flex-1">
-                  <p className="font-medium text-gray-900 dark:text-white">
+                  <p className="font-medium text-gray-900">
                     Başarılı: {result.success} | Başarısız: {result.failed}
                   </p>
                   {result.errors.length > 0 && (
-                    <div className="mt-2 text-sm text-gray-700 dark:text-gray-300">
+                    <div className="mt-2 text-sm text-gray-700">
                       <p className="font-medium mb-1">Hatalar:</p>
                       <ul className="list-disc list-inside space-y-1">
                         {result.errors.slice(0, 5).map((err, i) => (
@@ -579,7 +579,7 @@ function ImportParentsModal({ institutionId, onClose, onSuccess }: ImportParents
           <div className="flex justify-end space-x-3 pt-4">
             <button
               onClick={onClose}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
             >
               {result?.failed === 0 ? 'Kapat' : 'İptal'}
             </button>

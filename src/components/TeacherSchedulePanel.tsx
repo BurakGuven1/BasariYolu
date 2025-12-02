@@ -72,8 +72,8 @@ export default function TeacherSchedulePanel({ teacherId, institutionId }: Teach
         <div className="flex items-center space-x-3">
           <Calendar className="w-8 h-8 text-purple-600" />
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Ders Programım</h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <h2 className="text-2xl font-bold text-gray-900 ">Ders Programım</h2>
+            <p className="text-sm text-gray-600 ">
               Kurumunuzun oluşturduğu haftalık ders programı - Yoklama almak için derse tıklayın
             </p>
           </div>
@@ -81,19 +81,19 @@ export default function TeacherSchedulePanel({ teacherId, institutionId }: Teach
       </div>
 
       {scheduleEntries.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
+        <div className="bg-white rounded-lg shadow p-12 text-center">
           <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
             Henüz ders programınız yok
           </h3>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-gray-600 ">
             Kurumunuz henüz size ders programı atamamış. Lütfen kurum yöneticinizle iletişime geçin.
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-7 gap-4">
           {days.map(day => (
-            <div key={day} className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+            <div key={day} className="bg-white rounded-lg shadow overflow-hidden">
               {/* Gün Başlığı */}
               <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-4 py-3">
                 <h3 className="text-white font-bold text-center">{getDayName(day)}</h3>
@@ -106,7 +106,7 @@ export default function TeacherSchedulePanel({ teacherId, institutionId }: Teach
                     <button
                       key={entry.id}
                       onClick={() => handleLessonClick(entry)}
-                      className="w-full text-left p-3 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-purple-500 dark:hover:border-purple-400 transition-all hover:shadow-md cursor-pointer group"
+                      className="w-full text-left p-3 rounded-lg border-2 border-gray-200 hover:border-purple-500 transition-all hover:shadow-md cursor-pointer group"
                       style={{
                         borderLeftWidth: '4px',
                         borderLeftColor: entry.color || '#8B5CF6'
@@ -114,26 +114,26 @@ export default function TeacherSchedulePanel({ teacherId, institutionId }: Teach
                     >
                       <div className="space-y-1">
                         {/* Ders Adı */}
-                        <div className="font-bold text-gray-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 flex items-center space-x-2">
+                        <div className="font-bold text-gray-900 group-hover:text-purple-600 flex items-center space-x-2">
                           <Book className="w-4 h-4" />
                           <span className="text-sm">{entry.subject}</span>
                         </div>
 
                         {/* Sınıf */}
-                        <div className="flex items-center space-x-2 text-xs text-gray-600 dark:text-gray-400">
+                        <div className="flex items-center space-x-2 text-xs text-gray-600 ">
                           <Users className="w-3 h-3" />
                           <span>{entry.class_name}</span>
                         </div>
 
                         {/* Saat */}
-                        <div className="flex items-center space-x-2 text-xs text-gray-600 dark:text-gray-400">
+                        <div className="flex items-center space-x-2 text-xs text-gray-600 ">
                           <Clock className="w-3 h-3" />
                           <span>{formatTime(entry.start_time)} - {formatTime(entry.end_time)}</span>
                         </div>
 
                         {/* Sınıf */}
                         {entry.classroom && (
-                          <div className="flex items-center space-x-2 text-xs text-gray-600 dark:text-gray-400">
+                          <div className="flex items-center space-x-2 text-xs text-gray-600 ">
                             <MapPin className="w-3 h-3" />
                             <span>{entry.classroom}</span>
                           </div>
@@ -141,13 +141,13 @@ export default function TeacherSchedulePanel({ teacherId, institutionId }: Teach
                       </div>
 
                       {/* Hover Hint */}
-                      <div className="mt-2 text-xs text-purple-600 dark:text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="mt-2 text-xs text-purple-600 opacity-0 group-hover:opacity-100 transition-opacity">
                         Yoklama almak için tıklayın →
                       </div>
                     </button>
                   ))
                 ) : (
-                  <div className="text-center py-8 text-gray-400 dark:text-gray-600 text-sm">
+                  <div className="text-center py-8 text-gray-400 text-sm">
                     Ders yok
                   </div>
                 )}

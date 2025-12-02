@@ -343,7 +343,7 @@ export const getScheduleByDay = (entries: FullScheduleEntry[]): Record<number, F
 };
 
 export const checkScheduleConflict = (
-  entries: ScheduleEntry[] | TeacherPersonalSchedule[],
+  entries: Array<ScheduleEntry | TeacherPersonalSchedule | FullScheduleEntry>,
   newEntry: { day_of_week: number; start_time: string; end_time: string; teacher_id?: string | null },
   excludeId?: string
 ): boolean => {

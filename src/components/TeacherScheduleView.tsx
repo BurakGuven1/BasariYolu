@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, Users, Plus, Edit2, Trash2, X, Save } from 'lucide-react';
+import { Clock, MapPin, Plus, Trash2, X, Save } from 'lucide-react';
 import {
   getTeacherWeeklySchedule,
   getTeacherPersonalSchedules,
@@ -59,7 +59,14 @@ export default function TeacherScheduleView({ teacherId, institutionId }: Teache
 
   const handleAdd = async () => {
     try {
-      if (checkScheduleConflict(fullSchedule, formData as any)) {
+      const conflictPayload = {
+        day_of_week: formData.day_of_week ?? 1,
+        start_time: formData.start_time ?? '08:00',
+        end_time: formData.end_time ?? '09:00',
+        teacher_id: teacherId
+      };
+
+      if (checkScheduleConflict(fullSchedule, conflictPayload)) {
         alert('Bu zaman diliminde çakışan bir etkinlik var!');
         return;
       }
@@ -185,7 +192,7 @@ export default function TeacherScheduleView({ teacherId, institutionId }: Teache
                   className="p-3 rounded-lg text-white text-sm cursor-pointer hover:opacity-90"
                   style={{ backgroundColor: entry.color }}
                   onClick={() => {
-                    if (entry.type === 'personal') {
+                    if (entry.type === 'teacher_personal') {
                       const personalEntry = personalSchedules.find(ps => ps.id === entry.id);
                       if (personalEntry) openEditModal(personalEntry);
                     }
@@ -203,7 +210,7 @@ export default function TeacherScheduleView({ teacherId, institutionId }: Teache
                     <Clock className="h-3 w-3" />
                     {formatTime(entry.start_time)} - {formatTime(entry.end_time)}
                   </div>
-                  {entry.type === 'personal' && (
+                  {entry.type === 'teacher_personal' && (
                     <div className="text-xs opacity-70 mt-1 italic">Kişisel</div>
                   )}
                 </div>
@@ -232,7 +239,7 @@ export default function TeacherScheduleView({ teacherId, institutionId }: Teache
                 <label className="block text-sm font-medium text-gray-700 mb-1">Başlık *</label>
                 <input
                   type="text"
-                  value={formData.title}
+                  value={formData.title ?? ''}
                   onChange={e => setFormData({ ...formData, title: e.target.value })}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2"
                   placeholder="Ders Hazırlığı, Toplantı vs"
@@ -242,7 +249,7 @@ export default function TeacherScheduleView({ teacherId, institutionId }: Teache
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Açıklama</label>
                 <textarea
-                  value={formData.description}
+                  value={formData.description ?? ''}
                   onChange={e => setFormData({ ...formData, description: e.target.value })}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2"
                   rows={2}
@@ -253,7 +260,7 @@ export default function TeacherScheduleView({ teacherId, institutionId }: Teache
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
                   <select
-                    value={formData.category}
+                    value={formData.category ?? 'personal'}
                     onChange={e => setFormData({ ...formData, category: e.target.value as any })}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2"
                   >
@@ -267,7 +274,7 @@ export default function TeacherScheduleView({ teacherId, institutionId }: Teache
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Gün</label>
                   <select
-                    value={formData.day_of_week}
+                    value={formData.day_of_week ?? 1}
                     onChange={e => setFormData({ ...formData, day_of_week: parseInt(e.target.value) })}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2"
                   >
@@ -282,7 +289,7 @@ export default function TeacherScheduleView({ teacherId, institutionId }: Teache
                 <label className="block text-sm font-medium text-gray-700 mb-1">Konum</label>
                 <input
                   type="text"
-                  value={formData.location}
+                  value={formData.location ?? ''}
                   onChange={e => setFormData({ ...formData, location: e.target.value })}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2"
                   placeholder="Öğretmenler Odası, Müdür Odası vs"
@@ -294,7 +301,7 @@ export default function TeacherScheduleView({ teacherId, institutionId }: Teache
                   <label className="block text-sm font-medium text-gray-700 mb-1">Başlangıç</label>
                   <input
                     type="time"
-                    value={formData.start_time}
+                    value={formData.start_time ?? '08:00'}
                     onChange={e => setFormData({ ...formData, start_time: e.target.value })}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2"
                   />
@@ -303,7 +310,7 @@ export default function TeacherScheduleView({ teacherId, institutionId }: Teache
                   <label className="block text-sm font-medium text-gray-700 mb-1">Bitiş</label>
                   <input
                     type="time"
-                    value={formData.end_time}
+                    value={formData.end_time ?? '09:00'}
                     onChange={e => setFormData({ ...formData, end_time: e.target.value })}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2"
                   />
@@ -314,7 +321,7 @@ export default function TeacherScheduleView({ teacherId, institutionId }: Teache
                 <label className="block text-sm font-medium text-gray-700 mb-1">Renk</label>
                 <input
                   type="color"
-                  value={formData.color}
+                  value={formData.color ?? '#10B981'}
                   onChange={e => setFormData({ ...formData, color: e.target.value })}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 h-10"
                 />
@@ -355,16 +362,16 @@ export default function TeacherScheduleView({ teacherId, institutionId }: Teache
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Başlık *</label>
-                <input type="text" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2" />
+                <input type="text" value={formData.title ?? ''} onChange={e => setFormData({ ...formData, title: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Açıklama</label>
-                <textarea value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2" rows={2} />
+                <textarea value={formData.description ?? ''} onChange={e => setFormData({ ...formData, description: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2" rows={2} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
-                  <select value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value as any })} className="w-full border border-gray-300 rounded-lg px-3 py-2">
+                  <select value={formData.category ?? 'personal'} onChange={e => setFormData({ ...formData, category: e.target.value as any })} className="w-full border border-gray-300 rounded-lg px-3 py-2">
                     <option value="personal">Kişisel</option>
                     <option value="meeting">Toplantı</option>
                     <option value="preparation">Hazırlık</option>
@@ -374,28 +381,28 @@ export default function TeacherScheduleView({ teacherId, institutionId }: Teache
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Gün</label>
-                  <select value={formData.day_of_week} onChange={e => setFormData({ ...formData, day_of_week: parseInt(e.target.value) })} className="w-full border border-gray-300 rounded-lg px-3 py-2">
+                  <select value={formData.day_of_week ?? 1} onChange={e => setFormData({ ...formData, day_of_week: parseInt(e.target.value) })} className="w-full border border-gray-300 rounded-lg px-3 py-2">
                     {[1, 2, 3, 4, 5, 6, 7].map(day => <option key={day} value={day}>{getDayName(day)}</option>)}
                   </select>
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Konum</label>
-                <input type="text" value={formData.location} onChange={e => setFormData({ ...formData, location: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2" />
+                <input type="text" value={formData.location ?? ''} onChange={e => setFormData({ ...formData, location: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Başlangıç</label>
-                  <input type="time" value={formData.start_time} onChange={e => setFormData({ ...formData, start_time: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2" />
+                  <input type="time" value={formData.start_time ?? '08:00'} onChange={e => setFormData({ ...formData, start_time: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Bitiş</label>
-                  <input type="time" value={formData.end_time} onChange={e => setFormData({ ...formData, end_time: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2" />
+                  <input type="time" value={formData.end_time ?? '09:00'} onChange={e => setFormData({ ...formData, end_time: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2" />
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Renk</label>
-                <input type="color" value={formData.color} onChange={e => setFormData({ ...formData, color: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 h-10" />
+                <input type="color" value={formData.color ?? '#10B981'} onChange={e => setFormData({ ...formData, color: e.target.value })} className="w-full border border-gray-300 rounded-lg px-3 py-2 h-10" />
               </div>
             </div>
 
@@ -403,7 +410,7 @@ export default function TeacherScheduleView({ teacherId, institutionId }: Teache
               <button onClick={handleUpdate} className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
                 Güncelle
               </button>
-              <button onClick={() => handleDelete(editingSchedule?.id!)} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+              <button onClick={() => editingSchedule?.id && handleDelete(editingSchedule.id)} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
                 <Trash2 className="h-4 w-4" />
               </button>
               <button onClick={() => setShowEditModal(false)} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
