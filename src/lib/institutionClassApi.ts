@@ -61,33 +61,41 @@ export const getInstitutionClasses = async (institutionId: string) => {
  */
 export const getClassStudents = async (classId: string) => {
   try {
-    const { data, error } = await supabase
+    // First get the enrollments
+    const { data: enrollments, error: enrollError } = await supabase
       .from('institution_class_students')
-      .select(`
-        id,
-        student_id,
-        enrollment_date,
-        is_active,
-        profiles:student_id (
-          full_name,
-          email
-        )
-      `)
+      .select('id, student_id, enrollment_date, is_active')
       .eq('class_id', classId)
-      .eq('is_active', true)
-      .order('profiles(full_name)');
+      .eq('is_active', true);
 
-    if (error) throw error;
+    if (enrollError) throw enrollError;
+    if (!enrollments || enrollments.length === 0) {
+      return { data: [], error: null };
+    }
 
-    // Transform data
-    const students: ClassStudentWithProfile[] = (data || []).map((item: any) => ({
-      id: item.id,
-      student_id: item.student_id,
-      student_name: item.profiles?.full_name || 'İsimsiz Öğrenci',
-      student_email: item.profiles?.email,
-      enrollment_date: item.enrollment_date,
-      is_active: item.is_active
-    }));
+    // Then get the student profiles
+    const studentIds = enrollments.map(e => e.student_id);
+    const { data: profiles, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, full_name, email')
+      .in('id', studentIds);
+
+    if (profileError) {
+      console.warn('Could not fetch profiles:', profileError);
+    }
+
+    // Merge data
+    const students: ClassStudentWithProfile[] = enrollments.map(enrollment => {
+      const profile = profiles?.find(p => p.id === enrollment.student_id);
+      return {
+        id: enrollment.id,
+        student_id: enrollment.student_id,
+        student_name: profile?.full_name || 'İsimsiz Öğrenci',
+        student_email: profile?.email,
+        enrollment_date: enrollment.enrollment_date,
+        is_active: enrollment.is_active
+      };
+    });
 
     return { data: students, error: null };
   } catch (error: any) {
@@ -101,26 +109,36 @@ export const getClassStudents = async (classId: string) => {
  */
 export const getStudentActiveClass = async (studentId: string, institutionId: string) => {
   try {
-    const { data, error } = await supabase
+    // Get the active enrollment
+    const { data: enrollment, error: enrollError } = await supabase
       .from('institution_class_students')
-      .select(`
-        *,
-        class:institution_classes (
-          id,
-          class_name,
-          class_description,
-          grade_level,
-          branch
-        )
-      `)
+      .select('*, class_id')
       .eq('student_id', studentId)
       .eq('institution_id', institutionId)
       .eq('is_active', true)
+      .maybeSingle();
+
+    if (enrollError) throw enrollError;
+    if (!enrollment) {
+      return { data: null, error: null };
+    }
+
+    // Get the class details
+    const { data: classData, error: classError } = await supabase
+      .from('institution_classes')
+      .select('id, class_name, class_description, grade_level, branch')
+      .eq('id', enrollment.class_id)
       .single();
 
-    if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows returned
+    if (classError) throw classError;
 
-    return { data: data as any, error: null };
+    return {
+      data: {
+        ...enrollment,
+        class: classData
+      },
+      error: null
+    };
   } catch (error: any) {
     console.error('Error fetching student active class:', error);
     return { data: null, error };

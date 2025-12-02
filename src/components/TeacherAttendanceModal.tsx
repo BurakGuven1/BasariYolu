@@ -40,32 +40,18 @@ export default function TeacherAttendanceModal({
   const loadClassStudents = async () => {
     setLoading(true);
     try {
-      // Get students enrolled in this specific class
-      const { data: classEnrollments, error: enrollmentError } = await supabase
-        .from('institution_class_students')
-        .select(`
-          student_id,
-          student:profiles!institution_class_students_student_id_fkey(
-            id,
-            full_name
-          )
-        `)
-        .eq('institution_id', institutionId)
-        .eq('is_active', true);
-
-      if (enrollmentError) throw enrollmentError;
-
-      // Filter by class_name from lesson
-      // Since we don't have class_id directly, we need to get the class first
+      // First, find the class by class_name
       const { data: institutionClass, error: classError } = await supabase
         .from('institution_classes')
         .select('id')
         .eq('institution_id', institutionId)
         .eq('class_name', lesson.class_name)
-        .single();
+        .maybeSingle();
 
-      if (classError) {
-        console.warn('Class not found, showing all students:', classError);
+      if (classError) throw classError;
+
+      if (!institutionClass) {
+        console.warn('Class not found for:', lesson.class_name);
         // Fallback: show all approved students
         const { data: allStudents } = await supabase
           .from('institution_student_requests')
@@ -86,25 +72,34 @@ export default function TeacherAttendanceModal({
         return;
       }
 
-      // Get students for this specific class
-      const { data: classStudents, error: studentsError } = await supabase
+      // Get students enrolled in this specific class
+      const { data: classEnrollments, error: enrollmentError } = await supabase
         .from('institution_class_students')
-        .select(`
-          student_id,
-          student:profiles!institution_class_students_student_id_fkey(
-            id,
-            full_name
-          )
-        `)
+        .select('student_id')
         .eq('class_id', institutionClass.id)
-        .eq('is_active', true)
-        .order('student(full_name)');
+        .eq('is_active', true);
 
-      if (studentsError) throw studentsError;
+      if (enrollmentError) throw enrollmentError;
 
-      const studentRows: StudentRow[] = (classStudents || []).map((cs: any) => ({
-        student_id: cs.student_id,
-        student_name: cs.student?.full_name || 'İsimsiz Öğrenci',
+      if (!classEnrollments || classEnrollments.length === 0) {
+        setStudents([]);
+        setLoading(false);
+        return;
+      }
+
+      // Get student profiles
+      const studentIds = classEnrollments.map(e => e.student_id);
+      const { data: profiles, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', studentIds)
+        .order('full_name');
+
+      if (profileError) throw profileError;
+
+      const studentRows: StudentRow[] = (profiles || []).map((profile: any) => ({
+        student_id: profile.id,
+        student_name: profile.full_name || 'İsimsiz Öğrenci',
         status: 'present' as AttendanceStatus,
         notes: ''
       }));
