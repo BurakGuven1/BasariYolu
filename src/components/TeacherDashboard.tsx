@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, type ComponentType } from 'react';
-import { Users, Plus, BookOpen, Settings, LogOut, Copy, Eye, EyeOff, CreditCard as Edit, Building2, School, RefreshCw, Home } from 'lucide-react';
+import { Users, Plus, BookOpen, Settings, LogOut, Copy, Eye, EyeOff, CreditCard as Edit, Building2, School, RefreshCw, Home, UserCheck } from 'lucide-react';
 import { getTeacherClasses, createClass, getClassData } from '../lib/teacherApi';
 import { PACKAGE_OPTIONS, calculateClassPrice } from '../types/teacher';
 import ClassManagementPanel from './ClassManagementPanel';
@@ -8,6 +8,7 @@ import { supabase } from '../lib/supabase';
 import InstitutionQuestionBankPanel from './InstitutionQuestionBankPanel';
 import InstitutionStudentExamPanel from './InstitutionStudentExamPanel';
 import TeacherScheduleView from './TeacherScheduleView';
+import TeacherAttendancePanel from './TeacherAttendancePanel';
 import {
   acceptInstitutionTeacherInvite,
   listTeacherInstitutionRequests,
@@ -43,7 +44,7 @@ export default function TeacherDashboard({ teacherUser, onLogout }: TeacherDashb
   });
   const [createLoading, setCreateLoading] = useState(false);
 
-  type PanelKey = 'overview' | 'classes' | 'institutions';
+  type PanelKey = 'overview' | 'classes' | 'institutions' | 'attendance';
   const [activePanel, setActivePanel] = useState<PanelKey>('overview');
   const [institutionMemberships, setInstitutionMemberships] = useState<TeacherInstitutionMembership[]>([]);
   const [institutionsLoading, setInstitutionsLoading] = useState(false);
@@ -324,6 +325,13 @@ useEffect(() => {
         label: 'Sınıflarım',
         description: 'Kendi sınıflarınız ve öğrencileriniz',
         icon: BookOpen,
+        visible: true,
+      },
+      {
+        key: 'attendance',
+        label: 'Yoklama',
+        description: 'Öğrenci yoklama ve devamsızlık takibi',
+        icon: UserCheck,
         visible: true,
       },
       {
@@ -1042,6 +1050,13 @@ useEffect(() => {
             )}
           </div>
             </div>
+          )}
+
+          {resolvedPanel === 'attendance' && teacher && (
+            <TeacherAttendancePanel
+              teacherId={teacher.id}
+              institutionId={selectedMembership?.institution?.id || ''}
+            />
           )}
 
           {resolvedPanel === 'institutions' && (

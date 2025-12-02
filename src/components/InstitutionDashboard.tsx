@@ -1,6 +1,6 @@
 
 import { useMemo, useState, type ComponentType } from 'react';
-import { Building2, Users, FileSpreadsheet, ClipboardList, ShieldCheck, LogOut, Mail, CheckCircle2, Layers, Copy, Download, BarChart3, Calendar, Award, Upload, Phone, Check, X } from 'lucide-react';
+import { Building2, Users, FileSpreadsheet, ClipboardList, ShieldCheck, LogOut, Mail, CheckCircle2, Layers, Copy, Download, BarChart3, Calendar, Award, Upload, Phone, Check, X, UserCheck } from 'lucide-react';
 import { InstitutionSession } from '../lib/institutionApi';
 import InstitutionQuestionBankPanel from './InstitutionQuestionBankPanel';
 import InstitutionStudentApprovalPanel from './InstitutionStudentApprovalPanel';
@@ -11,6 +11,7 @@ import InstitutionAnalyticsPanel from './InstitutionAnalyticsPanel';
 import InstitutionScheduleManagement from './InstitutionScheduleManagement';
 import ClassPerformancePanel from './ClassPerformancePanel';
 import InstitutionExternalExamPanel from './InstitutionExternalExamPanel';
+import InstitutionParentsPanel from './InstitutionParentsPanel';
 import { exportStudentsToExcel, exportExamResultsToExcel, exportPerformanceReportToExcel } from '../lib/institutionExportUtils';
 
 interface InstitutionDashboardProps {
@@ -46,7 +47,7 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
   const isTeacherRole = session.role === 'teacher';
   const canManageInstitution = ['owner', 'manager'].includes(session.role);
   const canAccessQuestionBank = canManageInstitution || isTeacherRole;
-  type PanelKey = 'overview' | 'analytics' | 'performance' | 'external-exams' | 'question-bank' | 'schedule' | 'teachers' | 'students' | 'student-list' | 'engagement';
+  type PanelKey = 'overview' | 'analytics' | 'performance' | 'external-exams' | 'question-bank' | 'schedule' | 'teachers' | 'students' | 'student-list' | 'engagement' | 'parents';
   const [activePanel, setActivePanel] = useState<PanelKey>('overview');
 
   type PanelItem = {
@@ -127,6 +128,13 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
         label: 'Etkileşim',
         description: 'Performans ve duyurular',
         icon: Mail,
+        visible: canManageInstitution && isActive,
+      },
+      {
+        key: 'parents',
+        label: 'Veli Yönetimi',
+        description: 'Veli listesi ve iletişim bilgileri',
+        icon: UserCheck,
         visible: canManageInstitution && isActive,
       },
     ],
@@ -747,6 +755,17 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
                 <InstitutionEngagementPanel institutionId={session.institution.id} userId={session.user.id} />
               ) : (
                 renderPanelMessage('Kurum onayı tamamlandığında etkileşim verileri aktifleştirilecek.')
+              )
+            ) : (
+              renderPanelMessage('Bu ekran yalnızca kurum yöneticilerine açıktır.')
+            ))}
+
+          {resolvedPanel === 'parents' &&
+            (canManageInstitution ? (
+              isActive ? (
+                <InstitutionParentsPanel institutionId={session.institution.id} />
+              ) : (
+                renderPanelMessage('Kurum onayı tamamlandığında veli yönetimi aktifleştirilecek.')
               )
             ) : (
               renderPanelMessage('Bu ekran yalnızca kurum yöneticilerine açıktır.')
