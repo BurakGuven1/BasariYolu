@@ -697,6 +697,32 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
               </div>
             </div>
 
+            {isLoginMode && (
+              <div className="text-right">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!formData.email) {
+                      alert('Lütfen e-posta adresinizi girin');
+                      return;
+                    }
+                    try {
+                      const { error } = await supabase.auth.resetPasswordForEmail(formData.email, {
+                        redirectTo: `${window.location.origin}/auth/reset-password`,
+                      });
+                      if (error) throw error;
+                      alert('Şifre sıfırlama bağlantısı e-posta adresinize gönderildi. Lütfen gelen kutunuzu kontrol edin.');
+                    } catch (error: any) {
+                      alert('Şifre sıfırlama hatası: ' + (error.message || 'Bilinmeyen hata'));
+                    }
+                  }}
+                  className="text-sm text-blue-600 hover:text-blue-700 hover:underline"
+                >
+                  Şifremi unuttum
+                </button>
+              </div>
+            )}
+
             {!isLoginMode && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
