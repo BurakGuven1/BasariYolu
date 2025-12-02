@@ -70,11 +70,34 @@ export const recordAttendance = async (
 
 /**
  * Toplu yoklama al (tüm sınıf için)
+ * UPSERT pattern: Delete existing records for same date/subject/students, then insert new ones
  */
 export const recordBulkAttendance = async (
   attendanceRecords: Omit<Attendance, 'id' | 'created_at' | 'updated_at'>[]
 ): Promise<{ data: Attendance[] | null; error: any }> => {
   try {
+    if (attendanceRecords.length === 0) {
+      return { data: [], error: null };
+    }
+
+    const firstRecord = attendanceRecords[0];
+    const studentIds = attendanceRecords.map(r => r.student_id);
+
+    // Delete existing attendance records for today (same date, subject, students)
+    const { error: deleteError } = await supabase
+      .from('attendance')
+      .delete()
+      .eq('institution_id', firstRecord.institution_id)
+      .eq('attendance_date', firstRecord.attendance_date)
+      .eq('subject', firstRecord.subject || '')
+      .in('student_id', studentIds);
+
+    if (deleteError) {
+      console.warn('Warning: Could not delete old attendance records:', deleteError);
+      // Continue anyway - insert will still work
+    }
+
+    // Insert new records
     const { data, error } = await supabase
       .from('attendance')
       .insert(attendanceRecords)
@@ -374,6 +397,23 @@ export const markAttendanceNotified = async (
   } catch (error: any) {
     console.error('Error marking attendance notified:', error);
     return { data: false, error };
+  }
+};
+
+/**
+ * Clean up old attendance records (older than 23 hours)
+ */
+export const cleanupOldAttendance = async (): Promise<{ data: { deleted_count: number } | null; error: any }> => {
+  try {
+    const { data, error } = await supabase
+      .rpc('cleanup_old_attendance');
+
+    if (error) throw error;
+
+    return { data: { deleted_count: data || 0 }, error: null };
+  } catch (error: any) {
+    console.error('Error cleaning up old attendance:', error);
+    return { data: null, error };
   }
 };
 

@@ -79,6 +79,27 @@ export const sendEmail = async (
 };
 
 /**
+ * Log notification to database
+ */
+const logNotification = async (
+  notificationData: Omit<NotificationLog, 'id' | 'created_at'>
+): Promise<void> => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+
+    await supabase
+      .from('notification_logs')
+      .insert([{
+        ...notificationData,
+        created_by: user?.id
+      }]);
+  } catch (error) {
+    console.error('Error logging notification:', error);
+    // Don't throw - logging failure shouldn't break the notification flow
+  }
+};
+
+/**
  * Devamsızlık bildirimi gönder
  */
 export const sendAttendanceNotification = async (
@@ -109,17 +130,14 @@ export const sendAttendanceNotification = async (
       };
     }
 
-    // Öğrenci adını al
-    const { data: student } = await supabase
-      .from('students')
-      .select(`
-        id,
-        profile:profiles!students_profile_id_fkey(full_name)
-      `)
+    // Öğrenci adını al (directly from profiles table)
+    const { data: studentProfile } = await supabase
+      .from('profiles')
+      .select('full_name')
       .eq('id', studentId)
-      .single();
+      .maybeSingle();
 
-    const studentName = student?.profile?.full_name || 'Öğrenci';
+    const studentName = studentProfile?.full_name || 'Öğrenci';
 
     let sent = 0;
     let failed = 0;
@@ -143,6 +161,22 @@ Bilgilerinize sunarız.
       // WhatsApp
       if ((parent.preferred_contact_method === 'whatsapp' || parent.preferred_contact_method === 'both') && parent.phone) {
         const result = await sendWhatsAppMessage(parent.phone, message);
+
+        // Log the notification
+        await logNotification({
+          institution_id: institutionId,
+          parent_contact_id: parent.id,
+          student_id: studentId,
+          notification_type: 'attendance',
+          method: 'whatsapp',
+          recipient: parent.phone,
+          message: message,
+          status: result.success ? 'sent' : 'failed',
+          error_message: result.error,
+          sent_at: result.success ? new Date().toISOString() : undefined,
+          metadata: { attendance_data: attendanceData }
+        });
+
         if (result.success) sent++;
         else failed++;
       }
@@ -154,6 +188,22 @@ Bilgilerinize sunarız.
           `${studentName} - Devamsızlık Bildirimi`,
           message.replace(/\n/g, '<br>')
         );
+
+        // Log the notification
+        await logNotification({
+          institution_id: institutionId,
+          parent_contact_id: parent.id,
+          student_id: studentId,
+          notification_type: 'attendance',
+          method: 'email',
+          recipient: parent.email,
+          message: message,
+          status: result.success ? 'sent' : 'failed',
+          error_message: result.error,
+          sent_at: result.success ? new Date().toISOString() : undefined,
+          metadata: { attendance_data: attendanceData }
+        });
+
         if (result.success) sent++;
         else failed++;
       }
