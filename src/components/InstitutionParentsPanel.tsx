@@ -11,6 +11,7 @@ import {
   ParentContact,
   BulkParentImport
 } from '../lib/parentContactApi';
+import { supabase } from '../lib/supabase';
 
 interface InstitutionParentsPanelProps {
   institutionId: string;
@@ -288,9 +289,22 @@ function AddEditParentModal({ institutionId, parent, onClose, onSuccess }: AddEd
   }, []);
 
   const loadStudents = async () => {
-    // Kurum öğrencilerini yükle (basitleştirilmiş)
-    setLoadingStudents(false);
-    // TODO: Implement proper student loading
+    try {
+      // Get approved students for this institution
+      const { data, error } = await supabase
+        .from('institution_student_requests')
+        .select('user_id, full_name')
+        .eq('institution_id', institutionId)
+        .eq('status', 'approved')
+        .order('full_name');
+
+      if (error) throw error;
+      setStudents(data || []);
+    } catch (error) {
+      console.error('Error loading students:', error);
+    } finally {
+      setLoadingStudents(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -366,6 +380,29 @@ function AddEditParentModal({ institutionId, parent, onClose, onSuccess }: AddEd
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
               />
+            </div>
+
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Öğrenci *
+              </label>
+              {loadingStudents ? (
+                <div className="text-sm text-gray-500">Öğrenciler yükleniyor...</div>
+              ) : (
+                <select
+                  value={formData.student_id}
+                  onChange={(e) => setFormData({ ...formData, student_id: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+                  required
+                >
+                  <option value="">Öğrenci Seçiniz</option>
+                  {students.map((student) => (
+                    <option key={student.user_id} value={student.user_id}>
+                      {student.full_name}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
             <div>
