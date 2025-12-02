@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import ExcelJS from 'exceljs';
 
 export interface ParentContact {
   id?: string;
@@ -338,17 +339,93 @@ export const parseParentCSV = (csvContent: string): BulkParentImport[] => {
 };
 
 /**
- * Örnek CSV template indir
+ * XLSX template indir (Excel)
  */
-export const downloadParentCSVTemplate = () => {
-  const template = `Veli Ad Soyad,Öğrenci Ad Soyad,Telefon,Email,İletişim Tercihi,Yakınlık,Notlar
-Ahmet Yılmaz,Mehmet Yılmaz,05321234567,ahmet@email.com,whatsapp,Baba,
-Ayşe Demir,Fatma Demir,05339876543,ayse@email.com,email,Anne,Özel durumu var
-`;
+export const downloadParentXLSXTemplate = async () => {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Veli Listesi');
 
-  const blob = new Blob([template], { type: 'text/csv;charset=utf-8;' });
+  // Sütun başlıkları
+  worksheet.columns = [
+    { header: 'Veli Ad Soyad *', key: 'parent_name', width: 25 },
+    { header: 'Öğrenci Ad Soyad *', key: 'student_name', width: 25 },
+    { header: 'Telefon', key: 'phone', width: 15 },
+    { header: 'Email', key: 'email', width: 25 },
+    { header: 'İletişim Tercihi', key: 'preferred_contact_method', width: 18 },
+    { header: 'Yakınlık', key: 'relation', width: 15 },
+    { header: 'Notlar', key: 'notes', width: 30 }
+  ];
+
+  // Başlık stilini ayarla
+  const headerRow = worksheet.getRow(1);
+  headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+  headerRow.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FF4F46E5' } // Purple/Indigo
+  };
+  headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+  headerRow.height = 25;
+
+  // Örnek veriler
+  worksheet.addRow({
+    parent_name: 'Ahmet Yılmaz',
+    student_name: 'Mehmet Yılmaz',
+    phone: '05321234567',
+    email: 'ahmet@email.com',
+    preferred_contact_method: 'whatsapp',
+    relation: 'Baba',
+    notes: ''
+  });
+
+  worksheet.addRow({
+    parent_name: 'Ayşe Demir',
+    student_name: 'Fatma Demir',
+    phone: '05339876543',
+    email: 'ayse@email.com',
+    preferred_contact_method: 'email',
+    relation: 'Anne',
+    notes: 'Özel durumu var'
+  });
+
+  // Açıklama sayfası ekle
+  const infoSheet = workbook.addWorksheet('Kullanım Kılavuzu');
+  infoSheet.columns = [
+    { header: 'Alan', key: 'field', width: 25 },
+    { header: 'Açıklama', key: 'description', width: 50 },
+    { header: 'Örnek', key: 'example', width: 25 }
+  ];
+
+  const infoHeaderRow = infoSheet.getRow(1);
+  infoHeaderRow.font = { bold: true };
+  infoHeaderRow.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFE5E7EB' }
+  };
+
+  infoSheet.addRows([
+    { field: 'Veli Ad Soyad *', description: 'Velinin tam adı ve soyadı (Zorunlu)', example: 'Ahmet Yılmaz' },
+    { field: 'Öğrenci Ad Soyad *', description: 'Öğrencinin tam adı ve soyadı - Sistemde kayıtlı olmalı (Zorunlu)', example: 'Mehmet Yılmaz' },
+    { field: 'Telefon', description: 'Velinin telefon numarası (05XX format)', example: '05321234567' },
+    { field: 'Email', description: 'Velinin email adresi', example: 'ahmet@email.com' },
+    { field: 'İletişim Tercihi', description: 'whatsapp, email veya both', example: 'whatsapp' },
+    { field: 'Yakınlık', description: 'Anne, Baba, Vasi, vb.', example: 'Baba' },
+    { field: 'Notlar', description: 'Ek bilgiler (opsiyonel)', example: 'Özel durumu var' }
+  ]);
+
+  // Not ekle
+  infoSheet.addRow([]);
+  infoSheet.addRow(['ÖNEMLİ:', 'Telefon veya Email alanlarından en az biri dolu olmalıdır.', '']);
+  infoSheet.addRow(['', 'Öğrenci Ad Soyad alanı sistemdeki kayıtlı öğrenci adıyla tam olarak eşleşmelidir.', '']);
+
+  // Excel dosyasını oluştur ve indir
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.download = 'veli_listesi_sablonu.csv';
+  link.download = 'veli_listesi_sablonu.xlsx';
   link.click();
 };

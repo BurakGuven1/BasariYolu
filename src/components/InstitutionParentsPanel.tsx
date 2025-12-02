@@ -7,7 +7,7 @@ import {
   deleteParentContact,
   importParentsFromCSV,
   parseParentCSV,
-  downloadParentCSVTemplate,
+  downloadParentXLSXTemplate,
   ParentContact,
   BulkParentImport
 } from '../lib/parentContactApi';
@@ -80,11 +80,11 @@ export default function InstitutionParentsPanel({ institutionId }: InstitutionPa
 
         <div className="flex space-x-3">
           <button
-            onClick={() => downloadParentCSVTemplate()}
+            onClick={() => downloadParentXLSXTemplate()}
             className="flex items-center space-x-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
           >
             <Download className="w-4 h-4" />
-            <span>Şablon İndir</span>
+            <span>Excel Şablon İndir</span>
           </button>
           <button
             onClick={() => setShowImportModal(true)}
