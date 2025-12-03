@@ -174,9 +174,12 @@ export default function TeacherAttendanceModal({
       // Velilere bildirim gönder (sadece absent olan öğrenciler için)
       if (notifyParents) {
         const absentStudents = students.filter(s => s.status === 'absent');
+        console.log('🔔 Bildirim gönderilecek öğrenci sayısı:', absentStudents.length);
 
         for (const student of absentStudents) {
           try {
+            console.log('📤 Bildirim gönderiliyor:', student.student_name, student.student_id);
+
             // Günde 1 mesaj kontrolü: Bugün bu öğrenci için daha önce mesaj gönderilmiş mi?
             const { data: todayNotifications, error: notifError } = await supabase
               .from('notification_logs')
@@ -188,17 +191,22 @@ export default function TeacherAttendanceModal({
 
             if (notifError) throw notifError;
 
-            // Eğer bugün mesaj gönderilmemişse gönder
-            if (!todayNotifications || todayNotifications.length === 0) {
-              await sendAttendanceNotification(institutionId, student.student_id, {
-                date: selectedDate,
-                status: 'absent',
-                lesson: lesson.subject,
-                notes: student.notes
-              });
+            if (todayNotifications && todayNotifications.length > 0) {
+              console.log('⚠️ Bu öğrenci için bugün zaten mesaj gönderilmiş, atlanıyor');
+              continue;
             }
+
+            // Eğer bugün mesaj gönderilmemişse gönder
+            console.log('✅ Mesaj gönderimi başlatılıyor...');
+            const result = await sendAttendanceNotification(institutionId, student.student_id, {
+              date: selectedDate,
+              status: 'absent',
+              lesson: lesson.subject,
+              notes: student.notes
+            });
+            console.log('📊 Bildirim sonucu:', result);
           } catch (notifError) {
-            console.error(`Failed to send notification for student ${student.student_id}:`, notifError);
+            console.error(`❌ Failed to send notification for student ${student.student_id}:`, notifError);
           }
         }
       }

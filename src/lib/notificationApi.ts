@@ -128,6 +128,8 @@ export const sendAttendanceNotification = async (
   }
 ): Promise<{ data: { sent: number; failed: number }; error: any }> => {
   try {
+    console.log('📧 sendAttendanceNotification çağrıldı:', { institutionId, studentId, attendanceData });
+
     // Öğrencinin velilerini al
     const { data: parents, error: parentsError } = await supabase
       .from('parent_contacts')
@@ -136,9 +138,12 @@ export const sendAttendanceNotification = async (
       .eq('student_id', studentId)
       .eq('is_active', true);
 
+    console.log('👨‍👩‍👧 Bulunan veli sayısı:', parents?.length || 0, parents);
+
     if (parentsError) throw parentsError;
 
     if (!parents || parents.length === 0) {
+      console.warn('⚠️ Veli kaydı bulunamadı!');
       return {
         data: { sent: 0, failed: 0 },
         error: { message: 'Veli kaydı bulunamadı' }
