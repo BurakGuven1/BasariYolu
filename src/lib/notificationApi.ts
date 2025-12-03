@@ -201,8 +201,9 @@ Bilgilerinize sunarız.
         else failed++;
       }
 
-      // Email
-      if ((parent.preferred_contact_method === 'email' || parent.preferred_contact_method === 'both') && parent.email) {
+      // Email (TEST: Tüm velilere email gönder - preferred_contact_method'a bakmadan)
+      if (parent.email) {
+        console.log('📧 Email gönderiliyor:', parent.email, 'Method:', parent.preferred_contact_method);
         const result = await sendEmail(
           parent.email,
           `${studentName} - Devamsızlık Bildirimi`,
