@@ -97,12 +97,29 @@ export default function TeacherAttendanceModal({
 
       if (profileError) throw profileError;
 
-      const studentRows: StudentRow[] = (profiles || []).map((profile: any) => ({
-        student_id: profile.id,
-        student_name: profile.full_name || 'İsimsiz Öğrenci',
-        status: 'present' as AttendanceStatus,
-        notes: ''
-      }));
+      // Get today's attendance records for these students
+      const { data: todayAttendance } = await supabase
+        .from('attendance')
+        .select('student_id, status, notes')
+        .eq('institution_id', institutionId)
+        .eq('attendance_date', selectedDate)
+        .eq('subject', lesson.subject)
+        .in('student_id', studentIds);
+
+      // Create a map of existing attendance
+      const attendanceMap = new Map(
+        todayAttendance?.map(a => [a.student_id, { status: a.status, notes: a.notes }]) || []
+      );
+
+      const studentRows: StudentRow[] = (profiles || []).map((profile: any) => {
+        const existingAttendance = attendanceMap.get(profile.id);
+        return {
+          student_id: profile.id,
+          student_name: profile.full_name || 'İsimsiz Öğrenci',
+          status: (existingAttendance?.status as AttendanceStatus) || 'present',
+          notes: existingAttendance?.notes || ''
+        };
+      });
 
       setStudents(studentRows);
     } catch (error) {
