@@ -16,8 +16,8 @@ import {
   type ScheduleEntry,
   type InstitutionClass
 } from '../lib/institutionScheduleApi';
-import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface InstitutionScheduleManagementProps {
   institutionId: string;
@@ -237,7 +237,7 @@ export default function InstitutionScheduleManagement({ institutionId, teachers:
       return row;
     });
 
-    (doc as any).autoTable({
+    autoTable(doc, {
       head: [['Saat', ...dayNames]],
       body: tableData,
       startY: 25,

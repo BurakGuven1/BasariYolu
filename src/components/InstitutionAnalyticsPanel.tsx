@@ -43,6 +43,7 @@ import {
   type StudentAnalytics,
   type TeacherActivity,
 } from '../lib/institutionAnalyticsApi';
+import { getInstitutionClasses, type InstitutionClass } from '../lib/institutionClassApi';
 
 interface InstitutionAnalyticsPanelProps {
   institutionId: string;
@@ -61,9 +62,11 @@ export default function InstitutionAnalyticsPanel({ institutionId }: Institution
   const [subjectPerf, setSubjectPerf] = useState<SubjectPerformance[]>([]);
   const [studentAnalytics, setStudentAnalytics] = useState<StudentAnalytics[]>([]);
   const [teacherActivity, setTeacherActivity] = useState<TeacherActivity[]>([]);
+  const [classes, setClasses] = useState<InstitutionClass[]>([]);
 
   // Filter states
   const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d' | 'all'>('30d');
+  const [selectedClassId, setSelectedClassId] = useState<string>('all');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
 
@@ -100,12 +103,13 @@ export default function InstitutionAnalyticsPanel({ institutionId }: Institution
   const fetchAnalytics = async () => {
     try {
       const filters = getDateRangeFilter();
+      const classFilter = selectedClassId === 'all' ? undefined : selectedClassId;
 
       const [summaryData, trendsData, subjectData, studentsData, teachersData] = await Promise.all([
         getInstitutionAnalyticsSummary(institutionId, filters),
         getPerformanceTrends(institutionId, filters),
         getSubjectPerformance(institutionId, filters),
-        getStudentAnalytics(institutionId, filters, 50),
+        getStudentAnalytics(institutionId, filters, 50, classFilter),
         getTeacherActivity(institutionId),
       ]);
 
@@ -123,8 +127,20 @@ export default function InstitutionAnalyticsPanel({ institutionId }: Institution
   };
 
   useEffect(() => {
+    const loadClasses = async () => {
+      try {
+        const { data: classData } = await getInstitutionClasses(institutionId);
+        setClasses(classData || []);
+      } catch (error) {
+        console.error('Error loading classes:', error);
+      }
+    };
+    loadClasses();
+  }, [institutionId]);
+
+  useEffect(() => {
     fetchAnalytics();
-  }, [institutionId, dateRange, customStartDate, customEndDate]);
+  }, [institutionId, dateRange, customStartDate, customEndDate, selectedClassId]);
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -160,6 +176,23 @@ export default function InstitutionAnalyticsPanel({ institutionId }: Institution
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          {/* Class Filter */}
+          <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2">
+            <Users className="h-4 w-4 text-gray-500" />
+            <select
+              value={selectedClassId}
+              onChange={(e) => setSelectedClassId(e.target.value)}
+              className="border-none bg-transparent text-sm focus:outline-none focus:ring-0"
+            >
+              <option value="all">Tüm Sınıflar</option>
+              {classes.map((cls) => (
+                <option key={cls.id} value={cls.id}>
+                  {cls.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Date Range Filter */}
           <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2">
             <Calendar className="h-4 w-4 text-gray-500" />
