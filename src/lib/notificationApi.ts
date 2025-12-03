@@ -28,7 +28,7 @@ export interface NotificationLog {
 export const sendWhatsAppMessage = async (
   phone: string,
   message: string,
-  metadata?: Record<string, any>
+  _metadata?: Record<string, any>
 ): Promise<{ success: boolean; error?: string; messageId?: string }> => {
   try {
     console.log('📱 WhatsApp Message (MOCK):', { phone, message });
@@ -56,42 +56,44 @@ export const sendWhatsAppMessage = async (
 export const sendEmail = async (
   email: string,
   subject: string,
-  body: string,
-  metadata?: Record<string, any>
+  htmlBody: string
 ): Promise<{ success: boolean; error?: string; messageId?: string }> => {
   try {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return { success: false, error: 'Geçersiz email adresi' };
+      return { success: false, error: "Geçersiz email adresi" };
     }
 
-    console.log('📧 Sending email to:', email, 'Subject:', subject);
+    console.log("📧 Sending email:", email);
 
-    // Call Supabase Edge Function for real SMTP email sending
-    // Sadece HTML gönder, text gönderme (denomailer ikisini birlikte kabul etmiyor)
-    const { data, error } = await supabase.functions.invoke('send-email', {
+    // notificationApi.ts içinde:
+    const { data, error } = await supabase.functions.invoke("send-email", {
       body: {
         to: email,
-        subject: subject,
-        html: body
+        subject,
+        html: htmlBody
       }
     });
 
     if (error) {
-      console.error('❌ Email sending failed:', error);
+      console.error("❌ Email sending failed:", error);
       return { success: false, error: error.message };
     }
 
-    console.log('✅ Email sent successfully:', data);
     return {
       success: true,
       messageId: data?.messageId || `email_${Date.now()}`
     };
-  } catch (error: any) {
-    console.error('Error sending email:', error);
-    return { success: false, error: error.message };
+
+  } catch (err: any) {
+    console.error("Error sending email:", err);
+    return { success: false, error: err.message };
   }
 };
+
+
+
+
 
 /**
  * Log notification to database

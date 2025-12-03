@@ -11,6 +11,7 @@ dist/
 dist-ssr/
 build/
 *.local
+.temp/
 
 # Environment variables (CRITICAL - Contains API keys)
 .env

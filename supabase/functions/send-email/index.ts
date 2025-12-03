@@ -5,8 +5,9 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { SMTPClient } from 'https://deno.land/x/denomailer@1.6.0/mod.ts';
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS"
 };
 
 interface EmailRequest {
@@ -16,14 +17,13 @@ interface EmailRequest {
   text?: string;
 }
 
-serve(async (req) => {
-  // Handle CORS preflight requests
+serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const { to, subject, html, text }: EmailRequest = await req.json();
+    const { to, subject, html } = await req.json();
 
     // Validate inputs
     if (!to || !subject) {
@@ -36,8 +36,8 @@ serve(async (req) => {
     // Get SMTP credentials from environment variables
     const SMTP_HOST = Deno.env.get('SMTP_HOST') || 'smtp.gmail.com';
     const SMTP_PORT = parseInt(Deno.env.get('SMTP_PORT') || '587');
-    const SMTP_USER = Deno.env.get('SMTP_USER'); // burakguven351999@gmail.com
-    const SMTP_PASS = Deno.env.get('SMTP_PASS'); // App password
+    const SMTP_USER = Deno.env.get('SMTP_USER');
+    const SMTP_PASS = Deno.env.get('SMTP_PASS');
     const SMTP_FROM = Deno.env.get('SMTP_FROM') || 'destek@basariyolum.com';
 
     if (!SMTP_USER || !SMTP_PASS) {
@@ -62,19 +62,16 @@ serve(async (req) => {
 
     // Send email (denomailer format)
     const emailConfig: any = {
-      from: SMTP_FROM,
-      to: to,
-      subject: subject,
+    from: SMTP_FROM,
+    to,
+    subject
     };
 
-    // HTML varsa HTML gönder, yoksa text gönder (ikisini birlikte gönderme)
     if (html) {
-      emailConfig.html = html;
-    } else if (text) {
-      emailConfig.content = text;
-    } else {
-      emailConfig.content = '';
+    emailConfig.html = html;
+    emailConfig.content = html.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '');
     }
+
 
     await client.send(emailConfig);
 
