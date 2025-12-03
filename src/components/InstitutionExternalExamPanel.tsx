@@ -478,40 +478,6 @@ export default function InstitutionExternalExamPanel({
         </div>
       )}
 
-      {/* Bilgi Notu */}
-      <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xl p-6">
-        <h3 className="font-bold text-purple-900 mb-2 flex items-center gap-2">
-          <Users className="h-5 w-5" />
-          Excel Formatı
-        </h3>
-        <div className="text-sm text-purple-800 space-y-2">
-          <p>Excel dosyanız şu formatta olmalı:</p>
-          <div className="bg-white rounded p-3 font-mono text-xs overflow-x-auto">
-            <table className="border-collapse">
-              <thead>
-                <tr>
-                  <th className="border border-gray-300 px-2 py-1">Öğrenci Adı</th>
-                  <th className="border border-gray-300 px-2 py-1">Soru 1</th>
-                  <th className="border border-gray-300 px-2 py-1">Soru 2</th>
-                  <th className="border border-gray-300 px-2 py-1">...</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td className="border border-gray-300 px-2 py-1">Ahmet Yılmaz</td>
-                  <td className="border border-gray-300 px-2 py-1">D</td>
-                  <td className="border border-gray-300 px-2 py-1">Y</td>
-                  <td className="border border-gray-300 px-2 py-1">...</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <p className="mt-2">
-            <strong>D</strong> = Doğru, <strong>Y</strong> = Yanlış, <strong>B</strong> = Boş
-          </p>
-        </div>
-      </div>
-
       {/* Student Performance Section */}
       <div className="bg-white rounded-xl shadow-md p-6">
         <div className="flex items-center justify-between mb-6">

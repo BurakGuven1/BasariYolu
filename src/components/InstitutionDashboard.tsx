@@ -13,7 +13,8 @@ import ClassPerformancePanel from './ClassPerformancePanel';
 import InstitutionExternalExamPanel from './InstitutionExternalExamPanel';
 import InstitutionParentsPanel from './InstitutionParentsPanel';
 import InstitutionClassManagementPanel from './InstitutionClassManagementPanel';
-import { exportStudentsToExcel, exportExamResultsToExcel, exportPerformanceReportToExcel } from '../lib/institutionExportUtils';
+import { exportStudentsToExcel, exportExamResultsToExcel } from '../lib/institutionExportUtils';
+import { exportParentsToExcel } from '../lib/parentContactApi';
 
 interface InstitutionDashboardProps {
   session: InstitutionSession;
@@ -227,16 +228,16 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
     }
   };
 
-  const handleExportPerformanceReport = async () => {
-    setExportLoading('performance');
+  const handleExportParents = async () => {
+    setExportLoading('parents');
     setExportError(null);
     setExportSuccess(null);
     try {
-      const result = await exportPerformanceReportToExcel(session.institution.id);
+      const result = await exportParentsToExcel(session.institution.id);
       setExportSuccess(`✓ ${result.filename} başarıyla indirildi!`);
     } catch (error) {
       console.error('Export error:', error);
-      setExportError('Performans raporu dışa aktarılırken bir hata oluştu.');
+      setExportError('Veli listesi dışa aktarılırken bir hata oluştu.');
     } finally {
       setExportLoading(null);
       setTimeout(() => {
@@ -594,20 +595,20 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
                     </button>
 
                     <button
-                      onClick={handleExportPerformanceReport}
-                      disabled={exportLoading === 'performance'}
+                      onClick={handleExportParents}
+                      disabled={exportLoading === 'parents'}
                       className="group flex flex-col items-start gap-3 rounded-xl border-2 border-emerald-200 bg-white p-4 text-left transition-all hover:border-emerald-400 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <div className="flex w-full items-center justify-between">
-                        <div className="rounded-lg bg-orange-100 p-2">
-                          <CheckCircle2 className="h-5 w-5 text-orange-700" />
+                        <div className="rounded-lg bg-purple-100 p-2">
+                          <Phone className="h-5 w-5 text-purple-700" />
                         </div>
                         <Download className="h-5 w-5 text-gray-400 transition-transform group-hover:scale-110 group-hover:text-emerald-600" />
                       </div>
                       <div>
-                        <p className="font-semibold text-gray-900">Performans Raporu</p>
+                        <p className="font-semibold text-gray-900">Veli Listesi</p>
                         <p className="mt-1 text-xs text-gray-600">
-                          {exportLoading === 'performance' ? 'İndiriliyor...' : 'Öğrenci başarı ve performans analizini indirin'}
+                          {exportLoading === 'parents' ? 'İndiriliyor...' : 'Tüm veli iletişim bilgilerini Excel olarak indirin'}
                         </p>
                       </div>
                     </button>
