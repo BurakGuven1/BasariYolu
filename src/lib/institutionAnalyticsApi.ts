@@ -259,18 +259,47 @@ export async function getSubjectPerformance(
 export async function getStudentAnalytics(
   institutionId: string,
   filters?: AnalyticsFilters,
-  limit = 50
+  limit = 50,
+  classId?: string
 ): Promise<StudentAnalytics[]> {
   try {
-    // Get students
-    const { data: students, error: studentsError } = await supabase
-      .from('institution_student_requests')
-      .select('id, full_name, email')
-      .eq('institution_id', institutionId)
-      .eq('status', 'approved')
-      .limit(limit);
+    let students: Array<{ id: string; full_name: string; email: string }> = [];
 
-    if (studentsError) throw studentsError;
+    if (classId) {
+      // Belirli sınıfa ait öğrencileri çek
+      const { data: classStudents, error: classError } = await supabase
+        .from('institution_class_students')
+        .select(`
+          student_id,
+          profiles!institution_class_students_student_id_fkey(id, full_name, email)
+        `)
+        .eq('class_id', classId)
+        .eq('is_active', true)
+        .limit(limit);
+
+      if (classError) throw classError;
+      if (classStudents && classStudents.length > 0) {
+        students = classStudents
+          .filter((cs: any) => cs.profiles)
+          .map((cs: any) => ({
+            id: cs.profiles.id,
+            full_name: cs.profiles.full_name,
+            email: cs.profiles.email,
+          }));
+      }
+    } else {
+      // Tüm onaylı öğrencileri çek
+      const { data: allStudents, error: studentsError } = await supabase
+        .from('institution_student_requests')
+        .select('id, full_name, email')
+        .eq('institution_id', institutionId)
+        .eq('status', 'approved')
+        .limit(limit);
+
+      if (studentsError) throw studentsError;
+      students = allStudents || [];
+    }
+
     if (!students || students.length === 0) return [];
 
     // Get exam results

@@ -7,6 +7,7 @@ import { sendAnnouncementNotification } from '../lib/notificationApi';
 import { supabase } from '../lib/supabase';
 import InstitutionQuestionBankPanel from './InstitutionQuestionBankPanel';
 import InstitutionStudentExamPanel from './InstitutionStudentExamPanel';
+import InstitutionExternalExamPanel from './InstitutionExternalExamPanel';
 import TeacherSchedulePanel from './TeacherSchedulePanel';
 import {
   acceptInstitutionTeacherInvite,
@@ -544,6 +545,10 @@ useEffect(() => {
                     institutionId={derivedInstitutionSession.institution.id}
                     institutionName={derivedInstitutionSession.institution.name}
                     teacherUserId={teacher?.id ?? selectedMembership?.user_id ?? null}
+                  />
+                  <InstitutionExternalExamPanel
+                    institutionId={derivedInstitutionSession.institution.id}
+                    userId={teacher?.id ?? selectedMembership?.user_id ?? ''}
                   />
                   <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                     <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
