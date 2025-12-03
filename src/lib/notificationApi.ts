@@ -68,12 +68,12 @@ export const sendEmail = async (
     console.log('📧 Sending email to:', email, 'Subject:', subject);
 
     // Call Supabase Edge Function for real SMTP email sending
+    // Sadece HTML gönder, text gönderme (denomailer ikisini birlikte kabul etmiyor)
     const { data, error } = await supabase.functions.invoke('send-email', {
       body: {
         to: email,
         subject: subject,
-        html: body,
-        text: body.replace(/<br>/g, '\n').replace(/<[^>]*>/g, '')
+        html: body
       }
     });
 
