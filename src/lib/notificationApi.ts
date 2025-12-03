@@ -51,7 +51,7 @@ export const sendWhatsAppMessage = async (
 };
 
 /**
- * Email gönder (Supabase SMTP kullanılabilir)
+ * Email gönder (Supabase Edge Function ile gerçek SMTP)
  */
 export const sendEmail = async (
   email: string,
@@ -65,12 +65,27 @@ export const sendEmail = async (
       return { success: false, error: 'Geçersiz email adresi' };
     }
 
-    console.log('📧 Email (MOCK):', { email, subject });
+    console.log('📧 Sending email to:', email, 'Subject:', subject);
 
-    // Mock success
+    // Call Supabase Edge Function for real SMTP email sending
+    const { data, error } = await supabase.functions.invoke('send-email', {
+      body: {
+        to: email,
+        subject: subject,
+        html: body,
+        text: body.replace(/<br>/g, '\n').replace(/<[^>]*>/g, '')
+      }
+    });
+
+    if (error) {
+      console.error('❌ Email sending failed:', error);
+      return { success: false, error: error.message };
+    }
+
+    console.log('✅ Email sent successfully:', data);
     return {
       success: true,
-      messageId: `mock_email_${Date.now()}`
+      messageId: data?.messageId || `email_${Date.now()}`
     };
   } catch (error: any) {
     console.error('Error sending email:', error);

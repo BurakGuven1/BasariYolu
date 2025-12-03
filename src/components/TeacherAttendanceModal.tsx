@@ -182,7 +182,7 @@ export default function TeacherAttendanceModal({
               .from('notification_logs')
               .select('id')
               .eq('student_id', student.student_id)
-              .eq('notification_type', 'absence')
+              .eq('notification_type', 'attendance')
               .gte('created_at', `${selectedDate}T00:00:00`)
               .lte('created_at', `${selectedDate}T23:59:59`);
 
