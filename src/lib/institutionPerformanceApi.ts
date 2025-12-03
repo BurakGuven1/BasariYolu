@@ -309,14 +309,40 @@ export async function generateStudentPerformanceCard(
 export async function analyzeClassPerformance(
   institutionId: string,
   dateRangeStart?: string,
-  dateRangeEnd?: string
+  dateRangeEnd?: string,
+  classId?: string
 ): Promise<ClassPerformance> {
-  // Kuruma ait tüm öğrencileri çek
-  const { data: students } = await supabase
-    .from('institution_student_requests')
-    .select('user_id, full_name')
-    .eq('institution_id', institutionId)
-    .eq('status', 'approved');
+  let students: Array<{ user_id: string; full_name: string }> = [];
+
+  if (classId) {
+    // Belirli bir sınıfa ait öğrencileri çek
+    const { data: classStudents } = await supabase
+      .from('institution_class_students')
+      .select(`
+        student_id,
+        profiles!institution_class_students_student_id_fkey(id, full_name)
+      `)
+      .eq('class_id', classId)
+      .eq('is_active', true);
+
+    if (classStudents && classStudents.length > 0) {
+      students = classStudents
+        .filter((cs: any) => cs.profiles)
+        .map((cs: any) => ({
+          user_id: cs.profiles.id,
+          full_name: cs.profiles.full_name,
+        }));
+    }
+  } else {
+    // Kuruma ait tüm öğrencileri çek
+    const { data: allStudents } = await supabase
+      .from('institution_student_requests')
+      .select('user_id, full_name')
+      .eq('institution_id', institutionId)
+      .eq('status', 'approved');
+
+    students = allStudents || [];
+  }
 
   if (!students || students.length === 0) {
     return {

@@ -429,3 +429,122 @@ export const downloadParentXLSXTemplate = async () => {
   link.download = 'veli_listesi_sablonu.xlsx';
   link.click();
 };
+
+/**
+ * Veli listesini Excel formatında dışa aktar
+ */
+export const exportParentsToExcel = async (
+  institutionId: string
+): Promise<{ filename: string }> => {
+  // Veli kayıtlarını getir
+  const { data: parents, error } = await getInstitutionParents(institutionId);
+
+  if (error || !parents) {
+    throw new Error('Veli kayıtları alınamadı');
+  }
+
+  // Excel workbook oluştur
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Veli Listesi');
+
+  // Sütun başlıkları
+  worksheet.columns = [
+    { header: 'Veli Ad Soyad', key: 'parent_name', width: 25 },
+    { header: 'Öğrenci Ad Soyad', key: 'student_name', width: 25 },
+    { header: 'Telefon', key: 'phone', width: 15 },
+    { header: 'Email', key: 'email', width: 30 },
+    { header: 'İletişim Tercihi', key: 'preferred_contact_method', width: 18 },
+    { header: 'Yakınlık', key: 'relation', width: 15 },
+    { header: 'Durum', key: 'status', width: 12 },
+    { header: 'Notlar', key: 'notes', width: 35 }
+  ];
+
+  // Başlık stilini ayarla (BaşarıYolu renkleri)
+  const headerRow = worksheet.getRow(1);
+  headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+  headerRow.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FF4F46E5' } // İndigo
+  };
+  headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+  headerRow.height = 30;
+
+  // İletişim tercihi mapping
+  const contactMethodMap: Record<string, string> = {
+    whatsapp: 'WhatsApp',
+    email: 'Email',
+    both: 'Her ikisi'
+  };
+
+  // Veri satırlarını ekle
+  parents.forEach(parent => {
+    const row = worksheet.addRow({
+      parent_name: parent.parent_name,
+      student_name: parent.student?.profile?.full_name || 'Bilinmiyor',
+      phone: parent.phone || '-',
+      email: parent.email || '-',
+      preferred_contact_method: contactMethodMap[parent.preferred_contact_method || 'whatsapp'] || 'WhatsApp',
+      relation: parent.relation || '-',
+      status: parent.is_active ? 'Aktif' : 'Pasif',
+      notes: parent.notes || '-'
+    });
+
+    // Satır stilini ayarla
+    row.eachCell((cell, colNumber) => {
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FFE5E7EB' } },
+        left: { style: 'thin', color: { argb: 'FFE5E7EB' } },
+        bottom: { style: 'thin', color: { argb: 'FFE5E7EB' } },
+        right: { style: 'thin', color: { argb: 'FFE5E7EB' } }
+      };
+
+      // Status sütununa renk ekle
+      if (colNumber === 7) {
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: parent.is_active ? 'FFD1FAE5' : 'FFFECACA' } // Yeşil/Kırmızı
+        };
+        cell.font = {
+          color: { argb: parent.is_active ? 'FF15803D' : 'FF991B1B' },
+          bold: true
+        };
+      }
+    });
+  });
+
+  // Özet satırı ekle
+  worksheet.addRow([]);
+  const summaryRow = worksheet.addRow({
+    parent_name: `TOPLAM: ${parents.length} Veli`,
+    student_name: '',
+    phone: '',
+    email: '',
+    preferred_contact_method: '',
+    relation: '',
+    status: `Aktif: ${parents.filter(p => p.is_active).length}`,
+    notes: ''
+  });
+  summaryRow.font = { bold: true };
+  summaryRow.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFF3F4F6' }
+  };
+
+  // Excel dosyasını oluştur ve indir
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  });
+
+  const filename = `veli_listesi_${new Date().toISOString().split('T')[0]}.xlsx`;
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
+
+  return { filename };
+};
+
