@@ -180,23 +180,7 @@ export default function TeacherAttendanceModal({
           try {
             console.log('📤 Bildirim gönderiliyor:', student.student_name, student.student_id);
 
-            // Günde 1 mesaj kontrolü: Bugün bu öğrenci için daha önce mesaj gönderilmiş mi?
-            const { data: todayNotifications, error: notifError } = await supabase
-              .from('notification_logs')
-              .select('id')
-              .eq('student_id', student.student_id)
-              .eq('notification_type', 'attendance')
-              .gte('created_at', `${selectedDate}T00:00:00`)
-              .lte('created_at', `${selectedDate}T23:59:59`);
-
-            if (notifError) throw notifError;
-
-            if (todayNotifications && todayNotifications.length > 0) {
-              console.log('⚠️ Bu öğrenci için bugün zaten mesaj gönderilmiş, atlanıyor');
-              continue;
-            }
-
-            // Eğer bugün mesaj gönderilmemişse gönder
+            // Email her zaman gönder, günlük kısıtlama sadece WhatsApp için
             console.log('✅ Mesaj gönderimi başlatılıyor...');
             const result = await sendAttendanceNotification(institutionId, student.student_id, {
               date: selectedDate,
