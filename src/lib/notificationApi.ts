@@ -130,7 +130,15 @@ export const sendAttendanceNotification = async (
   try {
     console.log('📧 sendAttendanceNotification çağrıldı:', { institutionId, studentId, attendanceData });
 
-    // Öğrencinin velilerini al
+    // Öğrencinin velilerini al (tüm veli kayıtlarını kontrol et)
+    const { data: allParents } = await supabase
+      .from('parent_contacts')
+      .select('*')
+      .eq('student_id', studentId);
+
+    console.log('🔍 Bu öğrencinin TÜM veli kayıtları (institution bakmadan):', allParents);
+
+    // Kurum ve aktif filtreli veli kayıtları
     const { data: parents, error: parentsError } = await supabase
       .from('parent_contacts')
       .select('*')
@@ -138,7 +146,8 @@ export const sendAttendanceNotification = async (
       .eq('student_id', studentId)
       .eq('is_active', true);
 
-    console.log('👨‍👩‍👧 Bulunan veli sayısı:', parents?.length || 0, parents);
+    console.log('👨‍👩‍👧 Bulunan veli sayısı (kuruma özel):', parents?.length || 0, parents);
+    console.log('🏢 Aranan institution_id:', institutionId);
 
     if (parentsError) throw parentsError;
 
@@ -178,27 +187,41 @@ ${attendanceData.notes ? `Not: ${attendanceData.notes}` : ''}
 Bilgilerinize sunarız.
       `.trim();
 
-      // WhatsApp
+      // WhatsApp (günde 1 mesaj kısıtlaması var)
       if ((parent.preferred_contact_method === 'whatsapp' || parent.preferred_contact_method === 'both') && parent.phone) {
-        const result = await sendWhatsAppMessage(parent.phone, message);
+        // Bugün WhatsApp mesajı gönderilmiş mi kontrol et
+        const { data: todayWhatsApp } = await supabase
+          .from('notification_logs')
+          .select('id')
+          .eq('student_id', studentId)
+          .eq('notification_type', 'attendance')
+          .eq('method', 'whatsapp')
+          .gte('created_at', `${attendanceData.date}T00:00:00`)
+          .lte('created_at', `${attendanceData.date}T23:59:59`);
 
-        // Log the notification
-        await logNotification({
-          institution_id: institutionId,
-          parent_contact_id: parent.id,
-          student_id: studentId,
-          notification_type: 'attendance',
-          method: 'whatsapp',
-          recipient: parent.phone,
-          message: message,
-          status: result.success ? 'sent' : 'failed',
-          error_message: result.error,
-          sent_at: result.success ? new Date().toISOString() : undefined,
-          metadata: { attendance_data: attendanceData }
-        });
+        if (todayWhatsApp && todayWhatsApp.length > 0) {
+          console.log('⚠️ Bu öğrenci için bugün zaten WhatsApp mesajı gönderilmiş, atlanıyor');
+        } else {
+          const result = await sendWhatsAppMessage(parent.phone, message);
 
-        if (result.success) sent++;
-        else failed++;
+          // Log the notification
+          await logNotification({
+            institution_id: institutionId,
+            parent_contact_id: parent.id,
+            student_id: studentId,
+            notification_type: 'attendance',
+            method: 'whatsapp',
+            recipient: parent.phone,
+            message: message,
+            status: result.success ? 'sent' : 'failed',
+            error_message: result.error,
+            sent_at: result.success ? new Date().toISOString() : undefined,
+            metadata: { attendance_data: attendanceData }
+          });
+
+          if (result.success) sent++;
+          else failed++;
+        }
       }
 
       // Email (TEST: Tüm velilere email gönder - preferred_contact_method'a bakmadan)
