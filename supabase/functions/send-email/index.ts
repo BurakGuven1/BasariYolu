@@ -60,14 +60,23 @@ serve(async (req) => {
       },
     });
 
-    // Send email
-    await client.send({
+    // Send email (denomailer format)
+    const emailConfig: any = {
       from: SMTP_FROM,
       to: to,
       subject: subject,
-      content: text || '',
-      html: html || text || '',
-    });
+    };
+
+    // HTML varsa HTML gönder, yoksa text gönder (ikisini birlikte gönderme)
+    if (html) {
+      emailConfig.html = html;
+    } else if (text) {
+      emailConfig.content = text;
+    } else {
+      emailConfig.content = '';
+    }
+
+    await client.send(emailConfig);
 
     await client.close();
 
