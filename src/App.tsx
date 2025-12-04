@@ -58,6 +58,7 @@ const FeaturesShowcase = lazy(() => import('./components/FeaturesShowcase'));
 const LiveStats = lazy(() => import('./components/LiveStats'));
 const Testimonials = lazy(() => import('./components/Testimonials'));
 const AuthCallback = lazy(() => import('./pages/AuthCallback'));
+const AuthConfirm = lazy(() => import('./pages/AuthConfirm'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 
 const INSTITUTION_MODAL_PATHS = ['/institution/login', '/institution/register'];
@@ -530,7 +531,7 @@ function App() {
       <Route path="/dashboard" element={<DashboardRoute />} />
       <Route path="/institution" element={<InstitutionDashboardRoute />} />
       <Route path="/auth/callback" element={<Suspense fallback={<LoadingSpinner />}><AuthCallback /></Suspense>} />
-      <Route path="/auth/confirm" element={<Suspense fallback={<LoadingSpinner />}><AuthCallback /></Suspense>} />
+      <Route path="/auth/confirm" element={<Suspense fallback={<LoadingSpinner />}><AuthConfirm /></Suspense>} />
       <Route path="/auth/reset-password" element={<Suspense fallback={<LoadingSpinner />}><ResetPassword /></Suspense>} />
       <Route path="*" element={<Suspense fallback={<LoadingSpinner />}><NotFoundPage onNavigateHome={handleNavigateHome} /></Suspense>} />
     </Routes>
