@@ -14,8 +14,7 @@ import { QuestionDetailScreen } from './src/screens/QuestionPortal/QuestionDetai
 import { CreateQuestionScreen } from './src/screens/QuestionPortal/CreateQuestionScreen';
 import { AnswerQuestionScreen } from './src/screens/QuestionPortal/AnswerQuestionScreen';
 import { AIChatScreen } from './src/screens/AIChatScreen';
-// TEMPORARY: Disabled for initial build (IAP not configured yet)
-// import { PackageSelectionScreen } from './src/screens/PackageSelectionScreen';
+import { PackageSelectionScreen } from './src/screens/PackageSelectionScreen';
 import { RootStackParamList } from './src/types/navigation';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -88,13 +87,11 @@ function AppNavigator() {
           component={AnswerQuestionScreen}
           options={{ headerShown: true, title: 'Cevap Yaz' }}
         />
-        {/* TEMPORARY: Disabled for initial build (IAP not configured yet)
         <Stack.Screen
           name="PackageSelection"
           component={PackageSelectionScreen}
           options={{ headerShown: true, title: 'Paket Seçimi' }}
         />
-        */}
       </Stack.Navigator>
     </NavigationContainer>
   );
