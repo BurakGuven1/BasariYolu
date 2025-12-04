@@ -159,17 +159,16 @@ export function AuthScreen({ navigation }: Props) {
         }
       }
 
-      // TEMPORARY: Skip package selection for initial build (IAP not configured)
-      // TODO: Re-enable after IAP is fully configured
-      // if (mode === 'register' && role === 'student') {
-      //   const { data: userResp } = await supabase.auth.getUser();
-      //   const uid = userResp.user?.id;
-      //   navigation.replace('PackageSelection', { userId: uid, userEmail: email });
-      //   resetFields();
-      //   return;
-      // }
+      // For student registration, navigate to package selection
+      if (mode === 'register' && role === 'student') {
+        const { data: userResp } = await supabase.auth.getUser();
+        const uid = userResp.user?.id;
+        navigation.replace('PackageSelection', { userId: uid, userEmail: email });
+        resetFields();
+        return;
+      }
 
-      // For all roles, go to respective dashboard
+      // For login or other roles, go to respective dashboard
       const target =
         role === 'teacher'
           ? 'Teacher'
