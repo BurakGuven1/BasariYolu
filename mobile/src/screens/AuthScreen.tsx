@@ -159,16 +159,17 @@ export function AuthScreen({ navigation }: Props) {
         }
       }
 
+      // TEMPORARY: Skip package selection until IAP is ready
       // For student registration, navigate to package selection
-      if (mode === 'register' && role === 'student') {
-        const { data: userResp } = await supabase.auth.getUser();
-        const uid = userResp.user?.id;
-        navigation.replace('PackageSelection', { userId: uid, userEmail: email });
-        resetFields();
-        return;
-      }
+      // if (mode === 'register' && role === 'student') {
+      //   const { data: userResp } = await supabase.auth.getUser();
+      //   const uid = userResp.user?.id;
+      //   navigation.replace('PackageSelection', { userId: uid, userEmail: email });
+      //   resetFields();
+      //   return;
+      // }
 
-      // For login or other roles, go to respective dashboard
+      // For login or all roles, go to respective dashboard
       const target =
         role === 'teacher'
           ? 'Teacher'
