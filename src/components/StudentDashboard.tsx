@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect } from 'react';
-import { BookOpen, StickyNote, MapIcon, BookmarkCheck, Plus, TrendingUp, Calendar, Target, Award, Clock, CheckCircle, AlertCircle, LogOut, CreditCard as Edit, Trash2, MoreVertical, Users, X, Brain, Crown, Trophy, Timer, FileText } from 'lucide-react';
+import { BookOpen, StickyNote, MapIcon, BookmarkCheck, Plus, TrendingUp, Calendar, Target, Award, Clock, CheckCircle, AlertCircle, LogOut, CreditCard as Edit, Trash2, MoreVertical, Users, X, Brain, Crown, Trophy, Timer, FileText, MessageSquare } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuth } from '../hooks/useAuth';
 import { useStudentData } from '../hooks/useStudentData';
@@ -7,6 +7,7 @@ import ExamForm from './ExamForm';
 import HomeworkForm from './HomeworkForm';
 import ExamTopicsSection from './ExamTopicsSection';
 import AIInsights from './AIInsights';
+import EnhancedAIAnalysis from './EnhancedAIAnalysis';
 import { useFeatureAccess } from '../hooks/useFeatureAccess';
 import ExamLimitBadge from './ExamLimitBadge';
 import FeatureGate from './FeatureGate';
@@ -26,7 +27,11 @@ import StudentWeeklySchedule from './StudentWeeklySchedule';
 import SelfStudyPlanner from './SelfStudyPlanner';
 import TopicSummariesSection from './TopicSummariesSection';
 import InstitutionStudentPortal from './InstitutionStudentPortal';
+import SoruPortali from './SoruPortali';
 import StudentExamPerformancePanel from './StudentExamPerformancePanel';
+import AIChatPanel from './AIChatPanel';
+import StudentExternalExams from './StudentExternalExams';
+import ErrorBoundary from './ErrorBoundary';
 import type { InstitutionExamBlueprint } from '../lib/institutionQuestionApi';
 import {
   fetchInstitutionStudentPortalData,
@@ -36,6 +41,42 @@ import {
   type InstitutionExamResult,
   type InstitutionStudentRequest,
 } from '../lib/institutionStudentApi';
+
+type DashboardTab =
+  | 'overview'
+  | 'exams'
+  | 'homeworks'
+  | 'schedule'
+  | 'summaries'
+  | 'pomodoro'
+  | 'formulas'
+  | 'maps'
+  | 'notes'
+  | 'ai-analysis'
+  | 'classes'
+  | 'subscription'
+  | 'ai-chat'
+  | 'soru-portali'
+  | 'kurumsal-sinavlar';
+
+const DASHBOARD_TAB_KEY = 'studentDashboardActiveTab';
+const DASHBOARD_TABS: DashboardTab[] = [
+  'overview',
+  'exams',
+  'homeworks',
+  'schedule',
+  'summaries',
+  'pomodoro',
+  'formulas',
+  'maps',
+  'notes',
+  'ai-analysis',
+  'classes',
+  'subscription',
+  'ai-chat',
+  'soru-portali',
+  'kurumsal-sinavlar',
+];
 
 const getCurrentWeekRange = () => {
   const now = new Date();
@@ -58,12 +99,24 @@ const getCurrentWeekRange = () => {
   };
 };
 
-export default function StudentDashboard() {
+type StudentDashboardProps = {
+  authUser?: any;
+};
+
+export default function StudentDashboard({ authUser }: StudentDashboardProps) {
   const [insights, setInsights] = useState<any[]>([]);
   const [dailyChallenge, setDailyChallenge] = useState<any>(null);
   const { planName } = useFeatureAccess();
-  const { user, clearUser } = useAuth();
-  const [activeTab, setActiveTab] = useState<'overview' | 'exams' | 'homeworks' | 'schedule' | 'summaries' | 'pomodoro' | 'formulas' | 'maps' | 'notes' | 'analysis' | 'classes' | 'smartplan' | 'subscription'>('overview');
+  const { user, clearUser } = useAuth(authUser);
+  const [activeTab, setActiveTab] = useState<DashboardTab>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem(DASHBOARD_TAB_KEY) as DashboardTab | null;
+      if (stored && DASHBOARD_TABS.includes(stored)) {
+        return stored;
+      }
+    }
+    return 'overview';
+  });
   const [showExamForm, setShowExamForm] = useState(false);
   const [showHomeworkForm, setShowHomeworkForm] = useState(false);
   const [showInviteCode, setShowInviteCode] = useState(false);
@@ -117,6 +170,12 @@ export default function StudentDashboard() {
   const [institutionAssignments, setInstitutionAssignments] = useState<InstitutionAssignment[]>([]);
   const [institutionPortalReloadKey, setInstitutionPortalReloadKey] = useState(0);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(DASHBOARD_TAB_KEY, activeTab);
+    }
+  }, [activeTab]);
+
   const {
     studentData,
     examResults,
@@ -126,11 +185,13 @@ export default function StudentDashboard() {
     classAnnouncements,
     classExamResults,
     loading,
+    error: studentDataError,
     refetch
   } = useStudentData(user?.id);
 
   const institutionProfile = studentData?.profile;
   const isInstitutionStudent = Boolean(institutionProfile?.institution_student && institutionProfile?.institution_id);
+  const showInstitutionPortal = Boolean(isInstitutionStudent && institutionRequest?.status === 'approved');
 
   const loadWeeklyQuestionPlan = React.useCallback(async () => {
     if (!studentData) {
@@ -362,6 +423,62 @@ export default function StudentDashboard() {
   React.useEffect(() => {
     loadWeeklyQuestionPlan();
   }, [loadWeeklyQuestionPlan]);
+
+  // ALL HOOKS COMPLETE - NOW SAFE TO DO EARLY RETURNS
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600 font-medium">Öğrenci verileri yükleniyor...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (studentDataError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center">
+          <div className="mb-4">
+            <AlertCircle className="h-16 w-16 text-red-500 mx-auto" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Hata Oluştu</h2>
+          <p className="text-gray-600 mb-6">
+            {studentDataError instanceof Error ? studentDataError.message : 'Öğrenci verileri yüklenirken bir hata oluştu.'}
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+          >
+            Yeniden Dene
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!studentData) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center">
+          <div className="mb-4">
+            <AlertCircle className="h-16 w-16 text-yellow-500 mx-auto" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Öğrenci Verisi Bulunamadı</h2>
+          <p className="text-gray-600 mb-6">
+            Hesabınıza ait öğrenci kaydı bulunamadı. Lütfen yöneticinizle iletişime geçin.
+          </p>
+          <button
+            onClick={() => clearUser()}
+            className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+          >
+            Çıkış Yap
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const handleLogout = () => {
     console.log('StudentDashboard logout başlatıldı');
@@ -922,30 +1039,32 @@ export default function StudentDashboard() {
               </select>
             </div>
             {chartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={250}>
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  {/* Artık "date" anahtarını veride bulabilmek için bu satır doğru çalışacak */}
-                  <XAxis dataKey="date" fontSize={12} /> 
-                  <YAxis domain={[100, 500]} />
-                  <Tooltip 
-                    formatter={(value, _name, props) => [
-                      `${value} puan`,
-                      `${props.payload.examName} (${props.payload.examType})`
-                    ]}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="puan" 
-                    stroke="#3B82F6" 
-                    strokeWidth={3} 
-                    name="Puan"
-                    // Bu noktalar artık veri olduğu için görünecek
-                    dot={{ fill: '#3B82F6', strokeWidth: 2, r: 5 }}
-                    activeDot={{ r: 7, stroke: '#3B82F6', strokeWidth: 2 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+              <div style={{ width: '100%', height: 250, minHeight: 250 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    {/* Artık "date" anahtarını veride bulabilmek için bu satır doğru çalışacak */}
+                    <XAxis dataKey="date" fontSize={12} />
+                    <YAxis domain={[100, 500]} />
+                    <Tooltip
+                      formatter={(value, _name, props) => [
+                        `${value} puan`,
+                        `${props.payload.examName} (${props.payload.examType})`
+                      ]}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="puan"
+                      stroke="#3B82F6"
+                      strokeWidth={3}
+                      name="Puan"
+                      // Bu noktalar artık veri olduğu için görünecek
+                      dot={{ fill: '#3B82F6', strokeWidth: 2, r: 5 }}
+                      activeDot={{ r: 7, stroke: '#3B82F6', strokeWidth: 2 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
             ) : (
               <div className="text-center py-16 text-gray-500">
                 <TrendingUp className="h-12 w-12 mx-auto mb-4 text-gray-300" />
@@ -1070,22 +1189,11 @@ export default function StudentDashboard() {
     </div>
   );
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Yükleniyor...</p>
-        </div>
-      </div>
-    );
-  }
-
   const renderAnalysis = () => (
-    <div className="space-y-6">
-      <StudentExamPerformancePanel userId={user?.id} />
-      <AIInsights examResults={examResults} studentData={studentData} />
-    </div>
+    <EnhancedAIAnalysis
+      studentId={studentData.id}
+      examResults={examResults}
+    />
   );
 
   const renderInstitutionClasses = () => {
@@ -1120,7 +1228,7 @@ export default function StudentDashboard() {
         results={institutionExamResults}
         announcements={institutionAnnouncements}
         assignments={institutionAssignments}
-        studentId={studentData?.id}
+        studentId={studentData.id}
         userId={user?.id ?? undefined}
         onExamSubmitted={triggerInstitutionPortalReload}
       />
@@ -1131,9 +1239,14 @@ export default function StudentDashboard() {
     { key: 'overview', label: 'Genel Bakış', icon: TrendingUp },
     { key: 'exams', label: 'Denemeler', icon: BookOpen },
     { key: 'homeworks', label: 'Ödevler', icon: Calendar },
-    { key: 'classes', label: isInstitutionStudent ? 'Kurumlarım' : 'Sınıflarım', icon: Users },
-    { key: 'analysis', label: 'AI Analiz', icon: Target },
-    { key: 'smartplan', label: 'Akıllı Plan', icon: Brain },
+    { key: 'classes', label: showInstitutionPortal ? 'Kurumlarım' : 'Sınıflarım', icon: Users },
+    ...(isInstitutionStudent && institutionRequest?.status === 'approved'
+      ? [{ key: 'kurumsal-sinavlar' as const, label: 'Kurumsal Sınavlar', icon: Target }]
+      : []
+    ),
+    { key: 'soru-portali', label: 'Soru Portalı', icon: MessageSquare },
+    { key: 'ai-analysis', label: 'AI Analiz & Akıllı Plan', icon: Brain },
+    { key: 'ai-chat', label: 'Yapay Zekaya Sor', icon: Brain },
     { key: 'summaries', label: 'Konu Özetleri', icon: FileText },
     { key: 'formulas', label: 'Formül Kartları', icon: BookmarkCheck },
     { key: 'pomodoro', label: 'Pomodoro', icon: Timer },
@@ -1186,7 +1299,12 @@ export default function StudentDashboard() {
               >
                 <Icon className="h-4 w-4" />
                 <span>{label}</span>
-                {(key === 'pomodoro' || key === 'formulas'|| key === 'maps'|| key === 'notes' || key === 'summaries') && (
+                {(key === 'pomodoro' ||
+                  key === 'formulas' ||
+                  key === 'maps' ||
+                  key === 'notes' ||
+                  key === 'summaries' ||
+                  key === 'ai-chat') && (
                   <span className="px-2 py-0.5 bg-gradient-to-r from-purple-500 to-blue-500 text-white text-xs rounded-full font-bold">
                     PRO
                   </span>
@@ -1216,7 +1334,7 @@ export default function StudentDashboard() {
 
         {activeTab === 'overview' && renderOverview()}
         {activeTab === 'exams' && renderExams()}
-        {activeTab === 'analysis' && renderAnalysis()}
+        {activeTab === 'ai-analysis' && renderAnalysis()}
         {activeTab === 'summaries' && (
           <FeatureGate
             feature="topic_summaries"
@@ -1244,16 +1362,30 @@ export default function StudentDashboard() {
             <TopicSummariesSection />
           </FeatureGate>
         )}
-        {activeTab === 'smartplan' && studentData && (
-          <AIRecommendations studentId={studentData.id} />
+        {activeTab === 'ai-chat' && <AIChatPanel />}
+        {activeTab === 'soru-portali' && <SoruPortali />}
+        {activeTab === 'kurumsal-sinavlar' && user && (
+          <ErrorBoundary>
+            <StudentExternalExams
+              userId={user.id}
+              institutionId={institutionRequest?.institution_id}
+            />
+          </ErrorBoundary>
         )}
         {activeTab === 'classes' && (
-          isInstitutionStudent ? (
+          showInstitutionPortal ? (
             <div className="bg-white rounded-lg p-6 shadow-sm">
               {renderInstitutionClasses()}
             </div>
           ) : (
             <div className="bg-white rounded-lg p-6 shadow-sm">
+              {isInstitutionStudent && (
+                <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                  {institutionRequest?.status === 'pending'
+                    ? 'Kurum kaydın onay bekliyor. Onaylanana kadar bireysel sınıflarını yönetebilir ve yeni sınıflara katılabilirsin.'
+                    : 'Kurum kaydın henüz aktif değil veya erişimin kaldırıldı. Bireysel sınıf özelliklerini kullanmaya devam edebilirsin.'}
+                </div>
+              )}
               <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-6">
                 <h3 className="text-lg font-semibold">Sınıflarım</h3>
                 <div className="flex flex-wrap gap-2">

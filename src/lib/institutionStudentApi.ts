@@ -117,7 +117,17 @@ export async function submitInstitutionStudentSignup({
   phone,
   password,
 }: InstitutionStudentSignupPayload) {
+  // Aggressive normalization - remove ALL whitespace, lowercase
   const normalizedInviteCode = inviteCode.trim().toUpperCase();
+  const normalizedEmail = email.replace(/\s+/g, '').trim().toLowerCase();
+  const normalizedFullName = fullName.trim();
+  const normalizedPhone = phone?.trim() || null;
+
+  // Client-side email validation
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  if (!emailRegex.test(normalizedEmail)) {
+    throw new Error('Geçersiz email adresi. Lütfen geçerli bir email girin (örn: isim@domain.com)');
+  }
 
   const { data: institution, error: institutionError } = await supabase
     .from('institutions')
@@ -140,12 +150,13 @@ export async function submitInstitutionStudentSignup({
   }
 
   const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-    email,
+    email: normalizedEmail,
     password,
     options: {
+      emailRedirectTo: `${window.location.origin}/auth/callback`,
       data: {
-        full_name: fullName,
-        phone,
+        full_name: normalizedFullName,
+        phone: normalizedPhone,
         user_type: 'institution_student',
         institution_id: institution.id,
       },
@@ -153,6 +164,17 @@ export async function submitInstitutionStudentSignup({
   });
 
   if (signUpError) {
+    console.error('[submitInstitutionStudentSignup] Supabase auth error:', signUpError);
+
+    // More specific error messages
+    if (signUpError.message.includes('already registered') || signUpError.message.includes('already been registered')) {
+      throw new Error('Bu email adresi zaten kayıtlı. Lütfen farklı bir email kullanın.');
+    }
+    if (signUpError.message.includes('invalid') || signUpError.message.includes('Email')) {
+      throw new Error(
+        `Email kaydı başarısız: ${signUpError.message}. Supabase Dashboard > Authentication > Settings kontrol edin. "Enable email confirmations" kapalı olmalı veya SMTP yapılandırılmalı.`
+      );
+    }
     throw signUpError;
   }
 
@@ -167,9 +189,9 @@ export async function submitInstitutionStudentSignup({
       institution_id: institution.id,
       user_id: user.id,
       invite_code: normalizedInviteCode,
-      full_name: fullName,
-      email,
-      phone,
+      full_name: normalizedFullName,
+      email: normalizedEmail,
+      phone: normalizedPhone,
       status: 'pending',
     },
   ]);

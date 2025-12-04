@@ -21,6 +21,8 @@ export const useStudentData = (userId?: string) => {
     },
     enabled: Boolean(userId),
     staleTime: CACHE_STALE_TIME,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const studentId = studentQuery.data?.id;
@@ -34,6 +36,8 @@ export const useStudentData = (userId?: string) => {
     },
     enabled: Boolean(studentId),
     staleTime: CACHE_STALE_TIME,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const homeworksQuery = useQuery({
@@ -45,6 +49,8 @@ export const useStudentData = (userId?: string) => {
     },
     enabled: Boolean(studentId),
     staleTime: CACHE_STALE_TIME,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const classesQuery = useQuery({
@@ -56,6 +62,8 @@ export const useStudentData = (userId?: string) => {
     },
     enabled: Boolean(studentId),
     staleTime: CACHE_STALE_TIME,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const classAssignmentsQuery = useQuery({
@@ -67,6 +75,8 @@ export const useStudentData = (userId?: string) => {
     },
     enabled: Boolean(studentId),
     staleTime: CACHE_STALE_TIME,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const classAnnouncementsQuery = useQuery({
@@ -78,6 +88,8 @@ export const useStudentData = (userId?: string) => {
     },
     enabled: Boolean(studentId),
     staleTime: CACHE_STALE_TIME,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const classExamResultsQuery = useQuery({
@@ -89,10 +101,14 @@ export const useStudentData = (userId?: string) => {
     },
     enabled: Boolean(studentId),
     staleTime: CACHE_STALE_TIME,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const loading =
     studentQuery.isLoading ||
+    studentQuery.isFetching ||
+    (studentQuery.data === undefined && !studentQuery.isError) ||
     examResultsQuery.isLoading ||
     homeworksQuery.isLoading ||
     classesQuery.isLoading ||
@@ -120,6 +136,7 @@ export const useStudentData = (userId?: string) => {
     classAnnouncements: classAnnouncementsQuery.data ?? [],
     classExamResults: classExamResultsQuery.data ?? [],
     loading,
+    error: studentQuery.error,
     refetch,
   };
 };

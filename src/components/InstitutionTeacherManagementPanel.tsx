@@ -240,19 +240,19 @@ export default function InstitutionTeacherManagementPanel({
   };
 
   return (
-    <section className="space-y-5 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+    <section className="space-y-5 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Öğretmen yönetimi</p>
-          <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Kuruma bağlı öğretmenler</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <p className="text-xs uppercase tracking-wide text-gray-500">Öğretmen yönetimi</p>
+          <h2 className="text-2xl font-semibold text-gray-900">Kuruma bağlı öğretmenler</h2>
+          <p className="text-sm text-gray-500">
             Öğretmen davetlerini yönetin, mevcut kadroyu görüntüleyin ve gerekirse erişimi kaldırın.
           </p>
         </div>
         <button
           type="button"
           onClick={loadData}
-          className="inline-flex items-center gap-2 rounded-full border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 transition hover:border-blue-400 hover:text-blue-600 dark:border-gray-700 dark:text-gray-200"
+          className="inline-flex items-center gap-2 rounded-full border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 transition hover:border-blue-400 hover:text-blue-600"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
           Yenile
@@ -260,27 +260,27 @@ export default function InstitutionTeacherManagementPanel({
       </header>
 
       {message && (
-        <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:border-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200">
+        <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
           {message}
         </p>
       )}
       {error && (
-        <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/30 dark:text-red-200">
+        <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           {error}
         </p>
       )}
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-800/40">
-          <p className="text-xs uppercase text-gray-500 dark:text-gray-400">Aktif öğretmen</p>
-          <p className="mt-2 flex items-center gap-2 text-3xl font-semibold text-gray-900 dark:text-white">
+        <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+          <p className="text-xs uppercase text-gray-500">Aktif öğretmen</p>
+          <p className="mt-2 flex items-center gap-2 text-3xl font-semibold text-gray-900">
             {stats.teacherCount}
             <Users className="h-5 w-5 text-gray-400" />
           </p>
         </div>
-        <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-800/40">
-          <p className="text-xs uppercase text-gray-500 dark:text-gray-400">Bekleyen davet</p>
-          <p className="mt-2 flex items-center gap-2 text-3xl font-semibold text-gray-900 dark:text-white">
+        <div className="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+          <p className="text-xs uppercase text-gray-500">Bekleyen davet</p>
+          <p className="mt-2 flex items-center gap-2 text-3xl font-semibold text-gray-900">
             {stats.pendingInvites}
             <Mail className="h-5 w-5 text-gray-400" />
           </p>
@@ -290,16 +290,16 @@ export default function InstitutionTeacherManagementPanel({
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Öğretmen başvuruları</p>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Onay bekleyen öğretmenler</h3>
+            <p className="text-xs uppercase tracking-wide text-gray-500">Öğretmen başvuruları</p>
+            <h3 className="text-lg font-semibold text-gray-900">Onay bekleyen öğretmenler</h3>
           </div>
-          <span className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+          <span className="text-xs uppercase tracking-wide text-gray-500">
             Bekleyen {pendingRequests.length} · Toplam {requests.length}
           </span>
         </div>
 
         {pendingRequests.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-gray-200 bg-white p-4 text-center text-sm text-gray-500 dark:border-gray-800 dark:bg-gray-900">
+          <p className="rounded-2xl border border-dashed border-gray-200 bg-white p-4 text-center text-sm text-gray-500">
             Bekleyen öğretmen başvurusu bulunmuyor.
           </p>
         ) : (
@@ -307,13 +307,13 @@ export default function InstitutionTeacherManagementPanel({
             {pendingRequests.map((request) => (
               <div
                 key={request.id}
-                className="rounded-2xl border border-gray-200 bg-white p-4 text-sm text-gray-700 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200"
+                className="rounded-2xl border border-gray-200 bg-white p-4 text-sm text-gray-700"
               >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <p className="font-semibold text-gray-900 dark:text-white">{request.full_name || 'İsimsiz öğretmen'}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{request.email}</p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500">
+                    <p className="font-semibold text-gray-900">{request.full_name || 'İsimsiz öğretmen'}</p>
+                    <p className="text-xs text-gray-500">{request.email}</p>
+                    <p className="text-xs text-gray-400">
                       Başvuru: {new Date(request.created_at).toLocaleString('tr-TR')}
                     </p>
                   </div>
@@ -322,7 +322,7 @@ export default function InstitutionTeacherManagementPanel({
                       type="button"
                       onClick={() => handleApproveRequest(request.id)}
                       disabled={requestActionId === request.id}
-                      className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 hover:border-emerald-300 dark:border-emerald-900/40 dark:bg-emerald-900/20 dark:text-emerald-200"
+                      className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 hover:border-emerald-300"
                     >
                       {requestActionId === request.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                       Onayla
@@ -331,7 +331,7 @@ export default function InstitutionTeacherManagementPanel({
                       type="button"
                       onClick={() => handleRejectRequest(request.id)}
                       disabled={requestActionId === request.id}
-                      className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-700 hover:border-red-300 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-200"
+                      className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-700 hover:border-red-300"
                     >
                       <Trash2 className="h-4 w-4" />
                       Reddet
@@ -344,16 +344,16 @@ export default function InstitutionTeacherManagementPanel({
         )}
 
         {resolvedRequests.length > 0 && (
-          <div className="rounded-2xl border border-gray-200 bg-white p-4 text-sm text-gray-600 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300">
-            <p className="mb-3 text-xs uppercase text-gray-500 dark:text-gray-400">Sonuçlanan başvurular</p>
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 text-sm text-gray-600">
+            <p className="mb-3 text-xs uppercase text-gray-500">Sonuçlanan başvurular</p>
             <div className="space-y-2">
               {resolvedRequests.slice(0, 5).map((request) => (
                 <div key={request.id} className="flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                    <p className="text-sm font-semibold text-gray-900">
                       {request.full_name || request.email}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <p className="text-xs text-gray-500">
                       {request.status === 'approved'
                         ? `Onaylandı: ${request.approved_at ? new Date(request.approved_at).toLocaleDateString('tr-TR') : '-'}`
                         : `Reddedildi${request.rejection_reason ? ` · ${request.rejection_reason}` : ''}`}
@@ -362,8 +362,8 @@ export default function InstitutionTeacherManagementPanel({
                   <span
                     className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
                       request.status === 'approved'
-                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200'
-                        : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-200'
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : 'bg-red-100 text-red-700'
                     }`}
                   >
                     {request.status === 'approved' ? 'Onaylandı' : 'Reddedildi'}
@@ -377,20 +377,20 @@ export default function InstitutionTeacherManagementPanel({
 
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Öğretmen görevleri</h3>
-          <span className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
+          <h3 className="text-lg font-semibold text-gray-900">Öğretmen görevleri</h3>
+          <span className="text-xs uppercase tracking-wide text-gray-500">
             Toplam {tasks.length}
           </span>
         </div>
 
-        <div className="rounded-2xl border border-dashed border-gray-200 p-4 dark:border-gray-700">
+        <div className="rounded-2xl border border-dashed border-gray-200 p-4">
           {teacherOptions.length === 0 ? (
-            <p className="text-sm text-gray-500 dark:text-gray-300">
+            <p className="text-sm text-gray-500">
               Görev atamak için önce öğretmen ekleyin veya davet gönderin.
             </p>
           ) : (
             <form className="grid gap-4 md:grid-cols-[1.2fr,1fr] lg:grid-cols-[1fr,1fr,0.6fr]" onSubmit={handleTaskSubmit}>
-              <label className="flex flex-col text-sm text-gray-700 dark:text-gray-200">
+              <label className="flex flex-col text-sm text-gray-700">
                 Öğretmen
                 <select
                   value={taskForm.teacherUserId}
@@ -400,7 +400,7 @@ export default function InstitutionTeacherManagementPanel({
                       teacherUserId: event.target.value,
                     }))
                   }
-                  className="mt-1 rounded-lg border border-gray-200 px-3 py-2 text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                  className="mt-1 rounded-lg border border-gray-200 px-3 py-2 text-gray-900"
                 >
                   {teacherOptions.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -409,31 +409,31 @@ export default function InstitutionTeacherManagementPanel({
                   ))}
                 </select>
               </label>
-              <label className="flex flex-col text-sm text-gray-700 dark:text-gray-200">
+              <label className="flex flex-col text-sm text-gray-700">
                 Görev başlığı
                 <input
                   value={taskForm.title}
                   onChange={(event) => setTaskForm((prev) => ({ ...prev, title: event.target.value }))}
                   required
-                  className="mt-1 rounded-lg border border-gray-200 px-3 py-2 text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                  className="mt-1 rounded-lg border border-gray-200 px-3 py-2 text-gray-900"
                   placeholder="Örn. Matematik deneme seti hazırla"
                 />
               </label>
-              <label className="flex flex-col text-sm text-gray-700 dark:text-gray-200">
+              <label className="flex flex-col text-sm text-gray-700">
                 Bitiş tarihi
                 <input
                   type="date"
                   value={taskForm.dueDate}
                   onChange={(event) => setTaskForm((prev) => ({ ...prev, dueDate: event.target.value }))}
-                  className="mt-1 rounded-lg border border-gray-200 px-3 py-2 text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                  className="mt-1 rounded-lg border border-gray-200 px-3 py-2 text-gray-900"
                 />
               </label>
-              <label className="md:col-span-3 flex flex-col text-sm text-gray-700 dark:text-gray-200">
+              <label className="md:col-span-3 flex flex-col text-sm text-gray-700">
                 Açıklama
                 <textarea
                   value={taskForm.description}
                   onChange={(event) => setTaskForm((prev) => ({ ...prev, description: event.target.value }))}
-                  className="mt-1 min-h-[80px] rounded-lg border border-gray-200 px-3 py-2 text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                  className="mt-1 min-h-[80px] rounded-lg border border-gray-200 px-3 py-2 text-gray-900"
                   placeholder="Detaylar, beklenen çıktı, paylaşılacak kaynaklar..."
                 />
               </label>
@@ -455,12 +455,12 @@ export default function InstitutionTeacherManagementPanel({
           {tasks.map((task) => (
             <div
               key={task.id}
-              className="rounded-2xl border border-gray-200 bg-white p-4 text-sm text-gray-700 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200"
+              className="rounded-2xl border border-gray-200 bg-white p-4 text-sm text-gray-700"
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="font-semibold text-gray-900 dark:text-white">{task.title}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                  <p className="font-semibold text-gray-900">{task.title}</p>
+                  <p className="text-xs text-gray-500">
                     {teacherNameMap.get(task.teacher_user_id) ?? 'Öğretmen'} ·{' '}
                     {task.due_date ? `Bitiş: ${new Date(task.due_date).toLocaleDateString('tr-TR')}` : 'Tarih belirtilmedi'}
                   </p>
@@ -471,7 +471,7 @@ export default function InstitutionTeacherManagementPanel({
                     onChange={(event) =>
                       handleTaskStatusChange(task.id, event.target.value as InstitutionTeacherTaskStatus)
                     }
-                    className="rounded-lg border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+                    className="rounded-lg border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-700"
                   >
                     {Object.entries(TASK_STATUS_LABELS).map(([value, label]) => (
                       <option key={value} value={value}>
@@ -482,18 +482,18 @@ export default function InstitutionTeacherManagementPanel({
                   <button
                     type="button"
                     onClick={() => handleTaskDelete(task.id)}
-                    className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1 text-xs font-semibold text-red-600 hover:border-red-400 dark:border-gray-700 dark:text-red-300"
+                    className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1 text-xs font-semibold text-red-600 hover:border-red-400"
                   >
                     <Trash2 className="h-4 w-4" />
                     Sil
                   </button>
                 </div>
               </div>
-              {task.description && <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">{task.description}</p>}
+              {task.description && <p className="mt-2 text-sm text-gray-600">{task.description}</p>}
             </div>
           ))}
           {!tasks.length && (
-            <p className="rounded-2xl border border-dashed border-gray-200 bg-white p-6 text-center text-sm text-gray-500 dark:border-gray-800 dark:bg-gray-900">
+            <p className="rounded-2xl border border-dashed border-gray-200 bg-white p-6 text-center text-sm text-gray-500">
               Henüz görev atanmadı.
             </p>
           )}
@@ -502,32 +502,32 @@ export default function InstitutionTeacherManagementPanel({
 
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Aktif öğretmenler</h3>
-          <span className="text-xs uppercase text-gray-500 dark:text-gray-400">Toplam {teachers.length}</span>
+          <h3 className="text-lg font-semibold text-gray-900">Aktif öğretmenler</h3>
+          <span className="text-xs uppercase text-gray-500">Toplam {teachers.length}</span>
         </div>
-        <div className="overflow-x-auto rounded-2xl border border-gray-200 dark:border-gray-800">
-          <table className="min-w-full divide-y divide-gray-200 text-sm dark:divide-gray-800">
-            <thead className="bg-gray-50 dark:bg-gray-800/40">
+        <div className="overflow-x-auto rounded-2xl border border-gray-200">
+          <table className="min-w-full divide-y divide-gray-200 text-sm">
+            <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-2 text-left font-semibold text-gray-600 dark:text-gray-300">İsim</th>
-                <th className="px-4 py-2 text-left font-semibold text-gray-600 dark:text-gray-300">E-posta</th>
-                <th className="px-4 py-2 text-left font-semibold text-gray-600 dark:text-gray-300">Telefon</th>
+                <th className="px-4 py-2 text-left font-semibold text-gray-600">İsim</th>
+                <th className="px-4 py-2 text-left font-semibold text-gray-600">E-posta</th>
+                <th className="px-4 py-2 text-left font-semibold text-gray-600">Telefon</th>
                 <th className="px-4 py-2"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+            <tbody className="divide-y divide-gray-100">
               {teachers.map((teacher) => (
                 <tr key={teacher.id}>
-                  <td className="px-4 py-3 text-gray-900 dark:text-gray-100">
+                  <td className="px-4 py-3 text-gray-900">
                     {teacher.profile?.full_name ?? 'İsimsiz öğretmen'}
                   </td>
-                  <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{teacher.profile?.email ?? '-'}</td>
-                  <td className="px-4 py-3 text-gray-600 dark:text-gray-300">{teacher.profile?.phone ?? '-'}</td>
+                  <td className="px-4 py-3 text-gray-600">{teacher.profile?.email ?? '-'}</td>
+                  <td className="px-4 py-3 text-gray-600">{teacher.profile?.phone ?? '-'}</td>
                   <td className="px-4 py-3 text-right">
                     <button
                       type="button"
                       onClick={() => handleRemoveTeacher(teacher.id)}
-                      className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1 text-xs font-semibold text-red-600 hover:border-red-400 dark:border-gray-700 dark:text-red-300"
+                      className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1 text-xs font-semibold text-red-600 hover:border-red-400"
                     >
                       <Trash2 className="h-4 w-4" />
                       Kaldır
@@ -537,7 +537,7 @@ export default function InstitutionTeacherManagementPanel({
               ))}
               {!teachers.length && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-6 text-center text-gray-500 dark:text-gray-300">
+                  <td colSpan={4} className="px-4 py-6 text-center text-gray-500">
                     Henüz bağlı öğretmen yok. Davet göndererek ekleyebilirsiniz.
                   </td>
                 </tr>
@@ -549,25 +549,25 @@ export default function InstitutionTeacherManagementPanel({
 
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Davetler</h3>
-          <span className="text-xs uppercase text-gray-500 dark:text-gray-400">Toplam {invites.length}</span>
+          <h3 className="text-lg font-semibold text-gray-900">Davetler</h3>
+          <span className="text-xs uppercase text-gray-500">Toplam {invites.length}</span>
         </div>
         <div className="space-y-3">
           {invites.map((invite) => (
             <div
               key={invite.id}
-              className="rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700 dark:border-gray-800 dark:bg-gray-800/50 dark:text-gray-200"
+              className="rounded-2xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700"
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <p className="font-semibold text-gray-900 dark:text-white">{invite.email}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{invite.full_name ?? 'İsim belirtilmedi'}</p>
+                  <p className="font-semibold text-gray-900">{invite.email}</p>
+                  <p className="text-xs text-gray-500">{invite.full_name ?? 'İsim belirtilmedi'}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => handleCopyInvite(invite)}
-                    className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-700 hover:border-blue-400 hover:text-blue-600 dark:border-gray-700 dark:text-gray-200"
+                    className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-700 hover:border-blue-400 hover:text-blue-600"
                   >
                     <Copy className="h-4 w-4" />
                     Davet linki
@@ -576,7 +576,7 @@ export default function InstitutionTeacherManagementPanel({
                     <button
                       type="button"
                       onClick={() => handleRevokeInvite(invite.id)}
-                      className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1 text-xs font-semibold text-red-600 hover:border-red-400 dark:border-gray-700 dark:text-red-300"
+                      className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-1 text-xs font-semibold text-red-600 hover:border-red-400"
                     >
                       <Trash2 className="h-4 w-4" />
                       İptal et
@@ -584,10 +584,10 @@ export default function InstitutionTeacherManagementPanel({
                   )}
                 </div>
               </div>
-              <div className="mt-2 flex flex-wrap items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+              <div className="mt-2 flex flex-wrap items-center gap-4 text-xs text-gray-500">
                 <span className="inline-flex items-center gap-1">
                   Kod:
-                  <code className="rounded bg-white px-2 py-0.5 text-xs text-gray-900 dark:bg-gray-900 dark:text-gray-100">
+                  <code className="rounded bg-white px-2 py-0.5 text-xs text-gray-900">
                     {invite.invite_code}
                   </code>
                 </span>
@@ -600,10 +600,10 @@ export default function InstitutionTeacherManagementPanel({
                 <span
                   className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
                     invite.status === 'accepted'
-                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200'
+                      ? 'bg-emerald-100 text-emerald-700'
                       : invite.status === 'pending'
-                        ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-200'
-                        : 'bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                        ? 'bg-amber-100 text-amber-700'
+                        : 'bg-gray-200 text-gray-700'
                   }`}
                 >
                   {invite.status === 'accepted'
@@ -616,7 +616,7 @@ export default function InstitutionTeacherManagementPanel({
             </div>
           ))}
           {!invites.length && (
-            <p className="rounded-2xl border border-dashed border-gray-200 bg-white p-6 text-center text-sm text-gray-500 dark:border-gray-800 dark:bg-gray-900">
+            <p className="rounded-2xl border border-dashed border-gray-200 bg-white p-6 text-center text-sm text-gray-500">
               Şu anda aktif davet bulunmuyor.
             </p>
           )}

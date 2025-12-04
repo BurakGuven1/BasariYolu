@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import type { AuthUser } from './AuthContext';
 
 interface PomodoroSettings {
   focusMinutes: number;

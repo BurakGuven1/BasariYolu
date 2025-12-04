@@ -224,6 +224,31 @@ export const getStudentStudySchedules = async (studentId: string): Promise<{ dat
   }
 };
 
+export const getStudentPastStudySchedules = async (studentId: string, limit = 20): Promise<{ data: any; error: any }> => {
+  try {
+    const todayIso = new Date().toISOString().split('T')[0];
+    const { data, error } = await supabase
+      .from('study_schedules')
+      .select(`
+        *,
+        teacher:teachers(id, full_name),
+        class:classes(id, class_name),
+        study_schedule_items(*)
+      `)
+      .eq('student_id', studentId)
+      .lt('week_end_date', todayIso)
+      .order('week_start_date', { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+
+    return { data, error: null };
+  } catch (error: any) {
+    console.error('Error fetching past student schedules:', error);
+    return { data: null, error };
+  }
+};
+
 /**
  * Öğretmen için kendi oluşturduğu programları getir
  */
