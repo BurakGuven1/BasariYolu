@@ -1,44 +1,180 @@
 -- Migration: Add subscription system for In-App Purchases
 -- Date: 2025-12-03
 -- Description: Adds subscription tracking fields to profiles and creates subscriptions table
+-- IDEMPOTENT: Can be run multiple times safely
 
 -- ==============================================================================
 -- 1. Add subscription fields to profiles table
 -- ==============================================================================
 
 -- Add subscription tracking columns to profiles
-ALTER TABLE profiles
-ADD COLUMN IF NOT EXISTS subscription_expires_at TIMESTAMPTZ,
-ADD COLUMN IF NOT EXISTS subscription_status TEXT DEFAULT 'inactive' CHECK (subscription_status IN ('active', 'inactive', 'expired', 'canceled', 'pending'));
+DO $$
+BEGIN
+  -- Add subscription_expires_at column
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'profiles' AND column_name = 'subscription_expires_at'
+  ) THEN
+    ALTER TABLE profiles ADD COLUMN subscription_expires_at TIMESTAMPTZ;
+    RAISE NOTICE 'Added subscription_expires_at to profiles';
+  END IF;
 
--- Add index for faster subscription queries
+  -- Add subscription_status column
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'profiles' AND column_name = 'subscription_status'
+  ) THEN
+    ALTER TABLE profiles ADD COLUMN subscription_status TEXT DEFAULT 'inactive';
+    RAISE NOTICE 'Added subscription_status to profiles';
+  END IF;
+END $$;
+
+-- Add constraint if not exists
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'profiles_subscription_status_check'
+  ) THEN
+    ALTER TABLE profiles
+    ADD CONSTRAINT profiles_subscription_status_check
+    CHECK (subscription_status IN ('active', 'inactive', 'expired', 'canceled', 'pending'));
+    RAISE NOTICE 'Added subscription_status check constraint';
+  END IF;
+END $$;
+
+-- Add indexes for faster subscription queries
 CREATE INDEX IF NOT EXISTS idx_profiles_subscription_status ON profiles(subscription_status);
 CREATE INDEX IF NOT EXISTS idx_profiles_subscription_expires_at ON profiles(subscription_expires_at);
 
--- Add comment for documentation
+-- Add comments for documentation
 COMMENT ON COLUMN profiles.subscription_expires_at IS 'Timestamp when the current subscription expires';
 COMMENT ON COLUMN profiles.subscription_status IS 'Current subscription status: active, inactive, expired, canceled, pending';
 
 -- ==============================================================================
--- 2. Create subscriptions table for transaction history
+-- 2. Create or update subscriptions table
 -- ==============================================================================
 
--- Create subscriptions table to track all subscription transactions
+-- Create subscriptions table if not exists
 CREATE TABLE IF NOT EXISTS subscriptions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  product_id TEXT NOT NULL,
-  platform TEXT NOT NULL CHECK (platform IN ('ios', 'android', 'web')),
-  transaction_id TEXT,
-  transaction_receipt TEXT,
-  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'expired', 'canceled', 'refunded', 'pending')),
-  purchased_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  expires_at TIMESTAMPTZ NOT NULL,
-  canceled_at TIMESTAMPTZ,
-  refunded_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Add all required columns if they don't exist
+DO $$
+BEGIN
+  -- product_id
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'subscriptions' AND column_name = 'product_id'
+  ) THEN
+    ALTER TABLE subscriptions ADD COLUMN product_id TEXT NOT NULL DEFAULT 'unknown';
+    ALTER TABLE subscriptions ALTER COLUMN product_id DROP DEFAULT;
+    RAISE NOTICE 'Added product_id to subscriptions';
+  END IF;
+
+  -- platform
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'subscriptions' AND column_name = 'platform'
+  ) THEN
+    ALTER TABLE subscriptions ADD COLUMN platform TEXT NOT NULL DEFAULT 'web';
+    RAISE NOTICE 'Added platform to subscriptions';
+  END IF;
+
+  -- transaction_id
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'subscriptions' AND column_name = 'transaction_id'
+  ) THEN
+    ALTER TABLE subscriptions ADD COLUMN transaction_id TEXT;
+    RAISE NOTICE 'Added transaction_id to subscriptions';
+  END IF;
+
+  -- transaction_receipt
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'subscriptions' AND column_name = 'transaction_receipt'
+  ) THEN
+    ALTER TABLE subscriptions ADD COLUMN transaction_receipt TEXT;
+    RAISE NOTICE 'Added transaction_receipt to subscriptions';
+  END IF;
+
+  -- status
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'subscriptions' AND column_name = 'status'
+  ) THEN
+    ALTER TABLE subscriptions ADD COLUMN status TEXT NOT NULL DEFAULT 'active';
+    RAISE NOTICE 'Added status to subscriptions';
+  END IF;
+
+  -- purchased_at
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'subscriptions' AND column_name = 'purchased_at'
+  ) THEN
+    ALTER TABLE subscriptions ADD COLUMN purchased_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+    RAISE NOTICE 'Added purchased_at to subscriptions';
+  END IF;
+
+  -- expires_at (THIS WAS MISSING!)
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'subscriptions' AND column_name = 'expires_at'
+  ) THEN
+    ALTER TABLE subscriptions ADD COLUMN expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '1 month');
+    ALTER TABLE subscriptions ALTER COLUMN expires_at DROP DEFAULT;
+    RAISE NOTICE 'Added expires_at to subscriptions';
+  END IF;
+
+  -- canceled_at
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'subscriptions' AND column_name = 'canceled_at'
+  ) THEN
+    ALTER TABLE subscriptions ADD COLUMN canceled_at TIMESTAMPTZ;
+    RAISE NOTICE 'Added canceled_at to subscriptions';
+  END IF;
+
+  -- refunded_at
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'subscriptions' AND column_name = 'refunded_at'
+  ) THEN
+    ALTER TABLE subscriptions ADD COLUMN refunded_at TIMESTAMPTZ;
+    RAISE NOTICE 'Added refunded_at to subscriptions';
+  END IF;
+END $$;
+
+-- Add constraints if they don't exist
+DO $$
+BEGIN
+  -- Platform check constraint
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'subscriptions_platform_check'
+  ) THEN
+    ALTER TABLE subscriptions
+    ADD CONSTRAINT subscriptions_platform_check
+    CHECK (platform IN ('ios', 'android', 'web'));
+    RAISE NOTICE 'Added platform check constraint';
+  END IF;
+
+  -- Status check constraint
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'subscriptions_status_check'
+  ) THEN
+    ALTER TABLE subscriptions
+    ADD CONSTRAINT subscriptions_status_check
+    CHECK (status IN ('active', 'expired', 'canceled', 'refunded', 'pending'));
+    RAISE NOTICE 'Added status check constraint';
+  END IF;
+END $$;
 
 -- Add indexes for performance
 CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id);
@@ -53,12 +189,17 @@ COMMENT ON COLUMN subscriptions.platform IS 'Purchase platform: ios, android, or
 COMMENT ON COLUMN subscriptions.transaction_id IS 'Unique transaction ID from App Store or Google Play';
 COMMENT ON COLUMN subscriptions.transaction_receipt IS 'Receipt data for validation';
 COMMENT ON COLUMN subscriptions.status IS 'Current subscription status';
+COMMENT ON COLUMN subscriptions.expires_at IS 'When this subscription expires';
 
 -- ==============================================================================
 -- 3. Enable Row Level Security (RLS)
 -- ==============================================================================
 
 ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can view own subscriptions" ON subscriptions;
+DROP POLICY IF EXISTS "Service role can manage subscriptions" ON subscriptions;
 
 -- Policy: Users can view their own subscriptions
 CREATE POLICY "Users can view own subscriptions"
@@ -96,6 +237,8 @@ BEGIN
       updated_at = NOW()
   WHERE subscription_status = 'active'
     AND subscription_expires_at < NOW();
+
+  RAISE NOTICE 'Updated expired subscriptions';
 END;
 $$;
 
@@ -175,5 +318,8 @@ GRANT ALL ON subscriptions TO service_role;
 -- Log completion
 DO $$
 BEGIN
-  RAISE NOTICE 'Subscription system migration completed successfully';
+  RAISE NOTICE '✅ Subscription system migration completed successfully';
+  RAISE NOTICE '📋 Tables: profiles (updated), subscriptions (created/updated)';
+  RAISE NOTICE '🔧 Functions: update_expired_subscriptions(), get_active_subscription()';
+  RAISE NOTICE '🔒 RLS: Enabled with policies';
 END $$;
