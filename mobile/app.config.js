@@ -1,0 +1,43 @@
+module.exports = {
+  expo: {
+    name: 'BaşarıYolu',
+    slug: 'basariyolu',
+    version: '1.0.0',
+    orientation: 'portrait',
+    icon: './assets/icon.png',
+    userInterfaceStyle: 'light',
+    splash: {
+      image: './assets/splash-icon.png',
+      resizeMode: 'contain',
+      backgroundColor: '#ffffff',
+    },
+    assetBundlePatterns: ['**/*'],
+    ios: {
+      supportsTablet: true,
+      bundleIdentifier: 'com.basariyolu',
+    },
+    android: {
+      package: 'com.basariyolu',
+      versionCode: 1,
+      adaptiveIcon: {
+        foregroundImage: './assets/adaptive-icon.png',
+        backgroundColor: '#ffffff',
+      },
+      permissions: ['INTERNET', 'ACCESS_NETWORK_STATE'],
+    },
+    web: {
+      favicon: './assets/favicon.png',
+    },
+    extra: {
+      // Read from environment variables
+      // In development: reads from .env file
+      // In EAS builds: reads from eas.json environment or build-time env vars
+      supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
+      supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+      appUrl: process.env.EXPO_PUBLIC_APP_URL,
+      eas: {
+        projectId: 'basariyolu',
+      },
+    },
+  },
+};
