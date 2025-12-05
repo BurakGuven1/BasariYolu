@@ -72,7 +72,14 @@ export const getBigFiveQuestions = async (gradeLevel: number): Promise<BigFiveQu
     .gte('max_grade', gradeLevel)
     .order('question_order');
 
-  if (error) throw error;
+  // If table doesn't exist yet, return empty array instead of throwing
+  if (error) {
+    if (error.code === 'PGRST205' || error.code === 'PGRST204' || error.code === '42P01') {
+      console.warn('Big Five questions table not found. Feature is disabled.');
+      return [];
+    }
+    throw error;
+  }
   return data || [];
 };
 
@@ -85,7 +92,13 @@ export const getAllBigFiveQuestions = async (): Promise<BigFiveQuestion[]> => {
     .select('*')
     .order('question_order');
 
-  if (error) throw error;
+  if (error) {
+    if (error.code === 'PGRST205' || error.code === 'PGRST204' || error.code === '42P01') {
+      console.warn('Big Five questions table not found. Feature is disabled.');
+      return [];
+    }
+    throw error;
+  }
   return data || [];
 };
 
@@ -137,7 +150,12 @@ export const getStudentResponses = async (studentId: string): Promise<BigFiveRes
     .select('*')
     .eq('student_id', studentId);
 
-  if (error) throw error;
+  if (error) {
+    if (error.code === 'PGRST205' || error.code === 'PGRST204' || error.code === '42P01') {
+      return [];
+    }
+    throw error;
+  }
   return data || [];
 };
 
