@@ -2,7 +2,7 @@ module.exports = {
   expo: {
     name: 'BaşarıYolu',
     slug: 'basariyolu',
-    version: '1.0.1',
+    version: '1.0.2',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'light',
@@ -18,7 +18,7 @@ module.exports = {
     },
     android: {
       package: 'com.basariyolu',
-      versionCode: 2,
+      versionCode: 3,
       adaptiveIcon: {
         foregroundImage: './assets/adaptive-icon.png',
         backgroundColor: '#ffffff',
