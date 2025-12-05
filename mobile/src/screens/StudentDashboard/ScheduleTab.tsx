@@ -52,12 +52,7 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({ studentId }) => {
         .from('study_schedules')
         .select(`
           *,
-          study_schedule_items (*),
-          teacher:teacher_id (
-            profile_id (
-              full_name
-            )
-          )
+          study_schedule_items (*)
         `)
         .eq('student_id', studentId)
         .lte('week_start_date', endOfWeek.toISOString())
@@ -158,12 +153,13 @@ export const ScheduleTab: React.FC<ScheduleTabProps> = ({ studentId }) => {
             {new Date(schedule.week_end_date).toLocaleDateString('tr-TR')}
           </Text>
 
-          {schedule.teacher?.profile_id?.full_name && (
+          {/* Teacher info temporarily disabled due to schema issues */}
+          {/* {schedule.teacher?.profile_id?.full_name && (
             <View style={styles.teacherInfo}>
               <Text style={styles.teacherLabel}>👨‍🏫 Öğretmen</Text>
               <Text style={styles.teacherName}>{schedule.teacher.profile_id.full_name}</Text>
             </View>
-          )}
+          )} */}
 
           {schedule.description && (
             <View style={styles.descriptionBox}>
