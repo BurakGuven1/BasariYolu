@@ -6,6 +6,8 @@ module.exports = {
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'light',
+    // Disable New Architecture for stability
+    newArchEnabled: false,
     splash: {
       image: './assets/splash-icon.png',
       resizeMode: 'contain',
@@ -29,12 +31,11 @@ module.exports = {
       favicon: './assets/favicon.png',
     },
     extra: {
-      // Read from environment variables
-      // In development: reads from .env file
-      // In EAS builds: reads from eas.json environment or build-time env vars
-      supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
-      supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
-      appUrl: process.env.EXPO_PUBLIC_APP_URL,
+      // Hardcode credentials for production builds
+      // EAS builds don't read .env automatically
+      supabaseUrl: 'https://xsgbtofqgcmbtncinyzn.supabase.co',
+      supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhzZ2J0b2ZxZ2NtYnRuY2lueXpuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzMxODE2MzgsImV4cCI6MjA0ODc1NzYzOH0.VR5qYQHUzEthTKPsMECL2kl_xz_v-qdM3OQJm0qcpMg',
+      appUrl: 'https://basariyolum.com',
     },
   },
 };
