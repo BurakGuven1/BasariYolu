@@ -53,15 +53,18 @@ export const getAllQuestions = async (currentUserId?: string) => {
   const { data, error } = await supabase
     .from('student_questions')
     .select(`
-      *,
-      student:students!student_id(
-        user_id,
-        profiles:profiles!students_profile_id_fkey(full_name, avatar_url)
-      )
+      *
     `)
     .order('created_at', { ascending: false });
 
-  if (error) throw error;
+  // Gracefully handle table not existing
+  if (error) {
+    if (error.code === 'PGRST200' || error.code === 'PGRST204' || error.code === 'PGRST205' || error.code === '42P01') {
+      console.warn('Question portal not available yet.');
+      return [];
+    }
+    throw error;
+  }
 
   const questions = data ?? [];
 
