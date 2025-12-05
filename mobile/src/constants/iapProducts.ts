@@ -62,12 +62,6 @@ export interface PackageInfo {
   popular?: boolean;
   recommended?: boolean;
   features: string[];
-  limits: {
-    maxClasses: number;
-    maxStudentsPerClass: number;
-    storage: string;
-    support: string;
-  };
 }
 
 /**
@@ -81,41 +75,32 @@ export const PACKAGE_INFO: PackageInfo[] = [
     duration: 'monthly',
     name: 'Temel - Aylık',
     duration_months: 1,
-    base_price: 99,
+    base_price: 229,
     discount_percent: 0,
     features: [
-      '3 sınıfa kadar',
-      'Sınıf başına 30 öğrenci',
-      'Temel sınav sistemi',
-      'Basit performans raporları',
+      'Soru portalı ile çözemediğiniz soruları paylaşma ve çözme',
+      'Deneme sonuçlarını kaydetme',
+      'Çalışma Programı Oluşturma',
+      'Denemelerinizin trend analiz grafikleri',
       'E-posta desteği',
-    ],
-    limits: {
-      maxClasses: 3,
-      maxStudentsPerClass: 30,
-      storage: '5 GB',
-      support: 'E-posta (48 saat)',
-    },
+      'Haftalık çalışma hedefi',
+      'Veliniz de ücretsiz sizi takip edebilir.',
+      'Sınıf ile etkileşim'
+    ]
   },
   {
     id: 'basic_6months',
     level: 'basic',
     duration: '6months',
-    name: 'Temel - 6 Aylık',
-    duration_months: 6,
-    base_price: 499, // ~83 TL/ay (16% indirim)
+    name: 'Temel - YKS LGS sınav dönemi bitene kadar',
+    duration_months: 7,
+    base_price: 1199,
     discount_percent: 16,
     features: [
       'Tüm Aylık Temel özellikler',
-      '%16 indirim',
-      '6 ay kullanım',
-    ],
-    limits: {
-      maxClasses: 3,
-      maxStudentsPerClass: 30,
-      storage: '5 GB',
-      support: 'E-posta (48 saat)',
-    },
+      '%13 indirim',
+      'YKS-LGS dönemi sonuna kadar kullanım.',
+    ]
   },
   {
     id: 'basic_yearly',
@@ -123,19 +108,13 @@ export const PACKAGE_INFO: PackageInfo[] = [
     duration: 'yearly',
     name: 'Temel - Yıllık',
     duration_months: 12,
-    base_price: 899, // ~75 TL/ay (24% indirim)
-    discount_percent: 24,
+    base_price: 1999, 
+    discount_percent: 28,
     features: [
       'Tüm Aylık Temel özellikler',
       '%24 indirim',
       '12 ay kullanım',
-    ],
-    limits: {
-      maxClasses: 3,
-      maxStudentsPerClass: 30,
-      storage: '5 GB',
-      support: 'E-posta (48 saat)',
-    },
+    ]
   },
 
   // ========== GELİŞMİŞ PAKETLER ==========
@@ -145,47 +124,36 @@ export const PACKAGE_INFO: PackageInfo[] = [
     duration: 'monthly',
     name: 'Gelişmiş - Aylık',
     duration_months: 1,
-    base_price: 199,
+    base_price: 339,
     discount_percent: 0,
     popular: true,
     features: [
-      '10 sınıfa kadar',
-      'Sınıf başına 50 öğrenci',
-      'Gelişmiş sınav ve analiz sistemi',
-      'Fiziksel sınav entegrasyonu',
-      'Ders programı yönetimi',
-      'Yoklama sistemi',
-      'Veli bildirim sistemi',
-      'Öncelikli destek',
-    ],
-    limits: {
-      maxClasses: 10,
-      maxStudentsPerClass: 50,
-      storage: '20 GB',
-      support: 'E-posta + Chat (24 saat)',
-    },
+      'Tüm temel özellikleri barındırır',
+      'Yapay Zeka Görsel Analiz(Fotoğraftan Soru Çözme)',
+      'Anlamadığınız konular için Yapay Zeka destekli konu özeti çıkarma',
+      'ÖSYM-MEB Son 8 yılın Çıkmış konular analizi',
+      'Yapay zeka destekli eksik tespit',
+      'Ayrıntılı infografik analizler',
+      'Denemelerinizde netlerinizi arttırmak için yapay zeka destekli öneriler',
+      'Konu bazlı başarı analizi',
+      'Pomodoro tekniği ile çalışma zamanlayıcı',
+      'Akılda kalıcı Tarih-Coğrafya harita çalışmaları',
+    ]
   },
   {
     id: 'advanced_6months',
     level: 'advanced',
     duration: '6months',
-    name: 'Gelişmiş - 6 Aylık',
-    duration_months: 6,
-    base_price: 999, // ~166 TL/ay (16% indirim)
-    discount_percent: 16,
+    name: 'Gelişmiş - YKS LGS sınav dönemi bitene kadar',
+    duration_months: 7,
+    base_price: 1899,
+    discount_percent: 10,
     popular: true,
     features: [
       'Tüm Aylık Gelişmiş özellikler',
-      '%16 indirim',
-      '6 ay kullanım',
-      'Ücretsiz 1 hafta uzatma',
-    ],
-    limits: {
-      maxClasses: 10,
-      maxStudentsPerClass: 50,
-      storage: '20 GB',
-      support: 'E-posta + Chat (24 saat)',
-    },
+      '%10 indirim',
+      'YKS-LGS dönemi sonuna kadar kullanım.',
+    ]
   },
   {
     id: 'advanced_yearly',
@@ -193,21 +161,14 @@ export const PACKAGE_INFO: PackageInfo[] = [
     duration: 'yearly',
     name: 'Gelişmiş - Yıllık',
     duration_months: 12,
-    base_price: 1799, // ~150 TL/ay (24% indirim)
-    discount_percent: 24,
+    base_price: 2899,
+    discount_percent: 28,
     recommended: true,
     features: [
       'Tüm Aylık Gelişmiş özellikler',
-      '%24 indirim (EN AVANTAJLI)',
-      '12 ay kullanım',
-      'Ücretsiz 1 ay uzatma',
-    ],
-    limits: {
-      maxClasses: 10,
-      maxStudentsPerClass: 50,
-      storage: '20 GB',
-      support: 'E-posta + Chat (24 saat)',
-    },
+      '%28 indirim',
+      '12 ay kullanım'
+    ]
   },
 
   // ========== PROFESYONEL PAKETLER ==========
@@ -217,47 +178,33 @@ export const PACKAGE_INFO: PackageInfo[] = [
     duration: 'monthly',
     name: 'Profesyonel - Aylık',
     duration_months: 1,
-    base_price: 399,
+    base_price: 499,
     discount_percent: 0,
     features: [
-      'Sınırsız sınıf',
-      'Sınıf başına sınırsız öğrenci',
+      'Tüm gelişmiş özellikleri barındırır',
+      'AI ile kişiselleştirilmiş çalışma planı',
       'Tüm premium özellikler',
-      'AI asistan entegrasyonu',
-      'Özel raporlar ve analizler',
-      'API erişimi',
-      'Özel domain',
-      'VIP 7/24 destek',
-      'Özel eğitim ve onboarding',
-    ],
-    limits: {
-      maxClasses: 999999,
-      maxStudentsPerClass: 999999,
-      storage: 'Sınırsız',
-      support: '7/24 Telefon + Chat',
-    },
+      'Profesyonel Pakete Özel Konu Özetleri',
+      'Formül Kartları(Flashcard) ile akılda kalıcı öğrenme',
+      'Özel not alma ve vurgulama araçları',
+      'BaşarıYolumda öncelikli destek',
+      'Haftalık rapor e-posta/SMS',
+      'Gelişmiş AI analiz ve öneriler',
+    ]
   },
   {
     id: 'professional_6months',
     level: 'professional',
     duration: '6months',
-    name: 'Profesyonel - 6 Aylık',
-    duration_months: 6,
-    base_price: 1999, // ~333 TL/ay (16% indirim)
+    name: 'Profesyonel - YKS LGS sınav dönemi bitene kadar',
+    duration_months: 7,
+    base_price: 2499,
     discount_percent: 16,
     features: [
       'Tüm Aylık Profesyonel özellikler',
-      '%16 indirim',
-      '6 ay kullanım',
-      'Ücretsiz 2 hafta uzatma',
-      'Özel API limitleri',
-    ],
-    limits: {
-      maxClasses: 999999,
-      maxStudentsPerClass: 999999,
-      storage: 'Sınırsız',
-      support: '7/24 Telefon + Chat + Özel Account Manager',
-    },
+      '%50 indirim',
+      '7 ay kullanım',
+    ]
   },
   {
     id: 'professional_yearly',
@@ -265,22 +212,13 @@ export const PACKAGE_INFO: PackageInfo[] = [
     duration: 'yearly',
     name: 'Profesyonel - Yıllık',
     duration_months: 12,
-    base_price: 3599, // ~300 TL/ay (24% indirim)
+    base_price: 3599,
     discount_percent: 24,
     features: [
       'Tüm Aylık Profesyonel özellikler',
-      '%24 indirim',
+      '%33 indirim',
       '12 ay kullanım',
-      'Ücretsiz 2 ay uzatma',
-      'Premium API limitleri',
-      'Özel feature istekleri',
-    ],
-    limits: {
-      maxClasses: 999999,
-      maxStudentsPerClass: 999999,
-      storage: 'Sınırsız',
-      support: '7/24 Telefon + Chat + Özel Account Manager',
-    },
+    ]
   },
 ];
 
