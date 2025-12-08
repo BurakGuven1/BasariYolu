@@ -111,10 +111,7 @@ export const getQuestionById = async (questionId: string, currentUserId?: string
     .from('student_questions')
     .select(`
       *,
-      student:students!student_id(
-        user_id,
-        profiles:profiles!students_profile_id_fkey(full_name, avatar_url)
-      )
+      profile:profiles!student_id(id, full_name, avatar_url)
     `)
     .eq('id', questionId)
     .single();
@@ -222,10 +219,7 @@ export const getAnswersForQuestion = async (questionId: string, currentUserId?: 
     .from('student_answers')
     .select(`
       *,
-      student:students!student_id(
-        user_id,
-        profiles:profiles!students_profile_id_fkey(full_name, avatar_url)
-      )
+      profile:profiles!student_id(id, full_name, avatar_url)
     `)
     .eq('question_id', questionId)
     .order('created_at', { ascending: true });
