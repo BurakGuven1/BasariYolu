@@ -10,13 +10,12 @@ CREATE TABLE IF NOT EXISTS public.topics (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     grade_level INTEGER NOT NULL CHECK (grade_level >= 5 AND grade_level <= 12),
     subject VARCHAR(100) NOT NULL, -- Matematik, Türkçe, Fen, etc.
-    main_topic VARCHAR(200) NOT NULL, -- Ana konu (örn: "Doğal Sayılar")
-    sub_topic VARCHAR(200), -- Alt konu (örn: "Toplama ve Çıkarma")
+    topic_name VARCHAR(200) NOT NULL, -- Konu adı (örn: "Doğal Sayılarda Toplama")
     topic_order INTEGER NOT NULL, -- Sıralama için
     exam_type VARCHAR(50), -- TYT, AYT-SAY, AYT-EA, AYT-SOZ, LGS
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
-    UNIQUE(grade_level, subject, main_topic, sub_topic)
+    UNIQUE(grade_level, subject, topic_name)
 );
 
 CREATE INDEX idx_topics_grade_subject ON public.topics(grade_level, subject);
