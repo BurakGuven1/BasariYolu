@@ -34,6 +34,7 @@ import StudentExternalExams from './StudentExternalExams';
 import ErrorBoundary from './ErrorBoundary';
 import TopicTracking from './TopicTracking';
 import BigFiveAssessment from './BigFiveAssessment';
+import StudentCoachingPanel from './coaching/StudentCoachingPanel';
 import type { InstitutionExamBlueprint } from '../lib/institutionQuestionApi';
 import {
   fetchInstitutionStudentPortalData,
@@ -61,7 +62,8 @@ type DashboardTab =
   | 'soru-portali'
   | 'kurumsal-sinavlar'
   | 'topic-tracking'
-  | 'big-five';
+  | 'big-five'
+  | 'coaching';
 
 const DASHBOARD_TAB_KEY = 'studentDashboardActiveTab';
 const DASHBOARD_TABS: DashboardTab[] = [
@@ -82,6 +84,7 @@ const DASHBOARD_TABS: DashboardTab[] = [
   'kurumsal-sinavlar',
   'topic-tracking',
   'big-five',
+  'coaching',
 ];
 
 const getCurrentWeekRange = () => {
@@ -1266,6 +1269,7 @@ export default function StudentDashboard({ authUser }: StudentDashboardProps) {
     { key: 'pomodoro', label: 'Pomodoro', icon: Timer },
     { key: 'maps', label: 'Tarih/Coğrafya', icon: MapIcon },
     { key: 'notes', label: 'Notlarım', icon: StickyNote },
+    { key: 'coaching', label: '👨‍🏫 Koçluk', icon: Award },
     { key: 'subscription', label: 'Aboneliğim', icon: Crown },
   ];
 
@@ -1397,6 +1401,9 @@ export default function StudentDashboard({ authUser }: StudentDashboardProps) {
             studentId={studentData.id}
             gradeLevel={studentData.profile?.grade || 9}
           />
+        )}
+        {activeTab === 'coaching' && studentData && (
+          <StudentCoachingPanel studentId={studentData.id} />
         )}
         {activeTab === 'classes' && (
           showInstitutionPortal ? (
