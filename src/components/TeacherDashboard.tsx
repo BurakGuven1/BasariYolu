@@ -9,6 +9,7 @@ import InstitutionQuestionBankPanel from './InstitutionQuestionBankPanel';
 import InstitutionStudentExamPanel from './InstitutionStudentExamPanel';
 import InstitutionExternalExamPanel from './InstitutionExternalExamPanel';
 import TeacherSchedulePanel from './TeacherSchedulePanel';
+import CoachDashboard from './coaching/CoachDashboard';
 import {
   acceptInstitutionTeacherInvite,
   listTeacherInstitutionRequests,
@@ -44,7 +45,7 @@ export default function TeacherDashboard({ teacherUser, onLogout }: TeacherDashb
   });
   const [createLoading, setCreateLoading] = useState(false);
 
-  type PanelKey = 'overview' | 'classes' | 'institutions' | 'schedule';
+  type PanelKey = 'overview' | 'classes' | 'institutions' | 'schedule' | 'coaching';
   const [activePanel, setActivePanel] = useState<PanelKey>('overview');
   const [institutionMemberships, setInstitutionMemberships] = useState<TeacherInstitutionMembership[]>([]);
   const [institutionsLoading, setInstitutionsLoading] = useState(false);
@@ -332,6 +333,13 @@ useEffect(() => {
         label: 'Ders Programım',
         description: 'Haftalık ders programı ve yoklama',
         icon: UserCheck,
+        visible: true,
+      },
+      {
+        key: 'coaching',
+        label: '👨‍🏫 Koçluk Paneli',
+        description: 'Öğrenci koçluğu ve randevu yönetimi',
+        icon: Users,
         visible: true,
       },
       {
@@ -1057,6 +1065,10 @@ useEffect(() => {
               teacherId={teacher.id}
               institutionId={selectedMembership.institution.id}
             />
+          )}
+
+          {resolvedPanel === 'coaching' && teacher && (
+            <CoachDashboard coachId={teacher.id} />
           )}
 
           {resolvedPanel === 'institutions' && (
