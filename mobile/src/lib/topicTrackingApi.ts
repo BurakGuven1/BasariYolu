@@ -144,7 +144,7 @@ export const getStudentProgressBySubject = async (
     query = query.eq('topic.subject', subject);
   }
 
-  const { data, error } = await query.order('topic.topic_order');
+  const { data, error } = await query.order('topic_order', { foreignTable: 'topics' });
 
   if (error) throw error;
   return data || [];
