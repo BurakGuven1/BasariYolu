@@ -486,9 +486,15 @@ export default function StudentDashboard({ authUser }: StudentDashboardProps) {
     );
   }
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     console.log('StudentDashboard logout başlatıldı');
-    clearUser();
+    try {
+      await clearUser();
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Fallback: force redirect
+      window.location.href = '/';
+    }
   };
 
 
