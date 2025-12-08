@@ -6,6 +6,8 @@ module.exports = {
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'light',
+    // Disable New Architecture for stability
+    newArchEnabled: false,
     splash: {
       image: './assets/splash-icon.png',
       resizeMode: 'contain',
@@ -29,15 +31,10 @@ module.exports = {
       favicon: './assets/favicon.png',
     },
     extra: {
-      // Read from environment variables
-      // In development: reads from .env file
-      // In EAS builds: reads from eas.json environment or build-time env vars
+      // Read from environment variables (injected by EAS Secrets)
       supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
       supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
       appUrl: process.env.EXPO_PUBLIC_APP_URL,
-      eas: {
-        projectId: 'basariyolu',
-      },
     },
   },
 };
