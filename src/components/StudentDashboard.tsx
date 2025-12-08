@@ -32,6 +32,8 @@ import StudentExamPerformancePanel from './StudentExamPerformancePanel';
 import AIChatPanel from './AIChatPanel';
 import StudentExternalExams from './StudentExternalExams';
 import ErrorBoundary from './ErrorBoundary';
+import TopicTracking from './TopicTracking';
+import BigFiveAssessment from './BigFiveAssessment';
 import type { InstitutionExamBlueprint } from '../lib/institutionQuestionApi';
 import {
   fetchInstitutionStudentPortalData,
@@ -57,7 +59,9 @@ type DashboardTab =
   | 'subscription'
   | 'ai-chat'
   | 'soru-portali'
-  | 'kurumsal-sinavlar';
+  | 'kurumsal-sinavlar'
+  | 'topic-tracking'
+  | 'big-five';
 
 const DASHBOARD_TAB_KEY = 'studentDashboardActiveTab';
 const DASHBOARD_TABS: DashboardTab[] = [
@@ -76,6 +80,8 @@ const DASHBOARD_TABS: DashboardTab[] = [
   'ai-chat',
   'soru-portali',
   'kurumsal-sinavlar',
+  'topic-tracking',
+  'big-five',
 ];
 
 const getCurrentWeekRange = () => {
@@ -1239,6 +1245,8 @@ export default function StudentDashboard({ authUser }: StudentDashboardProps) {
     { key: 'overview', label: 'Genel Bakış', icon: TrendingUp },
     { key: 'exams', label: 'Denemeler', icon: BookOpen },
     { key: 'homeworks', label: 'Ödevler', icon: Calendar },
+    { key: 'topic-tracking', label: 'Konu Takibi', icon: CheckCircle },
+    { key: 'big-five', label: 'Kişilik Testi', icon: Trophy },
     { key: 'classes', label: showInstitutionPortal ? 'Kurumlarım' : 'Sınıflarım', icon: Users },
     ...(isInstitutionStudent && institutionRequest?.status === 'approved'
       ? [{ key: 'kurumsal-sinavlar' as const, label: 'Kurumsal Sınavlar', icon: Target }]
@@ -1371,6 +1379,18 @@ export default function StudentDashboard({ authUser }: StudentDashboardProps) {
               institutionId={institutionRequest?.institution_id}
             />
           </ErrorBoundary>
+        )}
+        {activeTab === 'topic-tracking' && studentData && (
+          <TopicTracking
+            studentId={studentData.id}
+            gradeLevel={studentData.profile?.grade || 9}
+          />
+        )}
+        {activeTab === 'big-five' && studentData && (
+          <BigFiveAssessment
+            studentId={studentData.id}
+            gradeLevel={studentData.profile?.grade || 9}
+          />
         )}
         {activeTab === 'classes' && (
           showInstitutionPortal ? (
