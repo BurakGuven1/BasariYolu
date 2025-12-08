@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../components/ui/Button';
@@ -7,7 +7,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import { supabase } from '../lib/supabase';
-import { packages } from '../data/packages';
 
 type Role = 'student' | 'parent' | 'teacher' | 'institution';
 
@@ -32,8 +31,6 @@ export function AuthScreen({ navigation }: Props) {
   const [grade, setGrade] = useState('');
   const [schoolName, setSchoolName] = useState('');
   const [classCode, setClassCode] = useState('');
-  const [packageType, setPackageType] = useState<'basic' | 'advanced' | 'professional'>('basic');
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
 
   const resetFields = () => {
     setEmail('');
@@ -43,8 +40,6 @@ export function AuthScreen({ navigation }: Props) {
     setGrade('');
     setSchoolName('');
     setClassCode('');
-    setPackageType('basic');
-    setBillingCycle('monthly');
   };
 
   const handleParentLogin = async () => {
@@ -115,8 +110,6 @@ export function AuthScreen({ navigation }: Props) {
             email,
             role,
             full_name: fullName,
-            package_type: packageType,
-            billing_cycle: billingCycle,
             grade,
             school_name: schoolName,
           });
@@ -165,6 +158,18 @@ export function AuthScreen({ navigation }: Props) {
           }
         }
       }
+
+      // TEMPORARY: Skip package selection until IAP is ready
+      // For student registration, navigate to package selection
+      // if (mode === 'register' && role === 'student') {
+      //   const { data: userResp } = await supabase.auth.getUser();
+      //   const uid = userResp.user?.id;
+      //   navigation.replace('PackageSelection', { userId: uid, userEmail: email });
+      //   resetFields();
+      //   return;
+      // }
+
+      // For login or all roles, go to respective dashboard
       const target =
         role === 'teacher'
           ? 'Teacher'
@@ -182,11 +187,6 @@ export function AuthScreen({ navigation }: Props) {
 
   const currentRoleMode = ROLES.find((r) => r.id === role)?.mode ?? 'login';
   const showRegisterToggle = role === 'student';
-
-  const selectedPackage = useMemo(
-    () => packages.find((p) => p.id === packageType),
-    [packageType],
-  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -233,46 +233,9 @@ export function AuthScreen({ navigation }: Props) {
                     onChangeText={setClassCode}
                     placeholder="ABCD-1234"
                   />
-                  <Text style={styles.sectionTitle}>Paket Seçimi</Text>
-                  <View style={styles.roles}>
-                    {['basic', 'advanced', 'professional'].map((p) => (
-                      <Button
-                        key={p}
-                        title={p === 'basic' ? 'Temel' : p === 'advanced' ? 'Gelişmiş' : 'Profesyonel'}
-                        variant={packageType === p ? 'primary' : 'secondary'}
-                        onPress={() => setPackageType(p as any)}
-                        style={{ flex: 1 }}
-                      />
-                    ))}
-                  </View>
-                  <Text style={styles.sectionTitle}>Ödeme Döngüsü</Text>
-                  <View style={styles.roles}>
-                    {['monthly', 'yearly'].map((b) => (
-                      <Button
-                        key={b}
-                        title={b === 'monthly' ? 'Aylık' : 'Yıllık'}
-                        variant={billingCycle === b ? 'primary' : 'secondary'}
-                        onPress={() => setBillingCycle(b as any)}
-                        style={{ flex: 1 }}
-                      />
-                    ))}
-                  </View>
-                  {selectedPackage && (
-                    <View style={styles.packageBox}>
-                      <Text style={styles.packageTitle}>{selectedPackage.name}</Text>
-                      <Text style={styles.packagePrice}>
-                        {billingCycle === 'monthly'
-                          ? `₺${selectedPackage.monthlyPrice}/ay`
-                          : `₺${selectedPackage.yearlyPrice}/yıl`}
-                      </Text>
-                      <Text style={styles.packageSubtitle}>Öne çıkanlar</Text>
-                      {selectedPackage.features.slice(0, 3).map((feat) => (
-                        <Text key={feat} style={styles.packageFeature}>
-                          • {feat}
-                        </Text>
-                      ))}
-                    </View>
-                  )}
+                  <Text style={styles.sectionTitle}>
+                    📦 Sonraki adımda paketinizi seçeceksiniz
+                  </Text>
                 </>
               )}
 
@@ -340,32 +303,6 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     fontWeight: '700',
     marginTop: 4,
-  },
-  packageBox: {
-    marginTop: 8,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 10,
-    backgroundColor: '#F8FAFC',
-    gap: 4,
-  },
-  packageTitle: {
-    color: '#0F172A',
-    fontWeight: '700',
-    fontSize: 16,
-  },
-  packagePrice: {
-    color: '#0F172A',
-    fontWeight: '700',
-  },
-  packageSubtitle: {
-    color: '#475569',
-    fontWeight: '600',
-    marginTop: 4,
-  },
-  packageFeature: {
-    color: '#4B5563',
-    fontSize: 13,
+    fontSize: 14,
   },
 });

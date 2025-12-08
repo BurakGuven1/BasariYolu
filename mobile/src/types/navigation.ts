@@ -12,4 +12,5 @@ export type RootStackParamList = {
   QuestionDetail: { questionId: string };
   CreateQuestion: undefined;
   AnswerQuestion: { questionId: string };
+  PackageSelection: { userId?: string; userEmail?: string };
 };

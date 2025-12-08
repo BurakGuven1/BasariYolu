@@ -8,8 +8,8 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { Card } from '../../components/Card';
-import { Button } from '../../components/Button';
+import { Card } from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
 import {
   getBigFiveQuestions,
   getStudentResponses,
@@ -201,6 +201,26 @@ export const BigFiveTab: React.FC<BigFiveTabProps> = ({ studentId, gradeLevel })
     );
   }
 
+  // If no questions available, show disabled message
+  if (questions.length === 0 && viewMode !== 'results') {
+    return (
+      <View style={styles.container}>
+        <Card style={styles.introCard}>
+          <Text style={styles.title}>🎯 Big Five Kişilik Envanteri</Text>
+          <Text style={styles.subtitle}>
+            Bu özellik şu anda kullanılamıyor
+          </Text>
+          <View style={styles.infoBox}>
+            <Text style={styles.infoText}>
+              📋 Big Five kişilik testi henüz aktif değil.
+              Bu özellik yakında eklenecektir.
+            </Text>
+          </View>
+        </Card>
+      </View>
+    );
+  }
+
   if (viewMode === 'intro') {
     return (
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -268,6 +288,16 @@ export const BigFiveTab: React.FC<BigFiveTabProps> = ({ studentId, gradeLevel })
 
   if (viewMode === 'questionnaire') {
     const currentQuestion = questions[currentQuestionIndex];
+
+    // Safety check: if no question at current index, show loading
+    if (!currentQuestion) {
+      return (
+        <View style={styles.centered}>
+          <Text style={styles.infoText}>Soru yükleniyor...</Text>
+        </View>
+      );
+    }
+
     const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
 
     return (

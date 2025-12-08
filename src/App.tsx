@@ -20,10 +20,10 @@ import StudentDashboard from './components/StudentDashboard';
 
 // Loading component for Suspense fallbacks
 const LoadingSpinner = () => (
-  <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+  <div className="min-h-screen bg-gray-50  flex items-center justify-center">
     <div className="text-center">
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-      <p className="text-gray-600 dark:text-gray-300">Yükleniyor...</p>
+      <p className="text-gray-600 ">Yükleniyor...</p>
     </div>
   </div>
 );
@@ -57,6 +57,9 @@ const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 const FeaturesShowcase = lazy(() => import('./components/FeaturesShowcase'));
 const LiveStats = lazy(() => import('./components/LiveStats'));
 const Testimonials = lazy(() => import('./components/Testimonials'));
+const AuthCallback = lazy(() => import('./pages/AuthCallback'));
+const AuthConfirm = lazy(() => import('./pages/AuthConfirm'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 
 const INSTITUTION_MODAL_PATHS = ['/institution/login', '/institution/register'];
 
@@ -420,10 +423,10 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-300">Yükleniyor...</p>
+          <p className="text-gray-600 ">Yükleniyor...</p>
         </div>
       </div>
     );
@@ -466,7 +469,7 @@ function App() {
 
   const renderHomePage = () => (
     <Suspense fallback={<LoadingSpinner />}>
-      <div className="min-h-screen bg-white dark:bg-gray-900">
+      <div className="min-h-screen bg-white ">
         <HeroV2 onGetStarted={handleGetStarted} />
         <LiveStats />
         <ProblemSection />
@@ -532,6 +535,9 @@ function App() {
       />
       <Route path="/dashboard" element={<DashboardRoute />} />
       <Route path="/institution" element={<InstitutionDashboardRoute />} />
+      <Route path="/auth/callback" element={<Suspense fallback={<LoadingSpinner />}><AuthCallback /></Suspense>} />
+      <Route path="/auth/confirm" element={<Suspense fallback={<LoadingSpinner />}><AuthConfirm /></Suspense>} />
+      <Route path="/auth/reset-password" element={<Suspense fallback={<LoadingSpinner />}><ResetPassword /></Suspense>} />
       <Route path="*" element={<Suspense fallback={<LoadingSpinner />}><NotFoundPage onNavigateHome={handleNavigateHome} /></Suspense>} />
     </Routes>
   );

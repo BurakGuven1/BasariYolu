@@ -17,7 +17,6 @@ import {
   Clock,
   Brain,
   Sparkles,
-  Shield,
   Zap,
   Heart,
   BarChart3,
@@ -363,7 +362,7 @@ function FeatureHighlight({ reverse, badge, title, description, features, gradie
 // Stats Section
 function StatsSection() {
   const stats = [
-    { value: '10,000+', label: 'Aktif Öğrenci' },
+    { value: '1,000+', label: 'Aktif Öğrenci' },
     { value: '120+', label: 'Öğretmen' },
     { value: '10+', label: 'Kurum' },
     { value: '%95', label: 'Memnuniyet' },
@@ -509,14 +508,19 @@ export default function FeaturesShowcase() {
         animationData={institution}
         features={[
           {
-            icon: <Shield className="w-6 h-6 text-white" />,
-            title: 'Kapsamlı Soru Bankası',
-            text: 'Binlerce soruyu kategorize edin, özel sınavlar oluşturun',
+            icon: <Award className="w-6 h-6 text-white" />,
+            title: 'Öğrenciye özel deneme performans raporu',
+            text: 'Kurum içi yaptığınız denemelerde her öğrenciye özel konu konu performans raporu',
           },
           {
             icon: <BarChart3 className="w-6 h-6 text-white" />,
             title: 'Detaylı Raporlama',
             text: 'Öğrenci başarılarını, öğretmen performansını anlık takip edin',
+          },
+          {
+            icon: <Brain className="w-6 h-6 text-white" />,
+            title: 'Öğrencileriniz ücretsiz bir şekilde platformun gelişmiş özelliklerine erişebilir.',
+            text: 'Öğrencileriniz yapay zeka destekli kişiselleştirilmiş öğrenme deneyiminden faydalansın',
           },
           {
             icon: <Zap className="w-6 h-6 text-white" />,
@@ -538,6 +542,11 @@ export default function FeaturesShowcase() {
             icon: <BookOpen className="w-6 h-6 text-white" />,
             title: 'Kolay Ders Yönetimi',
             text: 'Sınıflarınızı, ödevlerinizi ve sınavlarınızı kolayca organize edin',
+          },
+          {
+            icon: <HandCoins className="w-6 h-6 text-white" />,
+            title: 'Sınıfa ve Öğrenciye Özel Ders Çalışma Programı Oluşturma',
+            text: 'Her öğrenciye veya sınıfa özel ders çalışma programları hazırlayın ve geri bildirimler alın',
           },
           {
             icon: <Award className="w-6 h-6 text-white" />,

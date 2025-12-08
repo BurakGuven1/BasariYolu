@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Plus, Edit2, Trash2, Save, X, Clock, MapPin, Users, BookOpen, AlertCircle } from 'lucide-react';
+import { Calendar, Plus, Edit2, Trash2, Save, X, Clock, MapPin, Users, BookOpen, AlertCircle, Download, Filter } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import {
   getInstitutionScheduleEntries,
@@ -16,6 +16,8 @@ import {
   type ScheduleEntry,
   type InstitutionClass
 } from '../lib/institutionScheduleApi';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface InstitutionScheduleManagementProps {
   institutionId: string;
@@ -28,6 +30,7 @@ export default function InstitutionScheduleManagement({ institutionId, teachers:
   const [teachers, setTeachers] = useState<any[]>(teachersProp || []);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedClassFilter, setSelectedClassFilter] = useState<string>('all');
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -199,12 +202,79 @@ export default function InstitutionScheduleManagement({ institutionId, teachers:
     });
   };
 
+  const exportScheduleToPDF = () => {
+    const doc = new jsPDF('l', 'mm', 'a4'); // Landscape orientation
+    const filteredEntries = selectedClassFilter === 'all'
+      ? scheduleEntries
+      : scheduleEntries.filter(e => e.class_name === selectedClassFilter);
+
+    // Turkish character support - use default fonts
+    doc.setFont('helvetica');
+
+    // Title
+    const title = selectedClassFilter === 'all'
+      ? 'Haftalik Ders Programi - Tum Siniflar'
+      : `Haftalik Ders Programi - ${selectedClassFilter}`;
+    doc.setFontSize(16);
+    doc.text(title, 148, 15, { align: 'center' });
+
+    // Prepare table data
+    const timeSlots = getTimeSlots();
+    const days = [1, 2, 3, 4, 5, 6, 7];
+    const dayNames = days.map(d => getDayName(d));
+
+    const tableData = timeSlots.map(slot => {
+      const row = [slot];
+      days.forEach(day => {
+        const dayEntries = filteredEntries
+          .filter(e => e.day_of_week === day && e.start_time.startsWith(slot.substring(0, 2)))
+          .map(e => {
+            const teacher = teachers.find(t => t.id === e.teacher_id);
+            return `${e.subject}\n${e.class_name}\n${teacher?.full_name || ''}\n${e.classroom || ''}`;
+          });
+        row.push(dayEntries.join('\n---\n') || '-');
+      });
+      return row;
+    });
+
+    autoTable(doc, {
+      head: [['Saat', ...dayNames]],
+      body: tableData,
+      startY: 25,
+      styles: {
+        fontSize: 8,
+        cellPadding: 2,
+        overflow: 'linebreak',
+        halign: 'center',
+        valign: 'middle'
+      },
+      headStyles: {
+        fillColor: [79, 70, 229],
+        textColor: 255,
+        fontSize: 9,
+        fontStyle: 'bold'
+      },
+      columnStyles: {
+        0: { cellWidth: 20, fontStyle: 'bold' }
+      }
+    });
+
+    const filename = selectedClassFilter === 'all'
+      ? 'ders-programi-tum-siniflar.pdf'
+      : `ders-programi-${selectedClassFilter.replace(/\s+/g, '-').toLowerCase()}.pdf`;
+    doc.save(filename);
+  };
+
   const getScheduleGrid = () => {
     const grid: Record<number, ScheduleEntry[]> = {
       1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: []
     };
 
-    scheduleEntries.forEach(entry => {
+    const filteredEntries = selectedClassFilter === 'all'
+      ? scheduleEntries
+      : scheduleEntries.filter(e => e.class_name === selectedClassFilter);
+
+    filteredEntries.forEach(entry => {
       grid[entry.day_of_week].push(entry);
     });
 
@@ -244,28 +314,57 @@ export default function InstitutionScheduleManagement({ institutionId, teachers:
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Ders Programı Yönetimi</h2>
-          <p className="text-gray-600">Kurum genel ders programını yönetin</p>
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Ders Programı Yönetimi</h2>
+            <p className="text-gray-600">Kurum genel ders programını yönetin</p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowClassModal(true)}
+              className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+            >
+              <Users className="h-4 w-4" />
+              Sınıf Ekle
+            </button>
+            <button
+              onClick={() => {
+                resetForm();
+                setShowAddModal(true);
+              }}
+              className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+            >
+              <Plus className="h-4 w-4" />
+              Ders Ekle
+            </button>
+          </div>
         </div>
-        <div className="flex gap-2">
+
+        {/* Filters and Actions */}
+        <div className="flex items-center justify-between bg-white rounded-lg p-4 border border-gray-200">
+          <div className="flex items-center gap-3">
+            <Filter className="h-5 w-5 text-gray-500" />
+            <select
+              value={selectedClassFilter}
+              onChange={(e) => setSelectedClassFilter(e.target.value)}
+              className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="all">Tüm Sınıflar</option>
+              {classes.map((cls) => (
+                <option key={cls.id} value={cls.class_name}>
+                  {cls.class_name}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <button
-            onClick={() => setShowClassModal(true)}
-            className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+            onClick={exportScheduleToPDF}
+            className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
           >
-            <Users className="h-4 w-4" />
-            Sınıf Ekle
-          </button>
-          <button
-            onClick={() => {
-              resetForm();
-              setShowAddModal(true);
-            }}
-            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-          >
-            <Plus className="h-4 w-4" />
-            Ders Ekle
+            <Download className="h-4 w-4" />
+            PDF İndir
           </button>
         </div>
       </div>

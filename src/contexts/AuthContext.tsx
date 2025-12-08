@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { refreshInstitutionSession, InstitutionSession } from '../lib/institutionApi';
+import * as authApi from '../lib/authApi';
 
 export type UserType = 'student' | 'parent' | 'teacher' | 'institution';
 
@@ -144,7 +145,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Listen to Supabase auth changes - THIS HANDLES TOKEN REFRESH AUTOMATICALLY
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-
+      // CRITICAL: Don't process auth events during logout
+      const logoutInProgress = sessionStorage.getItem('logout_in_progress');
+      if (logoutInProgress) {
+        console.log('⚠️ Ignoring auth event during logout:', event);
+        return; // Skip all events during logout
+      }
 
       if (event === 'SIGNED_IN' && session?.user) {
         // Check localStorage for additional info
@@ -223,7 +229,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     saveSession(authUser);
   }, [saveSession]);
 
-  // Logout function - CRITICAL FIX: Stable logout for all user types
+  // Logout function - SECURE: Uses Worker API to clear HTTP-only cookies
   const logout = useCallback(async (options?: LogoutOptions) => {
     console.log('🚪 Logout initiated for user:', user?.userType);
     const redirectPath = options?.redirectTo ?? '/';
@@ -259,46 +265,80 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.warn('localStorage clear error:', e);
     }
 
-    // STEP 3: Sign out from Supabase for everyone (global to avoid ghost sessions)
-    try {
-      await supabase.auth.signOut({ scope: 'global' });
-    } catch (err) {
-      console.warn('Supabase signOut error:', err);
+    // STEP 3: Sign out from backend (Worker API + Supabase) for ALL user types
+    // Call Worker API to clear HTTP-only cookie (fire and forget)
+    authApi.logout().catch(err => {
+      console.warn('Worker logout error:', err);
+    });
+
+    // STEP 4: Sign out from Supabase BEFORE redirect (CRITICAL for institution)
+    if (user?.userType === 'student' || user?.userType === 'parent' || user?.userType === 'teacher' || user?.userType === 'institution') {
+      console.log('🔐 Signing out from Supabase before redirect...');
+
+      // WAIT for Supabase signOut to complete (max 2 seconds)
+      const signOutPromise = supabase.auth.signOut({ scope: 'local' });
+      const timeoutPromise = new Promise(resolve => setTimeout(resolve, 2000));
+
+      Promise.race([signOutPromise, timeoutPromise])
+        .catch(err => {
+          console.warn('Supabase signOut error:', err);
+        })
+        .finally(() => {
+          console.log('✅ Redirecting to:', redirectPath);
+          // Redirect after Supabase signOut completes
+          window.location.replace(redirectPath);
+        });
+    } else {
+      // For parent or other non-Supabase users, redirect immediately
+      console.log('✅ Redirecting to:', redirectPath);
+      setTimeout(() => {
+        window.location.replace(redirectPath);
+      }, 50);
     }
-
-    // STEP 4: IMMEDIATE redirect (synchronous)
-    console.log('✅ Redirecting to:', redirectPath);
-
-    // Small delay to ensure storage is cleared
-    setTimeout(() => {
-      window.location.replace(redirectPath);
-    }, 50); // 50ms delay to ensure storage cleanup completes
 
   }, [user, saveSession]);
 
-  // Manual refresh session (RARELY NEEDED - Supabase auto-refreshes tokens)
+  // Manual refresh session - Uses Worker API for secure token refresh
   const refreshSession = useCallback(async () => {
     try {
 
-      // For Supabase users (student/parent)
+      // For Supabase users (student/parent) - Use Worker API
       if (user?.userType === 'student' || user?.userType === 'parent') {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        try {
+          console.log('🔄 Refreshing token via Worker API (HTTP-only cookie)');
+          const refreshData = await authApi.refreshToken();
 
-        if (error) {
-          console.warn('⚠️ Session refresh error:', error);
-          return; // Keep current user - don't logout
-        }
+          if (refreshData?.user) {
+            console.log('✅ Token refreshed successfully');
+            const updatedUser: AuthUser = {
+              ...user,
+              id: refreshData.user.id,
+              email: refreshData.user.email || user.email,
+              profile: refreshData.user.user_metadata || user.profile,
+              metadata: refreshData.user.user_metadata || user.metadata,
+            };
+            setUser(updatedUser);
+            saveSession(updatedUser);
+          }
+        } catch (error) {
+          console.warn('⚠️ Worker token refresh failed, trying Supabase fallback:', error);
 
-        if (session?.user) {
-          const updatedUser: AuthUser = {
-            ...user,
-            id: session.user.id,
-            email: session.user.email || user.email,
-            profile: session.user.user_metadata,
-            metadata: session.user.user_metadata,
-          };
-          setUser(updatedUser);
-          saveSession(updatedUser);
+          // Fallback to Supabase if Worker fails
+          const { data: { session }, error: supabaseError } = await supabase.auth.getSession();
+
+          if (!supabaseError && session?.user) {
+            const updatedUser: AuthUser = {
+              ...user,
+              id: session.user.id,
+              email: session.user.email || user.email,
+              profile: session.user.user_metadata,
+              metadata: session.user.user_metadata,
+            };
+            setUser(updatedUser);
+            saveSession(updatedUser);
+          } else {
+            console.warn('⚠️ Session refresh error:', supabaseError);
+          }
         }
       }
       // For institution users

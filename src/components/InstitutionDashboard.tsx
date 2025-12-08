@@ -1,16 +1,20 @@
 
 import { useMemo, useState, type ComponentType } from 'react';
-import { Building2, Users, FileSpreadsheet, ClipboardList, ShieldCheck, LogOut, Mail, CheckCircle2, Layers, Copy, Download, BarChart3, Calendar, Award, Upload } from 'lucide-react';
+import { Building2, Users, FileSpreadsheet, ClipboardList, ShieldCheck, LogOut, Mail, CheckCircle2, Layers, Copy, Download, BarChart3, Calendar, Award, Upload, Phone, Check, X, UserCheck } from 'lucide-react';
 import { InstitutionSession } from '../lib/institutionApi';
 import InstitutionQuestionBankPanel from './InstitutionQuestionBankPanel';
 import InstitutionStudentApprovalPanel from './InstitutionStudentApprovalPanel';
+import InstitutionStudentListPanel from './InstitutionStudentListPanel';
 import InstitutionEngagementPanel from './InstitutionEngagementPanel';
 import InstitutionTeacherManagementPanel from './InstitutionTeacherManagementPanel';
 import InstitutionAnalyticsPanel from './InstitutionAnalyticsPanel';
 import InstitutionScheduleManagement from './InstitutionScheduleManagement';
 import ClassPerformancePanel from './ClassPerformancePanel';
 import InstitutionExternalExamPanel from './InstitutionExternalExamPanel';
-import { exportStudentsToExcel, exportExamResultsToExcel, exportPerformanceReportToExcel } from '../lib/institutionExportUtils';
+import InstitutionParentsPanel from './InstitutionParentsPanel';
+import InstitutionClassManagementPanel from './InstitutionClassManagementPanel';
+import { exportStudentsToExcel, exportExamResultsToExcel } from '../lib/institutionExportUtils';
+import { exportParentsToExcel } from '../lib/parentContactApi';
 
 interface InstitutionDashboardProps {
   session: InstitutionSession;
@@ -45,7 +49,7 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
   const isTeacherRole = session.role === 'teacher';
   const canManageInstitution = ['owner', 'manager'].includes(session.role);
   const canAccessQuestionBank = canManageInstitution || isTeacherRole;
-  type PanelKey = 'overview' | 'analytics' | 'performance' | 'external-exams' | 'question-bank' | 'schedule' | 'teachers' | 'students' | 'engagement';
+  type PanelKey = 'overview' | 'analytics' | 'performance' | 'external-exams' | 'question-bank' | 'schedule' | 'teachers' | 'students' | 'student-list' | 'engagement' | 'parents' | 'class-management';
   const [activePanel, setActivePanel] = useState<PanelKey>('overview');
 
   type PanelItem = {
@@ -109,16 +113,37 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
       },
       {
         key: 'students',
-        label: 'Öğrenciler',
-        description: 'Başvurular ve kodlar',
+        label: 'Öğrenci Başvuruları',
+        description: 'Başvuru onayları ve davet kodları',
         icon: Layers,
         visible: canManageInstitution,
+      },
+      {
+        key: 'student-list',
+        label: 'Öğrenci Listesi',
+        description: 'Onaylı öğrenciler ve performans analizi',
+        icon: Users,
+        visible: canManageInstitution && isActive,
       },
       {
         key: 'engagement',
         label: 'Etkileşim',
         description: 'Performans ve duyurular',
         icon: Mail,
+        visible: canManageInstitution && isActive,
+      },
+      {
+        key: 'parents',
+        label: 'Veli Yönetimi',
+        description: 'Veli listesi ve iletişim bilgileri',
+        icon: UserCheck,
+        visible: canManageInstitution && isActive,
+      },
+      {
+        key: 'class-management',
+        label: 'Sınıf Öğrencileri',
+        description: 'Öğrencileri sınıflara atama ve yönetim',
+        icon: Users,
         visible: canManageInstitution && isActive,
       },
     ],
@@ -159,6 +184,12 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
   const [exportError, setExportError] = useState<string | null>(null);
   const [exportSuccess, setExportSuccess] = useState<string | null>(null);
 
+  // Phone editing
+  const [editingPhone, setEditingPhone] = useState(false);
+  const [phoneValue, setPhoneValue] = useState(session.institution.contact_phone || '');
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [phoneSaving, setPhoneSaving] = useState(false);
+
   const handleExportStudents = async () => {
     setExportLoading('students');
     setExportError(null);
@@ -197,16 +228,16 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
     }
   };
 
-  const handleExportPerformanceReport = async () => {
-    setExportLoading('performance');
+  const handleExportParents = async () => {
+    setExportLoading('parents');
     setExportError(null);
     setExportSuccess(null);
     try {
-      const result = await exportPerformanceReportToExcel(session.institution.id);
+      const result = await exportParentsToExcel(session.institution.id);
       setExportSuccess(`✓ ${result.filename} başarıyla indirildi!`);
     } catch (error) {
       console.error('Export error:', error);
-      setExportError('Performans raporu dışa aktarılırken bir hata oluştu.');
+      setExportError('Veli listesi dışa aktarılırken bir hata oluştu.');
     } finally {
       setExportLoading(null);
       setTimeout(() => {
@@ -214,6 +245,40 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
         setExportSuccess(null);
       }, 5000);
     }
+  };
+
+  const handleSavePhone = async () => {
+    if (!phoneValue.trim()) {
+      setPhoneError('Telefon numarası boş olamaz.');
+      return;
+    }
+
+    setPhoneSaving(true);
+    setPhoneError(null);
+
+    try {
+      const { supabase } = await import('../lib/supabase');
+      const { error } = await supabase
+        .from('institutions')
+        .update({ contact_phone: phoneValue.trim() })
+        .eq('id', session.institution.id);
+
+      if (error) throw error;
+
+      session.institution.contact_phone = phoneValue.trim();
+      setEditingPhone(false);
+    } catch (error) {
+      console.error('Phone update error:', error);
+      setPhoneError('Telefon numarası güncellenemedi.');
+    } finally {
+      setPhoneSaving(false);
+    }
+  };
+
+  const handleCancelPhoneEdit = () => {
+    setPhoneValue(session.institution.contact_phone || '');
+    setEditingPhone(false);
+    setPhoneError(null);
   };
 
   let statusMessage = '';
@@ -229,42 +294,6 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
     statusMessage = 'Başvurunuz inceleniyor.';
     statusHint = 'Onay sonrası tüm kurum özellikleri otomatik açılacak. Durumu aşağıdaki düğmeden yenileyebilirsiniz.';
   }
-
-  const quickActions = canManageInstitution
-    ? [
-        {
-          key: 'question-bank',
-          icon: ClipboardList,
-          title: 'Soru Bankası',
-          description: 'Kendi sorularınızı kaydedin, ders ve zorluk seviyesine göre etiketleyin.',
-        },
-        {
-          key: 'exam-builder',
-          icon: FileSpreadsheet,
-          title: 'Sınav Oluştur',
-          description: 'Test, yazılı veya deneme sınavları hazırlayın ve sınıflara atayın.',
-        },
-        {
-          key: 'team',
-          icon: Users,
-          title: 'Ekip & Roller',
-          description: 'Öğretmenleri kurumunuza ekleyin ve yetkilerini yönetin.',
-        },
-      ]
-    : [
-        {
-          key: 'question-bank',
-          icon: ClipboardList,
-          title: 'Soru Bankası',
-          description: 'Yeni sorular ekleyin, yayımlayın ve mevcutları düzenleyin.',
-        },
-        {
-          key: 'exam-builder',
-          icon: FileSpreadsheet,
-          title: 'Sınav Taslakları',
-          description: 'Size atanan sınavları hazırlayıp öğrencilere açın.',
-        },
-      ];
 
   const onboardingSteps = [
     {
@@ -389,7 +418,51 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
                           İletişim
                         </p>
                         <p className="mt-2 text-sm text-blue-900">{session.institution.contact_email || 'E-posta ekleyin'}</p>
-                        <p className="text-xs text-blue-800">{session.institution.contact_phone || 'Telefon bilgisi ekleyin'}</p>
+
+                        {editingPhone ? (
+                          <div className="mt-2 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Phone className="h-3 w-3 text-blue-600" />
+                              <input
+                                type="tel"
+                                value={phoneValue}
+                                onChange={(e) => setPhoneValue(e.target.value)}
+                                placeholder="5XX XXX XX XX"
+                                className="flex-1 rounded border border-blue-300 px-2 py-1 text-xs text-gray-900 focus:border-blue-500 focus:outline-none"
+                                disabled={phoneSaving}
+                              />
+                            </div>
+                            {phoneError && (
+                              <p className="text-xs text-red-600">{phoneError}</p>
+                            )}
+                            <div className="flex gap-2">
+                              <button
+                                onClick={handleSavePhone}
+                                disabled={phoneSaving}
+                                className="inline-flex items-center gap-1 rounded bg-blue-600 px-2 py-1 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                              >
+                                <Check className="h-3 w-3" />
+                                Kaydet
+                              </button>
+                              <button
+                                onClick={handleCancelPhoneEdit}
+                                disabled={phoneSaving}
+                                className="inline-flex items-center gap-1 rounded border border-gray-300 bg-white px-2 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                              >
+                                <X className="h-3 w-3" />
+                                İptal
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setEditingPhone(true)}
+                            className="mt-1 flex items-center gap-1 text-xs text-blue-800 hover:text-blue-900 hover:underline"
+                          >
+                            <Phone className="h-3 w-3" />
+                            {session.institution.contact_phone || 'Telefon bilgisi ekleyin'}
+                          </button>
+                        )}
                       </div>
 
                       <div className="rounded-xl bg-green-50 p-4">
@@ -477,85 +550,6 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
                 </section>
               )}
 
-              <section className="grid gap-6 lg:grid-cols-3">
-                {quickActions.map((action) => {
-                  const Icon = action.icon;
-                  return (
-                    <button
-                      key={action.key}
-                      type="button"
-                      disabled={!isActive}
-                      className="group flex h-full flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-5 text-left transition hover:-translate-y-1 hover:border-blue-400 hover:shadow-lg disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-50 disabled:text-gray-400"
-                    >
-                      <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600 group-disabled:bg-gray-200 group-disabled:text-gray-400">
-                        <Icon className="h-5 w-5" />
-                      </span>
-                      <div>
-                        <p className="text-sm font-semibold text-gray-900 group-disabled:text-gray-500">{action.title}</p>
-                        <p className="mt-1 text-xs text-gray-600 group-disabled:text-gray-400">{action.description}</p>
-                      </div>
-                      {!isActive && (
-                        <span className="mt-auto inline-flex w-max items-center justify-center rounded-full bg-gray-200 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-gray-600">
-                          Onay sonrasında açılacak
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </section>
-
-              {canManageInstitution && (
-                <section className="grid gap-6 lg:grid-cols-[1.2fr,1fr]">
-                  <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-                    <h2 className="mb-3 text-lg font-semibold text-gray-900">Kurum özetiniz</h2>
-                    <div className="grid gap-4 sm:grid-cols-3">
-                      <div className="rounded-xl bg-gray-50 p-4">
-                        <p className="text-xs uppercase tracking-wide text-gray-500">Öğrenci</p>
-                        <p className="mt-2 text-xl font-semibold text-gray-900">Yakında</p>
-                        <p className="mt-1 text-xs text-gray-500">Öğrencileri sınıflara göre yönetin ve ilerlemelerini izleyin.</p>
-                      </div>
-                      <div className="rounded-xl bg-gray-50 p-4">
-                        <p className="text-xs uppercase tracking-wide text-gray-500">Öğretmen</p>
-                        <p className="mt-2 text-xl font-semibold text-gray-900">Yakında</p>
-                        <p className="mt-1 text-xs text-gray-500">Yetki atayın, soru yazma görevleri oluşturun.</p>
-                      </div>
-                      <div className="rounded-xl bg-gray-50 p-4">
-                        <p className="text-xs uppercase tracking-wide text-gray-500">Sınav</p>
-                        <p className="mt-2 text-xl font-semibold text-gray-900">Yakında</p>
-                        <p className="mt-1 text-xs text-gray-500">Deneme, quiz ve yazılı sınav sonuçlarını tek panelde takip edin.</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-                    <h2 className="mb-3 text-lg font-semibold text-gray-900">Yaklaşan modüller</h2>
-                    <div className="space-y-4 text-sm text-gray-600">
-                      <div className="flex items-start gap-3">
-                        <Layers className="mt-0.5 h-5 w-5 text-blue-500" />
-                        <div>
-                          <p className="font-medium text-gray-800">Soru bankası kategorileri</p>
-                          <p className="text-xs text-gray-500">Ders, konu ve kazanım bazlı soru arşivi ile gelişmiş filtreleme.</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <ShieldCheck className="mt-0.5 h-5 w-5 text-blue-500" />
-                        <div>
-                          <p className="font-medium text-gray-800">Velilere sonuç paylaşımı</p>
-                          <p className="text-xs text-gray-500">Veli paneliyle sınav sonuçlarını güvenle iletin.</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <Building2 className="mt-0.5 h-5 w-5 text-blue-500" />
-                        <div>
-                          <p className="font-medium text-gray-800">Kampüs içi duyurular</p>
-                          <p className="text-xs text-gray-500">Kurum içi haber akışı ile öğretmen ve öğrencileri bilgilendirin.</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </section>
-              )}
-
               {canManageInstitution && (
                 <section className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50 p-6 shadow-sm">
                   <div className="mb-4 flex items-center gap-3">
@@ -580,7 +574,7 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
                     </div>
                   )}
 
-                  <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="grid gap-4 sm:grid-cols-2">
                     <button
                       onClick={handleExportStudents}
                       disabled={exportLoading === 'students'}
@@ -601,39 +595,20 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
                     </button>
 
                     <button
-                      onClick={handleExportExamResults}
-                      disabled={exportLoading === 'exams'}
+                      onClick={handleExportParents}
+                      disabled={exportLoading === 'parents'}
                       className="group flex flex-col items-start gap-3 rounded-xl border-2 border-emerald-200 bg-white p-4 text-left transition-all hover:border-emerald-400 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <div className="flex w-full items-center justify-between">
                         <div className="rounded-lg bg-purple-100 p-2">
-                          <ClipboardList className="h-5 w-5 text-purple-700" />
+                          <Phone className="h-5 w-5 text-purple-700" />
                         </div>
                         <Download className="h-5 w-5 text-gray-400 transition-transform group-hover:scale-110 group-hover:text-emerald-600" />
                       </div>
                       <div>
-                        <p className="font-semibold text-gray-900">Sınav Sonuçları</p>
+                        <p className="font-semibold text-gray-900">Veli Listesi</p>
                         <p className="mt-1 text-xs text-gray-600">
-                          {exportLoading === 'exams' ? 'İndiriliyor...' : 'Tüm sınav sonuçlarını detaylı olarak indirin'}
-                        </p>
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={handleExportPerformanceReport}
-                      disabled={exportLoading === 'performance'}
-                      className="group flex flex-col items-start gap-3 rounded-xl border-2 border-emerald-200 bg-white p-4 text-left transition-all hover:border-emerald-400 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <div className="flex w-full items-center justify-between">
-                        <div className="rounded-lg bg-orange-100 p-2">
-                          <CheckCircle2 className="h-5 w-5 text-orange-700" />
-                        </div>
-                        <Download className="h-5 w-5 text-gray-400 transition-transform group-hover:scale-110 group-hover:text-emerald-600" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-gray-900">Performans Raporu</p>
-                        <p className="mt-1 text-xs text-gray-600">
-                          {exportLoading === 'performance' ? 'İndiriliyor...' : 'Öğrenci başarı ve performans analizini indirin'}
+                          {exportLoading === 'parents' ? 'İndiriliyor...' : 'Tüm veli iletişim bilgilerini Excel olarak indirin'}
                         </p>
                       </div>
                     </button>
@@ -750,6 +725,17 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
               renderPanelMessage('Öğrenci başvurularını yalnızca kurum yöneticileri görüntüleyebilir.')
             ))}
 
+          {resolvedPanel === 'student-list' &&
+            (canManageInstitution ? (
+              isActive ? (
+                <InstitutionStudentListPanel institutionId={session.institution.id} />
+              ) : (
+                renderPanelMessage('Öğrenci listesi yalnızca aktif kurumlar için kullanılabilir.')
+              )
+            ) : (
+              renderPanelMessage('Öğrenci listesi yalnızca kurum yöneticilerine açıktır.')
+            ))}
+
           {resolvedPanel === 'performance' &&
             (canManageInstitution ? (
               isActive ? (
@@ -778,6 +764,28 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
                 <InstitutionEngagementPanel institutionId={session.institution.id} userId={session.user.id} />
               ) : (
                 renderPanelMessage('Kurum onayı tamamlandığında etkileşim verileri aktifleştirilecek.')
+              )
+            ) : (
+              renderPanelMessage('Bu ekran yalnızca kurum yöneticilerine açıktır.')
+            ))}
+
+          {resolvedPanel === 'parents' &&
+            (canManageInstitution ? (
+              isActive ? (
+                <InstitutionParentsPanel institutionId={session.institution.id} />
+              ) : (
+                renderPanelMessage('Kurum onayı tamamlandığında veli yönetimi aktifleştirilecek.')
+              )
+            ) : (
+              renderPanelMessage('Bu ekran yalnızca kurum yöneticilerine açıktır.')
+            ))}
+
+          {resolvedPanel === 'class-management' &&
+            (canManageInstitution ? (
+              isActive ? (
+                <InstitutionClassManagementPanel institutionId={session.institution.id} />
+              ) : (
+                renderPanelMessage('Kurum onayı tamamlandığında sınıf yönetimi aktifleştirilecek.')
               )
             ) : (
               renderPanelMessage('Bu ekran yalnızca kurum yöneticilerine açıktır.')

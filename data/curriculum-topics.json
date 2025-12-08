@@ -1,0 +1,771 @@
+{
+  "grade_5": {
+    "Matematik": [
+      {
+        "main_topic": "Doğal Sayılar",
+        "sub_topics": [
+          "Doğal Sayılarda Toplama",
+          "Doğal Sayılarda Çıkarma",
+          "Doğal Sayılarda Çarpma",
+          "Doğal Sayılarda Bölme",
+          "İşlem Önceliği"
+        ]
+      },
+      {
+        "main_topic": "Kesirler",
+        "sub_topics": [
+          "Basit Kesirler",
+          "Kesirlerde Toplama ve Çıkarma",
+          "Kesirlerde Çarpma",
+          "Kesirlerde Bölme"
+        ]
+      },
+      {
+        "main_topic": "Ondalık Gösterim",
+        "sub_topics": [
+          "Ondalık Kesirleri Anlama",
+          "Ondalık Kesirlerde İşlemler"
+        ]
+      },
+      {
+        "main_topic": "Ölçme",
+        "sub_topics": [
+          "Uzunluk Ölçme",
+          "Alan Ölçme",
+          "Sıvı Ölçme",
+          "Zaman Ölçme"
+        ]
+      }
+    ],
+    "Türkçe": [
+      {
+        "main_topic": "Okuma",
+        "sub_topics": [
+          "Akıcı Okuma",
+          "Okuduğunu Anlama",
+          "Çıkarımda Bulunma"
+        ]
+      },
+      {
+        "main_topic": "Yazma",
+        "sub_topics": [
+          "Serbest Yazma",
+          "Planlı Yazma",
+          "Yazım Kuralları"
+        ]
+      },
+      {
+        "main_topic": "Dilbilgisi",
+        "sub_topics": [
+          "Sözcük Türleri",
+          "Cümle Türleri",
+          "Noktalama İşaretleri"
+        ]
+      }
+    ],
+    "Fen Bilimleri": [
+      {
+        "main_topic": "Güneş, Dünya ve Ay",
+        "sub_topics": [
+          "Güneş ve Özellikleri",
+          "Dünya'nın Hareketleri",
+          "Ay'ın Hareketleri ve Evreleri"
+        ]
+      },
+      {
+        "main_topic": "Canlılar Dünyası",
+        "sub_topics": [
+          "İnsan ve Çevre",
+          "Vücudumuz",
+          "Sağlıklı Yaşam"
+        ]
+      },
+      {
+        "main_topic": "Madde ve Değişim",
+        "sub_topics": [
+          "Maddenin Özellikleri",
+          "Maddenin Halleri",
+          "Isı ve Sıcaklık"
+        ]
+      }
+    ],
+    "Sosyal Bilgiler": [
+      {
+        "main_topic": "İnsanlar, Yerler ve Çevreler",
+        "sub_topics": [
+          "Haritalar ve Yönler",
+          "Ülkemizin Konumu",
+          "Bölgelerimiz"
+        ]
+      },
+      {
+        "main_topic": "Kültür ve Miras",
+        "sub_topics": [
+          "Kültür Öğeleri",
+          "Gelenekler",
+          "Tarihimiz"
+        ]
+      }
+    ]
+  },
+  "grade_6": {
+    "Matematik": [
+      {
+        "main_topic": "Doğal Sayılar",
+        "sub_topics": [
+          "Doğal Sayılarla İşlemler",
+          "EBOB ve EKOK",
+          "Üslü Sayılar"
+        ]
+      },
+      {
+        "main_topic": "Kesirler",
+        "sub_topics": [
+          "Kesirlerde Dört İşlem",
+          "Kesir Problemleri"
+        ]
+      },
+      {
+        "main_topic": "Ondalık Gösterim",
+        "sub_topics": [
+          "Ondalık Kesirlerde İşlemler",
+          "Yüzde Hesaplamaları"
+        ]
+      },
+      {
+        "main_topic": "Oran ve Orantı",
+        "sub_topics": [
+          "Oran Kavramı",
+          "Orantı Kavramı",
+          "Doğru ve Ters Orantı"
+        ]
+      },
+      {
+        "main_topic": "Cebirsel İfadeler",
+        "sub_topics": [
+          "Cebirsel İfadeleri Anlama",
+          "Cebirsel İfadelerde İşlemler"
+        ]
+      }
+    ],
+    "Türkçe": [
+      {
+        "main_topic": "Okuma",
+        "sub_topics": [
+          "Eleştirel Okuma",
+          "Metin Türleri",
+          "Okuma Stratejileri"
+        ]
+      },
+      {
+        "main_topic": "Yazma",
+        "sub_topics": [
+          "Bilgilendirici Metin Yazma",
+          "Hikaye Yazma",
+          "Paragraf Oluşturma"
+        ]
+      }
+    ],
+    "Fen Bilimleri": [
+      {
+        "main_topic": "Vücudumuzda Sistemler",
+        "sub_topics": [
+          "Sindirim Sistemi",
+          "Dolaşım Sistemi",
+          "Solunum Sistemi"
+        ]
+      },
+      {
+        "main_topic": "Kuvvet ve Hareket",
+        "sub_topics": [
+          "Kuvvet Çeşitleri",
+          "Sürtünme Kuvveti",
+          "Basit Makineler"
+        ]
+      },
+      {
+        "main_topic": "Madde ve Isı",
+        "sub_topics": [
+          "Maddenin Hal Değişimi",
+          "Isı Geçişi",
+          "Isı Yalıtımı"
+        ]
+      }
+    ]
+  },
+  "grade_7": {
+    "Matematik": [
+      {
+        "main_topic": "Tam Sayılar",
+        "sub_topics": [
+          "Tam Sayılarda Toplama ve Çıkarma",
+          "Tam Sayılarda Çarpma ve Bölme",
+          "Tam Sayılarla İşlemler"
+        ]
+      },
+      {
+        "main_topic": "Rasyonel Sayılar",
+        "sub_topics": [
+          "Rasyonel Sayılarda Toplama",
+          "Rasyonel Sayılarda Çarpma",
+          "Rasyonel Sayılarda Dört İşlem"
+        ]
+      },
+      {
+        "main_topic": "Cebirsel İfadeler",
+        "sub_topics": [
+          "Cebirsel İfadelerde Toplama ve Çıkarma",
+          "Cebirsel İfadelerde Çarpma",
+          "Özdeşlikler"
+        ]
+      },
+      {
+        "main_topic": "Denklemler",
+        "sub_topics": [
+          "Birinci Dereceden Denklemler",
+          "Denklem Problemleri"
+        ]
+      },
+      {
+        "main_topic": "Oran ve Orantı",
+        "sub_topics": [
+          "Basit Ortalama",
+          "Orantı Problemleri",
+          "Yüzde Hesaplamaları"
+        ]
+      }
+    ],
+    "Türkçe": [
+      {
+        "main_topic": "Okuma",
+        "sub_topics": [
+          "Şiir İnceleme",
+          "Öykü İnceleme",
+          "Eleştirel Düşünme"
+        ]
+      },
+      {
+        "main_topic": "Dilbilgisi",
+        "sub_topics": [
+          "Fiil Çekim Ekleri",
+          "İsim Çekim Ekleri",
+          "Cümle Öğeleri"
+        ]
+      }
+    ],
+    "Fen Bilimleri": [
+      {
+        "main_topic": "Güneş Sistemi ve Tutulmalar",
+        "sub_topics": [
+          "Güneş Sistemi",
+          "Ay ve Güneş Tutulmaları"
+        ]
+      },
+      {
+        "main_topic": "Hücre ve Bölünmeler",
+        "sub_topics": [
+          "Hücre Yapısı",
+          "Mitoz Bölünme",
+          "Mayoz Bölünme"
+        ]
+      },
+      {
+        "main_topic": "Kuvvet ve Enerji",
+        "sub_topics": [
+          "Elektrik Enerjisi",
+          "Enerji Dönüşümleri",
+          "Yenilenebilir Enerji"
+        ]
+      }
+    ]
+  },
+  "grade_8": {
+    "Matematik": [
+      {
+        "main_topic": "Üslü Sayılar",
+        "sub_topics": [
+          "Üslü İfadelerde Çarpma ve Bölme",
+          "Kareköklü Sayılar",
+          "Küpköklü Sayılar"
+        ]
+      },
+      {
+        "main_topic": "Çarpanlar ve Katlar",
+        "sub_topics": [
+          "Çarpanlara Ayırma",
+          "EBOB ve EKOK",
+          "Aralarında Asal Sayılar"
+        ]
+      },
+      {
+        "main_topic": "Üçgenler",
+        "sub_topics": [
+          "Üçgen Çeşitleri",
+          "Üçgende Açı-Kenar Bağıntıları",
+          "Özel Üçgenler"
+        ]
+      },
+      {
+        "main_topic": "Denklemler",
+        "sub_topics": [
+          "Birinci Dereceden Denklemler",
+          "Eşitsizlikler",
+          "Mutlak Değer"
+        ]
+      },
+      {
+        "main_topic": "Olasılık",
+        "sub_topics": [
+          "Basit Olasılık",
+          "Permütasyon",
+          "Kombinasyon"
+        ]
+      }
+    ],
+    "Türkçe": [
+      {
+        "main_topic": "Okuma",
+        "sub_topics": [
+          "Tiyatro Metinleri",
+          "Deneme ve Makale",
+          "Eleştiri"
+        ]
+      },
+      {
+        "main_topic": "Dilbilgisi",
+        "sub_topics": [
+          "Yapım Ekleri",
+          "Cümle Çözümleme",
+          "Anlatım Bozuklukları"
+        ]
+      }
+    ],
+    "Fen Bilimleri": [
+      {
+        "main_topic": "Mevsimler ve İklim",
+        "sub_topics": [
+          "Mevsimlerin Oluşumu",
+          "İklim ve Hava Olayları"
+        ]
+      },
+      {
+        "main_topic": "DNA ve Genetik Kod",
+        "sub_topics": [
+          "DNA Yapısı",
+          "Kalıtım",
+          "Genetik Hastalıklar"
+        ]
+      },
+      {
+        "main_topic": "Basınç",
+        "sub_topics": [
+          "Katı Basıncı",
+          "Sıvı Basıncı",
+          "Gaz Basıncı"
+        ]
+      }
+    ]
+  },
+  "grade_9": {
+    "Matematik": [
+      {
+        "main_topic": "Mantık",
+        "sub_topics": [
+          "Önermeler",
+          "Niceleyiciler",
+          "Çıkarımlar"
+        ]
+      },
+      {
+        "main_topic": "Kümeler",
+        "sub_topics": [
+          "Küme Kavramı",
+          "Küme İşlemleri",
+          "Kümelerde Problemler"
+        ]
+      },
+      {
+        "main_topic": "Denklemler ve Eşitsizlikler",
+        "sub_topics": [
+          "Mutlak Değer",
+          "Birinci Dereceden Denklemler",
+          "Birinci Dereceden Eşitsizlikler"
+        ]
+      },
+      {
+        "main_topic": "Üçgenler",
+        "sub_topics": [
+          "Üçgende Açı-Kenar Bağıntıları",
+          "Üçgende Alan",
+          "Özel Üçgenler"
+        ]
+      },
+      {
+        "main_topic": "Veri Analizi",
+        "sub_topics": [
+          "Merkezi Eğilim Ölçüleri",
+          "Grafik Yorumlama"
+        ]
+      }
+    ],
+    "Fizik": [
+      {
+        "main_topic": "Fizik Bilimine Giriş",
+        "sub_topics": [
+          "Fizik ve Ölçme",
+          "Vektörler"
+        ]
+      },
+      {
+        "main_topic": "Madde ve Özellikleri",
+        "sub_topics": [
+          "Maddenin Yapısı",
+          "Maddenin Halleri",
+          "Özkütleİle Hesaplamalar"
+        ]
+      },
+      {
+        "main_topic": "Hareket ve Kuvvet",
+        "sub_topics": [
+          "Hız ve Sürat",
+          "İvme",
+          "Newton'un Hareket Yasaları"
+        ]
+      }
+    ],
+    "Kimya": [
+      {
+        "main_topic": "Kimya Bilimi",
+        "sub_topics": [
+          "Kimyanın Önemi",
+          "Güvenlik",
+          "Laboratuvar Araçları"
+        ]
+      },
+      {
+        "main_topic": "Atom ve Periyodik Sistem",
+        "sub_topics": [
+          "Atom Modelleri",
+          "Periyodik Sistem",
+          "Modern Atom Teorisi"
+        ]
+      },
+      {
+        "main_topic": "Kimyasal Türler Arası Etkileşimler",
+        "sub_topics": [
+          "Kimyasal Bağlar",
+          "Moleküller Arası Kuvvetler"
+        ]
+      }
+    ],
+    "Biyoloji": [
+      {
+        "main_topic": "Yaşam Bilimi Biyoloji",
+        "sub_topics": [
+          "Biyolojinin İnceleme Alanı",
+          "Canlıların Ortak Özellikleri"
+        ]
+      },
+      {
+        "main_topic": "Hücre",
+        "sub_topics": [
+          "Hücre Yapısı",
+          "Hücre Zarından Madde Geçişi",
+          "Hücre Bölünmesi"
+        ]
+      }
+    ],
+    "Türk Dili ve Edebiyatı": [
+      {
+        "main_topic": "Yazılı ve Sözlü Anlatım",
+        "sub_topics": [
+          "Metin Türleri",
+          "Yazma Teknikleri"
+        ]
+      },
+      {
+        "main_topic": "Dil Bilgisi",
+        "sub_topics": [
+          "Ses Bilgisi",
+          "Kelime Türleri",
+          "Cümle Bilgisi"
+        ]
+      }
+    ]
+  },
+  "grade_10": {
+    "Matematik": [
+      {
+        "main_topic": "Çarpanlar ve Katlar",
+        "sub_topics": [
+          "Bölme ve Bölünebilme",
+          "EBOB-EKOK",
+          "Asal Sayılar"
+        ]
+      },
+      {
+        "main_topic": "Denklem ve Eşitsizlikler",
+        "sub_topics": [
+          "İkinci Dereceden Denklemler",
+          "Mutlak Değerli Denklemler",
+          "Eşitsizlik Sistemleri"
+        ]
+      },
+      {
+        "main_topic": "Karmaşık Sayılar",
+        "sub_topics": [
+          "Karmaşık Sayılar",
+          "Karmaşık Düzlem"
+        ]
+      },
+      {
+        "main_topic": "Trigonometri",
+        "sub_topics": [
+          "Trigonometrik Oranlar",
+          "Trigonometrik Fonksiyonlar",
+          "Trigonometrik Denklemler"
+        ]
+      }
+    ],
+    "Fizik": [
+      {
+        "main_topic": "Elektrik ve Manyetizma",
+        "sub_topics": [
+          "Elektrik Yükleri",
+          "Elektrik Akımı",
+          "Manyetik Alan"
+        ]
+      },
+      {
+        "main_topic": "Basınç ve Kaldırma Kuvveti",
+        "sub_topics": [
+          "Katı Basıncı",
+          "Sıvı Basıncı",
+          "Kaldırma Kuvveti"
+        ]
+      }
+    ],
+    "Kimya": [
+      {
+        "main_topic": "Kimyanın Temel Kanunları",
+        "sub_topics": [
+          "Mol Kavramı",
+          "Kimyasal Hesaplamalar",
+          "Kimyasal Tepkimeler"
+        ]
+      },
+      {
+        "main_topic": "Asit-Baz ve Tuz",
+        "sub_topics": [
+          "Asitler ve Bazlar",
+          "pH Kavramı",
+          "Tuzlar"
+        ]
+      }
+    ],
+    "Biyoloji": [
+      {
+        "main_topic": "Hücre Bölünmesi ve Kalıtım",
+        "sub_topics": [
+          "Mitoz ve Mayoz",
+          "Kalıtımın Temel İlkeleri",
+          "DNA ve Genetik Şifre"
+        ]
+      },
+      {
+        "main_topic": "Bitki ve Hayvanlarda Üreme",
+        "sub_topics": [
+          "Eşeyli Üreme",
+          "Eşeysiz Üreme"
+        ]
+      }
+    ]
+  },
+  "grade_11_tyt": {
+    "Matematik": [
+      {
+        "main_topic": "Temel Kavramlar",
+        "sub_topics": [
+          "Sayı Basamakları",
+          "Bölme ve Bölünebilme",
+          "EBOB-EKOK",
+          "Rasyonel Sayılar"
+        ],
+        "exam_type": "TYT"
+      },
+      {
+        "main_topic": "Denklemler",
+        "sub_topics": [
+          "Birinci Dereceden Denklemler",
+          "İkinci Dereceden Denklemler",
+          "Üstel ve Logaritmik Denklemler"
+        ],
+        "exam_type": "TYT"
+      },
+      {
+        "main_topic": "Fonksiyonlar",
+        "sub_topics": [
+          "Fonksiyon Kavramı",
+          "Fonksiyon Çeşitleri",
+          "Fonksiyonlarda İşlemler"
+        ],
+        "exam_type": "TYT"
+      },
+      {
+        "main_topic": "Polinomlar",
+        "sub_topics": [
+          "Polinomların Toplama ve Çarpma",
+          "Çarpanlara Ayırma",
+          "Polinomlarla Bölme"
+        ],
+        "exam_type": "TYT"
+      }
+    ],
+    "Geometri": [
+      {
+        "main_topic": "Temel Geometrik Kavramlar",
+        "sub_topics": [
+          "Açılar",
+          "Üçgenler",
+          "Dörtgenler"
+        ],
+        "exam_type": "TYT"
+      },
+      {
+        "main_topic": "Dönüşüm Geometrisi",
+        "sub_topics": [
+          "Öteleme",
+          "Yansıma",
+          "Dönme"
+        ],
+        "exam_type": "TYT"
+      },
+      {
+        "main_topic": "Çember ve Daire",
+        "sub_topics": [
+          "Çemberde Açılar",
+          "Daire Dilimi ve Daire Dilimleri"
+        ],
+        "exam_type": "TYT"
+      }
+    ],
+    "Türkçe": [
+      {
+        "main_topic": "Sözcük - Anlam",
+        "sub_topics": [
+          "Sözcükte Anlam",
+          "Cümlede Anlam",
+          "Paragrafta Anlam"
+        ],
+        "exam_type": "TYT"
+      },
+      {
+        "main_topic": "Dil Bilgisi",
+        "sub_topics": [
+          "Fiil Çekimi",
+          "İsim Çekimi",
+          "Cümle Bilgisi"
+        ],
+        "exam_type": "TYT"
+      }
+    ]
+  },
+  "grade_12_ayt_say": {
+    "Matematik": [
+      {
+        "main_topic": "Limit ve Süreklilik",
+        "sub_topics": [
+          "Limit Kavramı",
+          "Limit Teoremleri",
+          "Süreklilik"
+        ],
+        "exam_type": "AYT-SAY"
+      },
+      {
+        "main_topic": "Türev",
+        "sub_topics": [
+          "Türev Alma Kuralları",
+          "Türevin Uygulamaları"
+        ],
+        "exam_type": "AYT-SAY"
+      },
+      {
+        "main_topic": "İntegral",
+        "sub_topics": [
+          "Belirsiz İntegral",
+          "Belirli İntegral",
+          "İntegral Uygulamaları"
+        ],
+        "exam_type": "AYT-SAY"
+      }
+    ],
+    "Fizik": [
+      {
+        "main_topic": "Çembersel Hareket",
+        "sub_topics": [
+          "Düzgün Çembersel Hareket",
+          "Açısal Hız ve İvme"
+        ],
+        "exam_type": "AYT-SAY"
+      },
+      {
+        "main_topic": "Elektrik ve Manyetizma",
+        "sub_topics": [
+          "Elektriksel Potansiyel",
+          "Kondansatörler",
+          "Manyetik Alan"
+        ],
+        "exam_type": "AYT-SAY"
+      },
+      {
+        "main_topic": "Modern Fizik",
+        "sub_topics": [
+          "Atom Fiziği",
+          "Kuantum Fiziği",
+          "Özel Görelilik"
+        ],
+        "exam_type": "AYT-SAY"
+      }
+    ],
+    "Kimya": [
+      {
+        "main_topic": "Kimyasal Tepkimeler",
+        "sub_topics": [
+          "Tepkime Hızı",
+          "Kimyasal Denge",
+          "Asit-Baz Dengeleri"
+        ],
+        "exam_type": "AYT-SAY"
+      },
+      {
+        "main_topic": "Organik Kimya",
+        "sub_topics": [
+          "Hidrokarbonlar",
+          "Organik Bileşikler",
+          "İzomerlik"
+        ],
+        "exam_type": "AYT-SAY"
+      }
+    ],
+    "Biyoloji": [
+      {
+        "main_topic": "Canlılık ve Enerji İlişkileri",
+        "sub_topics": [
+          "Fotosentez",
+          "Solunum",
+          "Kemosentez"
+        ],
+        "exam_type": "AYT-SAY"
+      },
+      {
+        "main_topic": "Ekosistem Ekolojisi",
+        "sub_topics": [
+          "Enerji Akışı",
+          "Madde Döngüleri",
+          "Ekolojik İlişkiler"
+        ],
+        "exam_type": "AYT-SAY"
+      }
+    ]
+  }
+}

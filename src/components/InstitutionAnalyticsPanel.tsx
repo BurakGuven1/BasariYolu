@@ -43,6 +43,7 @@ import {
   type StudentAnalytics,
   type TeacherActivity,
 } from '../lib/institutionAnalyticsApi';
+import { getInstitutionClasses, type InstitutionClass } from '../lib/institutionClassApi';
 
 interface InstitutionAnalyticsPanelProps {
   institutionId: string;
@@ -61,9 +62,11 @@ export default function InstitutionAnalyticsPanel({ institutionId }: Institution
   const [subjectPerf, setSubjectPerf] = useState<SubjectPerformance[]>([]);
   const [studentAnalytics, setStudentAnalytics] = useState<StudentAnalytics[]>([]);
   const [teacherActivity, setTeacherActivity] = useState<TeacherActivity[]>([]);
+  const [classes, setClasses] = useState<InstitutionClass[]>([]);
 
   // Filter states
   const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d' | 'all'>('30d');
+  const [selectedClassId, setSelectedClassId] = useState<string>('all');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
 
@@ -100,12 +103,13 @@ export default function InstitutionAnalyticsPanel({ institutionId }: Institution
   const fetchAnalytics = async () => {
     try {
       const filters = getDateRangeFilter();
+      const classFilter = selectedClassId === 'all' ? undefined : selectedClassId;
 
       const [summaryData, trendsData, subjectData, studentsData, teachersData] = await Promise.all([
         getInstitutionAnalyticsSummary(institutionId, filters),
         getPerformanceTrends(institutionId, filters),
         getSubjectPerformance(institutionId, filters),
-        getStudentAnalytics(institutionId, filters, 50),
+        getStudentAnalytics(institutionId, filters, 50, classFilter),
         getTeacherActivity(institutionId),
       ]);
 
@@ -123,8 +127,20 @@ export default function InstitutionAnalyticsPanel({ institutionId }: Institution
   };
 
   useEffect(() => {
+    const loadClasses = async () => {
+      try {
+        const { data: classData } = await getInstitutionClasses(institutionId);
+        setClasses(classData || []);
+      } catch (error) {
+        console.error('Error loading classes:', error);
+      }
+    };
+    loadClasses();
+  }, [institutionId]);
+
+  useEffect(() => {
     fetchAnalytics();
-  }, [institutionId, dateRange, customStartDate, customEndDate]);
+  }, [institutionId, dateRange, customStartDate, customEndDate, selectedClassId]);
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -160,6 +176,23 @@ export default function InstitutionAnalyticsPanel({ institutionId }: Institution
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          {/* Class Filter */}
+          <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2">
+            <Users className="h-4 w-4 text-gray-500" />
+            <select
+              value={selectedClassId}
+              onChange={(e) => setSelectedClassId(e.target.value)}
+              className="border-none bg-transparent text-sm focus:outline-none focus:ring-0"
+            >
+              <option value="all">Tüm Sınıflar</option>
+              {classes.map((cls) => (
+                <option key={cls.id} value={cls.id}>
+                  {cls.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Date Range Filter */}
           <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2">
             <Calendar className="h-4 w-4 text-gray-500" />
@@ -262,7 +295,7 @@ export default function InstitutionAnalyticsPanel({ institutionId }: Institution
           </div>
 
           {/* Performance Trends Chart */}
-          {trends.length > 0 && (
+          {trends.length > 0 ? (
             <div className="rounded-xl border border-gray-200 bg-white p-6">
               <div className="mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">Performans Trendi</h3>
@@ -310,10 +343,18 @@ export default function InstitutionAnalyticsPanel({ institutionId }: Institution
                 </ResponsiveContainer>
               </div>
             </div>
+          ) : (
+            <div className="rounded-xl border border-gray-200 bg-white p-12 text-center">
+              <LineChartIcon className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-4 text-lg font-medium text-gray-900">Performans Trendi Bulunmuyor</h3>
+              <p className="mt-2 text-sm text-gray-600">
+                Öğrencileriniz sınav tamamladıkça zaman içindeki performans değişimi burada görüntülenecektir.
+              </p>
+            </div>
           )}
 
           {/* Subject Performance */}
-          {subjectPerf.length > 0 && (
+          {subjectPerf.length > 0 ? (
             <div className="grid gap-6 lg:grid-cols-2">
               <div className="rounded-xl border border-gray-200 bg-white p-6">
                 <div className="mb-4">
@@ -367,6 +408,14 @@ export default function InstitutionAnalyticsPanel({ institutionId }: Institution
                 </div>
               </div>
             </div>
+          ) : (
+            <div className="rounded-xl border border-gray-200 bg-white p-12 text-center">
+              <BarChart3 className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-4 text-lg font-medium text-gray-900">Ders Bazlı Performans Verisi Yok</h3>
+              <p className="mt-2 text-sm text-gray-600">
+                Öğrencileriniz farklı derslerden sınavlar tamamladıkça ders bazlı analiz burada gösterilecektir.
+              </p>
+            </div>
           )}
         </div>
       )}
@@ -374,136 +423,156 @@ export default function InstitutionAnalyticsPanel({ institutionId }: Institution
       {/* Students Tab */}
       {activeTab === 'students' && (
         <div className="space-y-6">
-          <div className="rounded-xl border border-gray-200 bg-white">
-            <div className="border-b border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900">Öğrenci Performans Sıralaması</h3>
-              <p className="text-sm text-gray-600">Top 50 öğrenci performansı</p>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200 bg-gray-50">
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
-                      Sıra
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
-                      Öğrenci
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
-                      Sınav Sayısı
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
-                      Ortalama Puan
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
-                      Doğruluk %
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
-                      Trend
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
-                      Son Sınav
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {studentAnalytics.map((student, index) => (
-                    <tr key={student.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        #{index + 1}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">{student.fullName}</div>
-                          <div className="text-xs text-gray-500">{student.email}</div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                        {student.totalExams}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm font-semibold text-gray-900">
-                          {student.averageScore}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                        %{student.correctRate}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-1">
-                          {getTrendIcon(student.trend)}
-                          <span className="text-xs text-gray-600">
-                            {student.trend === 'improving' ? 'Yükseliyor' : student.trend === 'declining' ? 'Düşüyor' : 'Stabil'}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500">
-                        {student.lastExamDate ? new Date(student.lastExamDate).toLocaleDateString('tr-TR') : '-'}
-                      </td>
+          {studentAnalytics.length > 0 ? (
+            <div className="rounded-xl border border-gray-200 bg-white">
+              <div className="border-b border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900">Öğrenci Performans Sıralaması</h3>
+                <p className="text-sm text-gray-600">Top 50 öğrenci performansı</p>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200 bg-gray-50">
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
+                        Sıra
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
+                        Öğrenci
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
+                        Sınav Sayısı
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
+                        Ortalama Puan
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
+                        Doğruluk %
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
+                        Trend
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
+                        Son Sınav
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {studentAnalytics.map((student, index) => (
+                      <tr key={student.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          #{index + 1}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">{student.fullName}</div>
+                            <div className="text-xs text-gray-500">{student.email}</div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                          {student.totalExams}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-sm font-semibold text-gray-900">
+                            {student.averageScore}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                          %{student.correctRate}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-1">
+                            {getTrendIcon(student.trend)}
+                            <span className="text-xs text-gray-600">
+                              {student.trend === 'improving' ? 'Yükseliyor' : student.trend === 'declining' ? 'Düşüyor' : 'Stabil'}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500">
+                          {student.lastExamDate ? new Date(student.lastExamDate).toLocaleDateString('tr-TR') : '-'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="rounded-xl border border-gray-200 bg-white p-12 text-center">
+              <Users className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-4 text-lg font-medium text-gray-900">Öğrenci Analizi Bulunmuyor</h3>
+              <p className="mt-2 text-sm text-gray-600">
+                Öğrencileriniz sınav tamamladıkça performans sıralaması burada gösterilecektir.
+              </p>
+            </div>
+          )}
         </div>
       )}
 
       {/* Teachers Tab */}
       {activeTab === 'teachers' && (
         <div className="space-y-6">
-          <div className="rounded-xl border border-gray-200 bg-white">
-            <div className="border-b border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900">Öğretmen Aktivite Raporu</h3>
-              <p className="text-sm text-gray-600">Soru ve sınav oluşturma istatistikleri</p>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200 bg-gray-50">
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
-                      Öğretmen
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
-                      Oluşturulan Sınav
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
-                      Oluşturulan Soru
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
-                      Ortalama Zorluk
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {teacherActivity.map((teacher) => (
-                    <tr key={teacher.teacherId} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{teacher.teacherName}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                        {teacher.examsCreated}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                        {teacher.questionsCreated}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
-                          teacher.averageExamDifficulty === 'Kolay'
-                            ? 'bg-green-100 text-green-800'
-                            : teacher.averageExamDifficulty === 'Orta'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {teacher.averageExamDifficulty}
-                        </span>
-                      </td>
+          {teacherActivity.length > 0 ? (
+            <div className="rounded-xl border border-gray-200 bg-white">
+              <div className="border-b border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900">Öğretmen Aktivite Raporu</h3>
+                <p className="text-sm text-gray-600">Soru ve sınav oluşturma istatistikleri</p>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200 bg-gray-50">
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
+                        Öğretmen
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
+                        Oluşturulan Sınav
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
+                        Oluşturulan Soru
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
+                        Ortalama Zorluk
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {teacherActivity.map((teacher) => (
+                      <tr key={teacher.teacherId} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{teacher.teacherName}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                          {teacher.examsCreated}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                          {teacher.questionsCreated}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
+                            teacher.averageExamDifficulty === 'Kolay'
+                              ? 'bg-green-100 text-green-800'
+                              : teacher.averageExamDifficulty === 'Orta'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {teacher.averageExamDifficulty}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="rounded-xl border border-gray-200 bg-white p-12 text-center">
+              <BookOpen className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-4 text-lg font-medium text-gray-900">Öğretmen Aktivitesi Bulunmuyor</h3>
+              <p className="mt-2 text-sm text-gray-600">
+                Öğretmenleriniz sınav ve soru oluşturmaya başladıkça aktivite istatistikleri burada görüntülenecektir.
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>

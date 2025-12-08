@@ -28,6 +28,7 @@ import {
   type ClassPerformance,
   type TopicPerformance,
 } from '../lib/institutionPerformanceApi';
+import { getInstitutionClasses, type InstitutionClass } from '../lib/institutionClassApi';
 
 interface ClassPerformancePanelProps {
   institutionId: string;
@@ -42,10 +43,28 @@ export default function ClassPerformancePanel({
   const [data, setData] = useState<ClassPerformance | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<'7d' | '30d' | '90d' | 'all'>('30d');
+  const [classes, setClasses] = useState<InstitutionClass[]>([]);
+  const [selectedClassId, setSelectedClassId] = useState<string>('all');
 
   useEffect(() => {
-    loadClassPerformance();
-  }, [institutionId, dateRange]);
+    loadClasses();
+  }, [institutionId]);
+
+  useEffect(() => {
+    if (classes.length > 0 || selectedClassId === 'all') {
+      loadClassPerformance();
+    }
+  }, [institutionId, dateRange, selectedClassId]);
+
+  const loadClasses = async () => {
+    try {
+      const { data: classData, error: classError } = await getInstitutionClasses(institutionId);
+      if (classError) throw classError;
+      setClasses(classData || []);
+    } catch (err: any) {
+      console.error('Error loading classes:', err);
+    }
+  };
 
   const loadClassPerformance = async () => {
     try {
@@ -69,7 +88,9 @@ export default function ClassPerformancePanel({
 
       const performanceData = await analyzeClassPerformance(
         institutionId,
-        dateRangeStart
+        dateRangeStart,
+        undefined,
+        selectedClassId === 'all' ? undefined : selectedClassId
       );
       setData(performanceData);
     } catch (err: any) {
@@ -127,28 +148,48 @@ export default function ClassPerformancePanel({
           )}
         </div>
 
-        {/* Tarih Filtresi */}
-        <div className="flex items-center gap-2">
-          <Filter className="h-5 w-5 text-gray-500" />
-          <div className="flex gap-2">
-            {[
-              { value: '7d', label: 'Son 7 Gün' },
-              { value: '30d', label: 'Son 30 Gün' },
-              { value: '90d', label: 'Son 90 Gün' },
-              { value: 'all', label: 'Tümü' },
-            ].map((option) => (
-              <button
-                key={option.value}
-                onClick={() => setDateRange(option.value as any)}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  dateRange === option.value
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {option.label}
-              </button>
-            ))}
+        {/* Filtreler */}
+        <div className="flex flex-wrap items-center gap-4">
+          {/* Sınıf Filtresi */}
+          <div className="flex items-center gap-2">
+            <Users className="h-5 w-5 text-gray-500" />
+            <select
+              value={selectedClassId}
+              onChange={(e) => setSelectedClassId(e.target.value)}
+              className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="all">Tüm Sınıflar</option>
+              {classes.map((cls) => (
+                <option key={cls.id} value={cls.id}>
+                  {cls.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Tarih Filtresi */}
+          <div className="flex items-center gap-2">
+            <Filter className="h-5 w-5 text-gray-500" />
+            <div className="flex gap-2">
+              {[
+                { value: '7d', label: 'Son 7 Gün' },
+                { value: '30d', label: 'Son 30 Gün' },
+                { value: '90d', label: 'Son 90 Gün' },
+                { value: 'all', label: 'Tümü' },
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => setDateRange(option.value as any)}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    dateRange === option.value
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>

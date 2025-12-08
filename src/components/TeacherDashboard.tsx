@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, type ComponentType } from 'react';
-import { Users, Plus, BookOpen, Settings, LogOut, Copy, Eye, EyeOff, CreditCard as Edit, Building2, School, RefreshCw, Home } from 'lucide-react';
+import { Users, Plus, BookOpen, Settings, LogOut, Copy, Eye, EyeOff, CreditCard as Edit, Building2, School, RefreshCw, Home, UserCheck } from 'lucide-react';
 import { getTeacherClasses, createClass, getClassData } from '../lib/teacherApi';
 import { PACKAGE_OPTIONS, calculateClassPrice } from '../types/teacher';
 import ClassManagementPanel from './ClassManagementPanel';
@@ -7,7 +7,8 @@ import { sendAnnouncementNotification } from '../lib/notificationApi';
 import { supabase } from '../lib/supabase';
 import InstitutionQuestionBankPanel from './InstitutionQuestionBankPanel';
 import InstitutionStudentExamPanel from './InstitutionStudentExamPanel';
-import TeacherScheduleView from './TeacherScheduleView';
+import InstitutionExternalExamPanel from './InstitutionExternalExamPanel';
+import TeacherSchedulePanel from './TeacherSchedulePanel';
 import {
   acceptInstitutionTeacherInvite,
   listTeacherInstitutionRequests,
@@ -43,7 +44,7 @@ export default function TeacherDashboard({ teacherUser, onLogout }: TeacherDashb
   });
   const [createLoading, setCreateLoading] = useState(false);
 
-  type PanelKey = 'overview' | 'classes' | 'institutions';
+  type PanelKey = 'overview' | 'classes' | 'institutions' | 'schedule';
   const [activePanel, setActivePanel] = useState<PanelKey>('overview');
   const [institutionMemberships, setInstitutionMemberships] = useState<TeacherInstitutionMembership[]>([]);
   const [institutionsLoading, setInstitutionsLoading] = useState(false);
@@ -327,6 +328,13 @@ useEffect(() => {
         visible: true,
       },
       {
+        key: 'schedule',
+        label: 'Ders Programım',
+        description: 'Haftalık ders programı ve yoklama',
+        icon: UserCheck,
+        visible: true,
+      },
+      {
         key: 'institutions',
         label: 'Kurumlarım',
         description: 'Bağlı olduğunuz kurumlar',
@@ -538,9 +546,9 @@ useEffect(() => {
                     institutionName={derivedInstitutionSession.institution.name}
                     teacherUserId={teacher?.id ?? selectedMembership?.user_id ?? null}
                   />
-                  <TeacherScheduleView
-                    teacherId={teacher?.id ?? selectedMembership?.user_id ?? null}
+                  <InstitutionExternalExamPanel
                     institutionId={derivedInstitutionSession.institution.id}
+                    userId={teacher?.id ?? selectedMembership?.user_id ?? ''}
                   />
                   <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                     <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
@@ -1042,6 +1050,13 @@ useEffect(() => {
             )}
           </div>
             </div>
+          )}
+
+          {resolvedPanel === 'schedule' && teacher && selectedMembership?.institution?.id && (
+            <TeacherSchedulePanel
+              teacherId={teacher.id}
+              institutionId={selectedMembership.institution.id}
+            />
           )}
 
           {resolvedPanel === 'institutions' && (

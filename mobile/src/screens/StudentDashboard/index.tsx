@@ -14,6 +14,7 @@ import { PomodoroTab } from './PomodoroTab';
 import { GoalsTab } from './GoalsTab';
 import { ScheduleTab } from './ScheduleTab';
 import { BigFiveTab } from './BigFiveTab';
+import { TopicTrackingTab } from './TopicTrackingTab';
 import { AIChatScreen } from '../AIChatScreen';
 import { QuestionListScreen } from '../QuestionPortal/QuestionListScreen';
 
@@ -97,6 +98,9 @@ export const StudentDashboard: React.FC<DashboardProps> = ({ navigation }) => {
       >
         <Tab.Screen name="Overview" options={{ title: 'Özet' }}>
           {() => <OverviewTab student={student} profile={profile} />}
+        </Tab.Screen>
+        <Tab.Screen name="TopicTracking" options={{ title: 'Konu Takibi' }}>
+          {() => <TopicTrackingTab studentId={student.id} gradeLevel={student.grade_level || profile?.grade || 9} />}
         </Tab.Screen>
         <Tab.Screen name="AIChatTab" options={{ title: 'Yapay Zeka' }}>
           {() => <AIChatScreen />}
