@@ -6,8 +6,7 @@ export interface Topic {
   id: string;
   grade_level: number;
   subject: string;
-  main_topic: string;
-  sub_topic: string | null;
+  topic_name: string;
   topic_order: number;
   exam_type: string | null;
 }
