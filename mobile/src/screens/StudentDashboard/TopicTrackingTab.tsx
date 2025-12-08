@@ -163,8 +163,7 @@ export const TopicTrackingTab: React.FC<TopicTrackingTabProps> = ({
       >
         <View style={styles.topicNameCell}>
           <Text style={styles.topicName} numberOfLines={2}>
-            {topic.main_topic}
-            {topic.sub_topic && ` - ${topic.sub_topic}`}
+            {topic.topic_name}
           </Text>
         </View>
 
@@ -309,8 +308,7 @@ export const TopicTrackingTab: React.FC<TopicTrackingTabProps> = ({
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>
-              {selectedTopic?.main_topic}
-              {selectedTopic?.sub_topic && ` - ${selectedTopic.sub_topic}`}
+              {selectedTopic?.topic_name}
             </Text>
 
             <View style={styles.inputGroup}>
