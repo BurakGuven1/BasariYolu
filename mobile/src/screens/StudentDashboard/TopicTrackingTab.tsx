@@ -168,7 +168,7 @@ export const TopicTrackingTab: React.FC<TopicTrackingTabProps> = ({
     }
   };
 
-  const getProgressColor = (percentage: number): string[] => {
+  const getProgressColor = (percentage: number): [string, string] => {
     if (percentage === 0) return ['#E5E7EB', '#E5E7EB'];
     if (percentage < 25) return ['#EF4444', '#DC2626'];
     if (percentage < 50) return ['#F59E0B', '#D97706'];
