@@ -36,7 +36,7 @@ interface TopicTrackingTabProps {
 
 export const TopicTrackingTab: React.FC<TopicTrackingTabProps> = ({
   studentId,
-  gradeLevel,
+  gradeLevel: initialGradeLevel,
 }) => {
   const [loading, setLoading] = useState(true);
   const [subjects, setSubjects] = useState<string[]>([]);
@@ -45,6 +45,7 @@ export const TopicTrackingTab: React.FC<TopicTrackingTabProps> = ({
   const [progress, setProgress] = useState<Map<string, StudentTopicProgress>>(new Map());
   const [stats, setStats] = useState<TopicStats | null>(null);
   const [sortBy, setSortBy] = useState<'order' | 'progress'>('order');
+  const [selectedGrade, setSelectedGrade] = useState<number>(initialGradeLevel || 9);
 
   // Modal states
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -57,13 +58,13 @@ export const TopicTrackingTab: React.FC<TopicTrackingTabProps> = ({
 
   useEffect(() => {
     loadData();
-  }, [studentId, gradeLevel]);
+  }, [studentId, selectedGrade]);
 
   useEffect(() => {
     if (selectedSubject) {
       loadTopicsAndProgress();
     }
-  }, [selectedSubject, sortBy]);
+  }, [selectedSubject, sortBy, selectedGrade]);
 
   const loadData = async () => {
     try {
@@ -71,7 +72,7 @@ export const TopicTrackingTab: React.FC<TopicTrackingTabProps> = ({
 
       // Load subjects and stats
       const [subjectsData, statsData] = await Promise.all([
-        getSubjectsByGrade(gradeLevel),
+        getSubjectsByGrade(selectedGrade),
         getTopicStats(studentId),
       ]);
 
@@ -92,8 +93,8 @@ export const TopicTrackingTab: React.FC<TopicTrackingTabProps> = ({
   const loadTopicsAndProgress = async () => {
     try {
       const [topicsData, progressData] = await Promise.all([
-        getTopicsByGrade(gradeLevel),
-        getStudentProgressBySubject(studentId, gradeLevel, selectedSubject),
+        getTopicsByGrade(selectedGrade),
+        getStudentProgressBySubject(studentId, selectedGrade, selectedSubject),
       ]);
 
       // Filter topics by selected subject
@@ -312,6 +313,32 @@ export const TopicTrackingTab: React.FC<TopicTrackingTabProps> = ({
 
   return (
     <View style={styles.container}>
+      {/* Grade Selector */}
+      <View style={styles.gradeSelector}>
+        <Text style={styles.gradeSelectorLabel}>Sınıf Seçin:</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.gradeScrollView}>
+          {[5, 6, 7, 8, 9, 10, 11, 12].map((grade) => (
+            <Pressable
+              key={grade}
+              style={[
+                styles.gradeButton,
+                selectedGrade === grade && styles.gradeButtonActive,
+              ]}
+              onPress={() => setSelectedGrade(grade)}
+            >
+              <Text
+                style={[
+                  styles.gradeButtonText,
+                  selectedGrade === grade && styles.gradeButtonTextActive,
+                ]}
+              >
+                {grade}. Sınıf
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      </View>
+
       {/* Stats Header with Gradient */}
       {stats && (
         <LinearGradient
@@ -545,6 +572,43 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
     textAlign: 'center',
+  },
+  gradeSelector: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  gradeSelectorLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  gradeScrollView: {
+    flexGrow: 0,
+  },
+  gradeButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginRight: 8,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+  },
+  gradeButtonActive: {
+    backgroundColor: '#6366F1',
+    borderColor: '#6366F1',
+  },
+  gradeButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  gradeButtonTextActive: {
+    color: '#FFFFFF',
   },
   statsGradient: {
     marginHorizontal: 16,

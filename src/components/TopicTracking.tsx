@@ -17,7 +17,7 @@ interface TopicTrackingProps {
   gradeLevel: number;
 }
 
-export default function TopicTracking({ studentId, gradeLevel }: TopicTrackingProps) {
+export default function TopicTracking({ studentId, gradeLevel: initialGradeLevel }: TopicTrackingProps) {
   const [loading, setLoading] = useState(true);
   const [subjects, setSubjects] = useState<string[]>([]);
   const [selectedSubject, setSelectedSubject] = useState<string>('');
@@ -25,6 +25,7 @@ export default function TopicTracking({ studentId, gradeLevel }: TopicTrackingPr
   const [progress, setProgress] = useState<Map<string, StudentTopicProgress>>(new Map());
   const [stats, setStats] = useState<TopicStats | null>(null);
   const [sortBy, setSortBy] = useState<'order' | 'progress'>('order');
+  const [selectedGrade, setSelectedGrade] = useState<number>(initialGradeLevel || 9);
   const [editingTopic, setEditingTopic] = useState<Topic | null>(null);
   const [editPercentage, setEditPercentage] = useState('0');
   const [editQuestions, setEditQuestions] = useState('0');
@@ -34,19 +35,19 @@ export default function TopicTracking({ studentId, gradeLevel }: TopicTrackingPr
 
   useEffect(() => {
     loadData();
-  }, [studentId, gradeLevel]);
+  }, [studentId, selectedGrade]);
 
   useEffect(() => {
     if (selectedSubject) {
       loadTopicsAndProgress();
     }
-  }, [selectedSubject, sortBy]);
+  }, [selectedSubject, sortBy, selectedGrade]);
 
   const loadData = async () => {
     try {
       setLoading(true);
       const [subjectsData, statsData] = await Promise.all([
-        getSubjectsByGrade(gradeLevel),
+        getSubjectsByGrade(selectedGrade),
         getTopicStats(studentId),
       ]);
 
@@ -66,8 +67,8 @@ export default function TopicTracking({ studentId, gradeLevel }: TopicTrackingPr
   const loadTopicsAndProgress = async () => {
     try {
       const [topicsData, progressData] = await Promise.all([
-        getTopicsByGrade(gradeLevel),
-        getStudentProgressBySubject(studentId, gradeLevel, selectedSubject),
+        getTopicsByGrade(selectedGrade),
+        getStudentProgressBySubject(studentId, selectedGrade, selectedSubject),
       ]);
 
       let filteredTopics = topicsData.filter((t) => t.subject === selectedSubject);
@@ -169,13 +170,33 @@ export default function TopicTracking({ studentId, gradeLevel }: TopicTrackingPr
       <div className="text-center p-12">
         <BookOpen className="mx-auto h-16 w-16 text-gray-400 mb-4" />
         <h3 className="text-lg font-medium text-gray-900 mb-2">Henüz konu eklenmemiş</h3>
-        <p className="text-gray-500">{gradeLevel}. sınıf için konu bulunamadı</p>
+        <p className="text-gray-500">{selectedGrade}. sınıf için konu bulunamadı</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
+      {/* Grade Selector */}
+      <div className="bg-white border-b border-gray-200 px-4 py-3 rounded-lg">
+        <p className="text-sm font-semibold text-gray-700 mb-2">Sınıf Seçin:</p>
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {[5, 6, 7, 8, 9, 10, 11, 12].map((grade) => (
+            <button
+              key={grade}
+              onClick={() => setSelectedGrade(grade)}
+              className={`px-4 py-2 rounded-xl font-semibold text-sm whitespace-nowrap transition-all ${
+                selectedGrade === grade
+                  ? 'bg-indigo-600 text-white shadow-md scale-105'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border-2 border-gray-300'
+              }`}
+            >
+              {grade}. Sınıf
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Stats Header with Gradient */}
       {stats && (
         <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl shadow-lg p-6">
