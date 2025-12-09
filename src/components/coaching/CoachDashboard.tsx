@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Users, Clock, Video, Plus, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Calendar, Users, Clock, Video, Plus, CheckCircle, XCircle, AlertCircle, Settings, Bell } from 'lucide-react';
 import {
   getCoachSubscriptions,
   getCoachAppointments,
@@ -10,6 +10,8 @@ import {
   type CoachStats,
 } from '../../lib/coachingApi';
 import AppointmentModal from './AppointmentModal';
+import CoachAvailabilityManager from './CoachAvailabilityManager';
+import PendingAppointmentRequestsPanel from './PendingAppointmentRequestsPanel';
 
 interface CoachDashboardProps {
   coachId: string;
@@ -17,13 +19,14 @@ interface CoachDashboardProps {
 
 export default function CoachDashboard({ coachId }: CoachDashboardProps) {
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'calendar' | 'students'>('calendar');
+  const [activeTab, setActiveTab] = useState<'calendar' | 'students' | 'availability' | 'requests'>('requests');
   const [subscriptions, setSubscriptions] = useState<StudentCoachingSubscription[]>([]);
   const [appointments, setAppointments] = useState<CoachingAppointment[]>([]);
   const [stats, setStats] = useState<CoachStats | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState<CoachingAppointment | null>(null);
+  const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
     loadData();
@@ -41,18 +44,20 @@ export default function CoachDashboard({ coachId }: CoachDashboardProps) {
       const endOfWeek = new Date(startOfWeek);
       endOfWeek.setDate(startOfWeek.getDate() + 7);
 
-      const [subsData, appointmentsData, statsData] = await Promise.all([
+      const [subsData, appointmentsData, statsData, pendingAppointments] = await Promise.all([
         getCoachSubscriptions(coachId),
         getCoachAppointments(coachId, {
           startDate: startOfWeek.toISOString(),
           endDate: endOfWeek.toISOString(),
         }),
         getCoachStats(coachId),
+        getCoachAppointments(coachId, { status: ['pending'] }),
       ]);
 
       setSubscriptions(subsData);
       setAppointments(appointmentsData);
       setStats(statsData);
+      setPendingCount(pendingAppointments.length);
     } catch (error) {
       console.error('Error loading coach data:', error);
     } finally {
@@ -78,8 +83,13 @@ export default function CoachDashboard({ coachId }: CoachDashboardProps) {
 
   const getAppointmentStatusIcon = (status: string) => {
     switch (status) {
+      case 'pending':
+        return <Clock className="h-4 w-4 text-yellow-600" />;
+      case 'approved':
       case 'scheduled':
         return <Clock className="h-4 w-4 text-blue-600" />;
+      case 'rejected':
+        return <XCircle className="h-4 w-4 text-red-600" />;
       case 'completed':
         return <CheckCircle className="h-4 w-4 text-green-600" />;
       case 'cancelled':
@@ -93,8 +103,13 @@ export default function CoachDashboard({ coachId }: CoachDashboardProps) {
 
   const getAppointmentStatusColor = (status: string) => {
     switch (status) {
+      case 'pending':
+        return 'bg-yellow-50 text-yellow-700 border-yellow-200';
+      case 'approved':
       case 'scheduled':
         return 'bg-blue-50 text-blue-700 border-blue-200';
+      case 'rejected':
+        return 'bg-red-50 text-red-700 border-red-200';
       case 'completed':
         return 'bg-green-50 text-green-700 border-green-200';
       case 'cancelled':
@@ -108,6 +123,12 @@ export default function CoachDashboard({ coachId }: CoachDashboardProps) {
 
   const getAppointmentStatusLabel = (status: string) => {
     switch (status) {
+      case 'pending':
+        return 'Onay Bekliyor';
+      case 'approved':
+        return 'Onaylandı';
+      case 'rejected':
+        return 'Reddedildi';
       case 'scheduled':
         return 'Planlandı';
       case 'completed':
@@ -122,7 +143,7 @@ export default function CoachDashboard({ coachId }: CoachDashboardProps) {
   };
 
   const activeStudents = subscriptions.filter((s) => s.status === 'active');
-  const upcomingAppointments = appointments.filter((a) => a.status === 'scheduled');
+  const upcomingAppointments = appointments.filter((a) => a.status === 'approved' || a.status === 'scheduled');
 
   if (loading) {
     return (
@@ -158,7 +179,23 @@ export default function CoachDashboard({ coachId }: CoachDashboardProps) {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
+        <button
+          onClick={() => setActiveTab('requests')}
+          className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors relative ${
+            activeTab === 'requests'
+              ? 'bg-indigo-600 text-white'
+              : 'bg-white text-gray-700 hover:bg-gray-50 border-2 border-gray-200'
+          }`}
+        >
+          <Bell className="h-5 w-5" />
+          Randevu Talepleri
+          {pendingCount > 0 && (
+            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">
+              {pendingCount}
+            </span>
+          )}
+        </button>
         <button
           onClick={() => setActiveTab('calendar')}
           className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors ${
@@ -169,6 +206,17 @@ export default function CoachDashboard({ coachId }: CoachDashboardProps) {
         >
           <Calendar className="h-5 w-5" />
           Takvim & Randevular
+        </button>
+        <button
+          onClick={() => setActiveTab('availability')}
+          className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors ${
+            activeTab === 'availability'
+              ? 'bg-indigo-600 text-white'
+              : 'bg-white text-gray-700 hover:bg-gray-50 border-2 border-gray-200'
+          }`}
+        >
+          <Settings className="h-5 w-5" />
+          Müsaitlik Ayarları
         </button>
         <button
           onClick={() => setActiveTab('students')}
@@ -201,7 +249,7 @@ export default function CoachDashboard({ coachId }: CoachDashboardProps) {
           <div className="bg-white rounded-lg shadow-md p-6">
             <h3 className="text-lg font-bold text-gray-900 mb-4">📅 Bu Haftanın Randevuları</h3>
 
-            {appointments.length === 0 ? (
+            {appointments.filter((a) => a.status !== 'pending').length === 0 ? (
               <div className="text-center py-12">
                 <Calendar className="mx-auto h-16 w-16 text-gray-400 mb-4" />
                 <p className="text-gray-500">Bu hafta randevu bulunmuyor</p>
@@ -214,7 +262,7 @@ export default function CoachDashboard({ coachId }: CoachDashboardProps) {
               </div>
             ) : (
               <div className="space-y-3">
-                {appointments.map((appointment) => (
+                {appointments.filter((a) => a.status !== 'pending').map((appointment) => (
                   <div
                     key={appointment.id}
                     onClick={() => handleEditAppointment(appointment)}
@@ -355,6 +403,14 @@ export default function CoachDashboard({ coachId }: CoachDashboardProps) {
           )}
         </div>
       )}
+
+      {/* Pending Requests Tab */}
+      {activeTab === 'requests' && (
+        <PendingAppointmentRequestsPanel coachId={coachId} onUpdate={loadData} />
+      )}
+
+      {/* Availability Tab */}
+      {activeTab === 'availability' && <CoachAvailabilityManager coachId={coachId} />}
 
       {/* Appointment Modal */}
       {showAppointmentModal && (

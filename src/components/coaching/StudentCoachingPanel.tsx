@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Award, Calendar, Clock, Video, Package, TrendingUp } from 'lucide-react';
+import { Award, Calendar, Clock, Video, Package, TrendingUp, CalendarPlus } from 'lucide-react';
 import {
   getActivePackages,
   getAllCoaches,
@@ -14,6 +14,7 @@ import {
   type StudentCoachingSubscription,
   type CoachingAppointment,
 } from '../../lib/coachingApi';
+import AppointmentRequestModal from './AppointmentRequestModal';
 
 interface StudentCoachingPanelProps {
   studentId: string;
@@ -29,6 +30,8 @@ export default function StudentCoachingPanel({ studentId }: StudentCoachingPanel
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<CoachingPackage | null>(null);
   const [selectedCoach, setSelectedCoach] = useState<string>('');
+  const [showAppointmentRequestModal, setShowAppointmentRequestModal] = useState(false);
+  const [selectedSubscription, setSelectedSubscription] = useState<StudentCoachingSubscription | null>(null);
 
   useEffect(() => {
     loadData();
@@ -90,7 +93,17 @@ export default function StudentCoachingPanel({ studentId }: StudentCoachingPanel
   };
 
   const activeSubscriptions = subscriptions.filter((s) => isSubscriptionActive(s));
-  const upcomingAppointments = appointments.filter((a) => a.status === 'scheduled');
+  const upcomingAppointments = appointments.filter((a) => a.status === 'approved' || a.status === 'scheduled');
+  const pendingAppointments = appointments.filter((a) => a.status === 'pending');
+
+  const handleRequestAppointment = (subscription: StudentCoachingSubscription) => {
+    setSelectedSubscription(subscription);
+    setShowAppointmentRequestModal(true);
+  };
+
+  const handleAppointmentRequestSuccess = async () => {
+    await loadData();
+  };
 
   if (loading) {
     return (
@@ -235,6 +248,18 @@ export default function StudentCoachingPanel({ studentId }: StudentCoachingPanel
                               </span>
                             </div>
                           </div>
+
+                          {/* Request Appointment Button */}
+                          <div className="mt-4 pt-4 border-t border-indigo-200">
+                            <button
+                              onClick={() => handleRequestAppointment(subscription)}
+                              disabled={subscription.remaining_sessions === 0}
+                              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                            >
+                              <CalendarPlus className="h-5 w-5" />
+                              Randevu Talebi Oluştur
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -242,15 +267,74 @@ export default function StudentCoachingPanel({ studentId }: StudentCoachingPanel
                 </div>
               </div>
 
+              {/* Pending Appointments */}
+              {pendingAppointments.length > 0 && (
+                <div className="bg-white rounded-lg shadow-md p-6">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <Clock className="h-5 w-5 text-yellow-600" />
+                    Onay Bekleyen Taleplerim
+                  </h3>
+                  <div className="space-y-3">
+                    {pendingAppointments.map((appointment) => (
+                      <div
+                        key={appointment.id}
+                        className="border-2 border-yellow-200 rounded-lg p-4 bg-yellow-50"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-gray-900 mb-2">
+                              {appointment.title || 'Koçluk Görüşmesi'}
+                            </h4>
+
+                            <div className="flex items-center gap-4 text-sm mb-2">
+                              <span className="flex items-center gap-1 text-gray-700">
+                                <Clock className="h-4 w-4" />
+                                {formatAppointmentDate(appointment.appointment_date)}
+                              </span>
+                              <span className="text-gray-600">{appointment.duration_minutes} dakika</span>
+                            </div>
+
+                            {appointment.coach && (
+                              <div className="flex items-center gap-2 mb-2">
+                                {appointment.coach.avatar_url ? (
+                                  <img
+                                    src={appointment.coach.avatar_url}
+                                    alt={appointment.coach.full_name}
+                                    className="w-6 h-6 rounded-full"
+                                  />
+                                ) : (
+                                  <div className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center text-xs">
+                                    {appointment.coach.full_name[0]}
+                                  </div>
+                                )}
+                                <span className="text-sm font-medium">{appointment.coach.full_name}</span>
+                              </div>
+                            )}
+
+                            {appointment.description && (
+                              <p className="text-sm text-gray-600 mt-2">{appointment.description}</p>
+                            )}
+                          </div>
+
+                          <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium whitespace-nowrap">
+                            ⏳ Onay Bekliyor
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Upcoming Appointments */}
               <div className="bg-white rounded-lg shadow-md p-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">📅 Yaklaşan Görüşmelerim</h3>
+                <h3 className="text-lg font-bold text-gray-900 mb-4">📅 Onaylanmış Görüşmelerim</h3>
                 {upcomingAppointments.length === 0 ? (
                   <div className="text-center py-8">
                     <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-3" />
-                    <p className="text-gray-500">Henüz planlanmış görüşmeniz bulunmuyor</p>
+                    <p className="text-gray-500">Henüz onaylanmış görüşmeniz bulunmuyor</p>
                     <p className="text-sm text-gray-400 mt-1">
-                      Koçunuz size randevu oluşturduğunda buradan görebilirsiniz
+                      Koçunuz talebinizi onayladığında buradan görebilirsiniz
                     </p>
                   </div>
                 ) : (
@@ -518,6 +602,19 @@ export default function StudentCoachingPanel({ studentId }: StudentCoachingPanel
             </div>
           </div>
         </div>
+      )}
+
+      {/* Appointment Request Modal */}
+      {showAppointmentRequestModal && selectedSubscription && (
+        <AppointmentRequestModal
+          subscription={selectedSubscription}
+          studentId={studentId}
+          onClose={() => {
+            setShowAppointmentRequestModal(false);
+            setSelectedSubscription(null);
+          }}
+          onSuccess={handleAppointmentRequestSuccess}
+        />
       )}
     </div>
   );

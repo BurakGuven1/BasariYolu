@@ -314,7 +314,7 @@ export default function AppointmentModal({
           <div className="mt-6 flex gap-3">
             {editingAppointment && (
               <>
-                {editingAppointment.status === 'scheduled' && (
+                {(editingAppointment.status === 'scheduled' || editingAppointment.status === 'approved') && (
                   <>
                     <button
                       onClick={handleMarkAsCompleted}

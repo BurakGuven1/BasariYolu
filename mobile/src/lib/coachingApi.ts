@@ -1,5 +1,5 @@
 /**
- * Coaching API
+ * Coaching API for Mobile
  * Handles all coaching-related operations including packages, subscriptions, and appointments
  */
 
@@ -38,13 +38,7 @@ export interface StudentCoachingSubscription {
   updated_at: string;
   // Joined data
   package?: CoachingPackage;
-  coach?: {
-    id: string;
-    full_name: string;
-    avatar_url: string | null;
-    coach_bio: string | null;
-    coach_specializations: string[] | null;
-  };
+  coach?: CoachProfile;
   student?: {
     id: string;
     full_name: string;
@@ -72,25 +66,9 @@ export interface CoachingAppointment {
     id: string;
     full_name: string;
     avatar_url: string | null;
-    grade: number | null;
   };
-  coach?: {
-    id: string;
-    full_name: string;
-    avatar_url: string | null;
-  };
+  coach?: CoachProfile;
   subscription?: StudentCoachingSubscription;
-}
-
-export interface CoachAvailability {
-  id: string;
-  coach_id: string;
-  day_of_week: number; // 0-6, 0=Sunday
-  start_time: string; // HH:MM format
-  end_time: string;
-  is_available: boolean;
-  created_at: string;
-  updated_at: string;
 }
 
 export interface CoachProfile {
@@ -101,20 +79,6 @@ export interface CoachProfile {
   coach_bio: string | null;
   coach_specializations: string[] | null;
   coach_hourly_rate: number | null;
-  coach_availability_timezone: string | null;
-}
-
-export interface CoachStats {
-  coach_id: string;
-  coach_name: string;
-  avatar_url: string | null;
-  coach_bio: string | null;
-  coach_specializations: string[] | null;
-  coach_hourly_rate: number | null;
-  total_students: number;
-  completed_sessions: number;
-  upcoming_sessions: number;
-  avg_rating: number | null;
 }
 
 // =====================================================
@@ -150,7 +114,7 @@ export async function getPackageById(packageId: string): Promise<CoachingPackage
 export async function getAllCoaches(): Promise<CoachProfile[]> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, full_name, avatar_url, is_coach, coach_bio, coach_specializations, coach_hourly_rate, coach_availability_timezone')
+    .select('id, full_name, avatar_url, is_coach, coach_bio, coach_specializations, coach_hourly_rate')
     .eq('is_coach', true)
     .eq('role', 'teacher')
     .order('full_name');
@@ -162,51 +126,12 @@ export async function getAllCoaches(): Promise<CoachProfile[]> {
 export async function getCoachById(coachId: string): Promise<CoachProfile | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, full_name, avatar_url, is_coach, coach_bio, coach_specializations, coach_hourly_rate, coach_availability_timezone')
+    .select('id, full_name, avatar_url, is_coach, coach_bio, coach_specializations, coach_hourly_rate')
     .eq('id', coachId)
     .eq('is_coach', true)
     .single();
 
   if (error) throw error;
-  return data;
-}
-
-export async function updateCoachProfile(
-  coachId: string,
-  updates: {
-    coach_bio?: string;
-    coach_specializations?: string[];
-    coach_hourly_rate?: number;
-  }
-): Promise<void> {
-  const { error } = await supabase
-    .from('profiles')
-    .update(updates)
-    .eq('id', coachId);
-
-  if (error) throw error;
-}
-
-export async function enableCoaching(userId: string): Promise<void> {
-  const { error } = await supabase
-    .from('profiles')
-    .update({ is_coach: true })
-    .eq('id', userId);
-
-  if (error) throw error;
-}
-
-export async function getCoachStats(coachId: string): Promise<CoachStats | null> {
-  const { data, error } = await supabase
-    .from('coach_stats')
-    .select('*')
-    .eq('coach_id', coachId)
-    .single();
-
-  if (error) {
-    console.error('Error fetching coach stats:', error);
-    return null;
-  }
   return data;
 }
 
@@ -264,24 +189,6 @@ export async function getStudentSubscriptions(studentId: string): Promise<Studen
   return data || [];
 }
 
-export async function getCoachSubscriptions(coachId: string): Promise<StudentCoachingSubscription[]> {
-  const { data, error } = await supabase
-    .from('student_coaching_subscriptions')
-    .select(`
-      *,
-      package:coaching_packages(*),
-      student:profiles!student_coaching_subscriptions_student_id_fkey(
-        id, full_name, avatar_url
-      )
-    `)
-    .eq('coach_id', coachId)
-    .in('status', ['active', 'expired'])
-    .order('created_at', { ascending: false });
-
-  if (error) throw error;
-  return data || [];
-}
-
 export async function getActiveSubscription(
   studentId: string,
   coachId: string
@@ -302,124 +209,9 @@ export async function getActiveSubscription(
   return data;
 }
 
-export async function cancelSubscription(subscriptionId: string): Promise<void> {
-  const { error } = await supabase
-    .from('student_coaching_subscriptions')
-    .update({ status: 'cancelled' })
-    .eq('id', subscriptionId);
-
-  if (error) throw error;
-}
-
 // =====================================================
 // Appointments
 // =====================================================
-
-// Student requests appointment (pending status)
-export async function requestAppointment(
-  subscriptionId: string,
-  coachId: string,
-  studentId: string,
-  appointmentData: {
-    appointment_date: string;
-    duration_minutes?: number;
-    title?: string;
-    description?: string;
-  }
-): Promise<CoachingAppointment> {
-  const { data, error} = await supabase
-    .from('coaching_appointments')
-    .insert({
-      subscription_id: subscriptionId,
-      coach_id: coachId,
-      student_id: studentId,
-      appointment_date: appointmentData.appointment_date,
-      duration_minutes: appointmentData.duration_minutes || 60,
-      title: appointmentData.title,
-      description: appointmentData.description,
-      status: 'pending',
-    })
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
-}
-
-// Coach approves appointment
-export async function approveAppointment(
-  appointmentId: string,
-  google_meet_link?: string,
-  coach_notes?: string
-): Promise<void> {
-  const { error } = await supabase
-    .from('coaching_appointments')
-    .update({
-      status: 'approved',
-      google_meet_link: google_meet_link,
-      coach_notes: coach_notes,
-      approved_at: new Date().toISOString(),
-    })
-    .eq('id', appointmentId)
-    .eq('status', 'pending');
-
-  if (error) throw error;
-}
-
-// Coach rejects appointment
-export async function rejectAppointment(
-  appointmentId: string,
-  coach_notes?: string
-): Promise<void> {
-  const { error } = await supabase
-    .from('coaching_appointments')
-    .update({
-      status: 'rejected',
-      coach_notes: coach_notes,
-      rejected_at: new Date().toISOString(),
-    })
-    .eq('id', appointmentId)
-    .eq('status', 'pending');
-
-  if (error) throw error;
-}
-
-export async function getCoachAppointments(
-  coachId: string,
-  options?: {
-    startDate?: string;
-    endDate?: string;
-    status?: string[];
-  }
-): Promise<CoachingAppointment[]> {
-  let query = supabase
-    .from('coaching_appointments')
-    .select(`
-      *,
-      student:profiles!coaching_appointments_student_id_fkey(
-        id, full_name, avatar_url, grade
-      ),
-      subscription:student_coaching_subscriptions(*)
-    `)
-    .eq('coach_id', coachId);
-
-  if (options?.startDate) {
-    query = query.gte('appointment_date', options.startDate);
-  }
-  if (options?.endDate) {
-    query = query.lte('appointment_date', options.endDate);
-  }
-  if (options?.status) {
-    query = query.in('status', options.status);
-  }
-
-  query = query.order('appointment_date', { ascending: true });
-
-  const { data, error } = await query;
-
-  if (error) throw error;
-  return data || [];
-}
 
 export async function getStudentAppointments(
   studentId: string,
@@ -458,45 +250,68 @@ export async function getStudentAppointments(
   return data || [];
 }
 
-export async function updateAppointment(
-  appointmentId: string,
-  updates: {
-    appointment_date?: string;
-    duration_minutes?: number;
-    google_meet_link?: string;
-    title?: string;
-    description?: string;
-    status?: 'pending' | 'approved' | 'rejected' | 'completed' | 'cancelled' | 'no_show';
-    cancellation_reason?: string;
-  }
-): Promise<void> {
-  const updateData: any = { ...updates };
-
-  // Set completed_at when status changes to completed
-  if (updates.status === 'completed') {
-    updateData.completed_at = new Date().toISOString();
-  }
-
-  const { error } = await supabase
+export async function getAppointmentById(appointmentId: string): Promise<CoachingAppointment | null> {
+  const { data, error } = await supabase
     .from('coaching_appointments')
-    .update(updateData)
-    .eq('id', appointmentId);
+    .select(`
+      *,
+      coach:profiles!coaching_appointments_coach_id_fkey(
+        id, full_name, avatar_url
+      ),
+      subscription:student_coaching_subscriptions(*)
+    `)
+    .eq('id', appointmentId)
+    .single();
 
   if (error) throw error;
+  return data;
 }
 
-export async function deleteAppointment(appointmentId: string): Promise<void> {
-  const { error } = await supabase
+// Student requests appointment (pending status)
+export async function requestAppointment(
+  subscriptionId: string,
+  coachId: string,
+  studentId: string,
+  appointmentData: {
+    appointment_date: string;
+    duration_minutes?: number;
+    title?: string;
+    description?: string;
+  }
+): Promise<CoachingAppointment> {
+  const { data, error } = await supabase
     .from('coaching_appointments')
-    .delete()
-    .eq('id', appointmentId);
+    .insert({
+      subscription_id: subscriptionId,
+      coach_id: coachId,
+      student_id: studentId,
+      appointment_date: appointmentData.appointment_date,
+      duration_minutes: appointmentData.duration_minutes || 60,
+      title: appointmentData.title,
+      description: appointmentData.description,
+      status: 'pending',
+    })
+    .select()
+    .single();
 
   if (error) throw error;
+  return data;
 }
 
 // =====================================================
 // Coach Availability
 // =====================================================
+
+export interface CoachAvailability {
+  id: string;
+  coach_id: string;
+  day_of_week: number; // 0-6, 0=Sunday
+  start_time: string; // HH:MM format
+  end_time: string;
+  is_available: boolean;
+  created_at: string;
+  updated_at: string;
+}
 
 export async function getCoachAvailability(coachId: string): Promise<CoachAvailability[]> {
   const { data, error } = await supabase
@@ -510,74 +325,27 @@ export async function getCoachAvailability(coachId: string): Promise<CoachAvaila
   return data || [];
 }
 
-export async function setCoachAvailability(
-  coachId: string,
-  availability: Omit<CoachAvailability, 'id' | 'coach_id' | 'created_at' | 'updated_at'>[]
-): Promise<void> {
-  // Delete existing availability
-  await supabase
-    .from('coach_availability')
-    .delete()
-    .eq('coach_id', coachId);
-
-  // Insert new availability
-  const { error } = await supabase
-    .from('coach_availability')
-    .insert(
-      availability.map((slot) => ({
-        coach_id: coachId,
-        ...slot,
-      }))
-    );
-
-  if (error) throw error;
-}
-
-export async function addAvailabilitySlot(
-  coachId: string,
-  slot: {
-    day_of_week: number;
-    start_time: string;
-    end_time: string;
-    is_available?: boolean;
-  }
-): Promise<void> {
-  const { error } = await supabase
-    .from('coach_availability')
-    .insert({
-      coach_id: coachId,
-      ...slot,
-    });
-
-  if (error) throw error;
-}
-
-export async function removeAvailabilitySlot(slotId: string): Promise<void> {
-  const { error } = await supabase
-    .from('coach_availability')
-    .delete()
-    .eq('id', slotId);
-
-  if (error) throw error;
-}
-
 // Get available time slots for a coach within a date range
 export async function getAvailableTimeSlots(
   coachId: string,
   startDate: Date,
   endDate: Date
-): Promise<{ date: string; time: string; available: boolean }[]> {
+): Promise<{ date: string; time: string; dayOfWeek: number; available: boolean }[]> {
   // Get coach availability schedule
   const availability = await getCoachAvailability(coachId);
 
   // Get existing appointments in the date range
-  const appointments = await getCoachAppointments(coachId, {
-    startDate: startDate.toISOString(),
-    endDate: endDate.toISOString(),
-    status: ['pending', 'approved'],
-  });
+  const { data: appointments, error } = await supabase
+    .from('coaching_appointments')
+    .select('appointment_date, duration_minutes')
+    .eq('coach_id', coachId)
+    .in('status', ['pending', 'approved'])
+    .gte('appointment_date', startDate.toISOString())
+    .lte('appointment_date', endDate.toISOString());
 
-  const slots: { date: string; time: string; available: boolean }[] = [];
+  if (error) throw error;
+
+  const slots: { date: string; time: string; dayOfWeek: number; available: boolean }[] = [];
   const current = new Date(startDate);
 
   while (current <= endDate) {
@@ -591,26 +359,28 @@ export async function getAvailableTimeSlots(
 
     dayAvailability.forEach((av) => {
       const startHour = parseInt(av.start_time.split(':')[0]);
-      const startMinute = parseInt(av.start_time.split(':')[1]);
       const endHour = parseInt(av.end_time.split(':')[0]);
-      const endMinute = parseInt(av.end_time.split(':')[1]);
 
       // Create hourly slots
-      for (let hour = startHour; hour < endHour || (hour === endHour && startMinute < endMinute); hour++) {
+      for (let hour = startHour; hour < endHour; hour++) {
         const timeStr = `${hour.toString().padStart(2, '0')}:00`;
         const slotDateTime = new Date(`${dateStr}T${timeStr}:00`);
 
         // Check if this slot conflicts with existing appointment
-        const hasConflict = appointments.some((app) => {
+        const hasConflict = (appointments || []).some((app) => {
           const appDate = new Date(app.appointment_date);
           const appEnd = new Date(appDate.getTime() + app.duration_minutes * 60000);
           return slotDateTime >= appDate && slotDateTime < appEnd;
         });
 
+        // Don't show past slots
+        const isPast = slotDateTime < new Date();
+
         slots.push({
           date: dateStr,
           time: timeStr,
-          available: !hasConflict,
+          dayOfWeek,
+          available: !hasConflict && !isPast,
         });
       }
     });
@@ -644,18 +414,4 @@ export function formatAppointmentDate(date: string): string {
     hour: '2-digit',
     minute: '2-digit',
   });
-}
-
-export function isSubscriptionActive(subscription: StudentCoachingSubscription): boolean {
-  return (
-    subscription.status === 'active' &&
-    subscription.remaining_sessions > 0 &&
-    new Date(subscription.end_date) > new Date()
-  );
-}
-
-export function getSubscriptionProgress(subscription: StudentCoachingSubscription): number {
-  return Math.round(
-    ((subscription.total_sessions - subscription.remaining_sessions) / subscription.total_sessions) * 100
-  );
 }
