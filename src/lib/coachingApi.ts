@@ -433,9 +433,13 @@ export async function getCoachAppointments(
     .select(`
       *,
       student:profiles!coaching_appointments_student_id_fkey(
-        id, full_name, avatar_url, grade
+        id, full_name, avatar_url
       ),
-      subscription:student_coaching_subscriptions(*)
+      subscription:student_coaching_subscriptions!coaching_appointments_subscription_id_fkey(
+        id,
+        remaining_sessions,
+        package:coaching_packages(name)
+      )
     `)
     .eq('coach_id', coachId);
 
@@ -453,7 +457,10 @@ export async function getCoachAppointments(
 
   const { data, error } = await query;
 
-  if (error) throw error;
+  if (error) {
+    console.error('Error fetching coach appointments:', error);
+    throw error;
+  }
   return data || [];
 }
 
@@ -472,7 +479,11 @@ export async function getStudentAppointments(
       coach:profiles!coaching_appointments_coach_id_fkey(
         id, full_name, avatar_url
       ),
-      subscription:student_coaching_subscriptions(*)
+      subscription:student_coaching_subscriptions!coaching_appointments_subscription_id_fkey(
+        id,
+        remaining_sessions,
+        package:coaching_packages(name)
+      )
     `)
     .eq('student_id', studentId);
 
@@ -490,7 +501,10 @@ export async function getStudentAppointments(
 
   const { data, error } = await query;
 
-  if (error) throw error;
+  if (error) {
+    console.error('Error fetching student appointments:', error);
+    throw error;
+  }
   return data || [];
 }
 

@@ -66,30 +66,37 @@ export default function StudentCoachingPanel({ studentId }: StudentCoachingPanel
   };
 
   const handlePurchaseClick = (pkg: CoachingPackage) => {
-    setSelectedPackage(pkg);
-    setShowPurchaseModal(true);
+    // Web'den satın alma devre dışı - sadece mobile uygulama üzerinden
+    alert('Koçluk paketleri sadece mobil uygulama üzerinden satın alınabilir. Lütfen mobil uygulamayı indirin.');
+    return;
+
+    // setSelectedPackage(pkg);
+    // setShowPurchaseModal(true);
   };
 
   const handlePurchase = async () => {
-    if (!selectedPackage || !selectedCoach) {
-      alert('Lütfen koç seçin');
-      return;
-    }
+    // Bu fonksiyon artık kullanılmıyor - sadece mobile'dan satın alım
+    return;
 
-    try {
-      setLoading(true);
-      await createSubscription(studentId, selectedCoach, selectedPackage.id);
-      setShowPurchaseModal(false);
-      setSelectedPackage(null);
-      setSelectedCoach('');
-      await loadData();
-      setActiveTab('my-coaching');
-    } catch (error) {
-      console.error('Error purchasing package:', error);
-      alert('Paket satın alınırken bir hata oluştu');
-    } finally {
-      setLoading(false);
-    }
+    // if (!selectedPackage || !selectedCoach) {
+    //   alert('Lütfen koç seçin');
+    //   return;
+    // }
+
+    // try {
+    //   setLoading(true);
+    //   await createSubscription(studentId, selectedCoach, selectedPackage.id);
+    //   setShowPurchaseModal(false);
+    //   setSelectedPackage(null);
+    //   setSelectedCoach('');
+    //   await loadData();
+    //   setActiveTab('my-coaching');
+    // } catch (error) {
+    //   console.error('Error purchasing package:', error);
+    //   alert('Paket satın alınırken bir hata oluştu');
+    // } finally {
+    //   setLoading(false);
+    // }
   };
 
   const activeSubscriptions = subscriptions.filter((s) => isSubscriptionActive(s));
