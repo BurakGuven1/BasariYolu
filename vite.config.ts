@@ -10,15 +10,8 @@ export default defineConfig({
     // Disable sourcemap in production to speed up builds
     sourcemap: false,
 
-    // Minification settings
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true, // Remove console.logs in production
-        drop_debugger: true,
-        pure_funcs: ['console.log', 'console.debug']
-      }
-    },
+    // Use esbuild for faster builds (default, no extra dependency needed)
+    minify: 'esbuild',
 
     rollupOptions: {
       output: {
