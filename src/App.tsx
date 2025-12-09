@@ -38,6 +38,7 @@ const ExamTopicsSection = lazy(() => import('./components/ExamTopicsSection'));
 const TeacherLogin = lazy(() => import('./components/TeacherLogin'));
 const TeacherDashboard = lazy(() => import('./components/TeacherDashboard'));
 const HeroV2 = lazy(() => import('./components/HeroV2'));
+const CoachingPage = lazy(() => import('./pages/CoachingPage'));
 const ProblemSection = lazy(() => import('./components/ProblemSection'));
 const VisionSection = lazy(() => import('./components/VisionSection'));
 const ProductShowcase = lazy(() => import('./components/ProductShowcase'));
@@ -529,6 +530,8 @@ function App() {
       <Route path="/iade-politikasi" element={<Navigate to="/refund-policy" replace />} />
       <Route path="/features" element={<Suspense fallback={<LoadingSpinner />}><FeaturesShowcase /></Suspense>} />
       <Route path="/ozellikler" element={<Navigate to="/features" replace />} />
+      <Route path="/coaching" element={<Suspense fallback={<LoadingSpinner />}><CoachingPage /></Suspense>} />
+      <Route path="/kocluk" element={<Navigate to="/coaching" replace />} />
       <Route
         path="/question-bank"
         element={isQuestionBankAllowed ? <Suspense fallback={<LoadingSpinner />}><QuestionBankPage /></Suspense> : <Navigate to="/" replace />}
