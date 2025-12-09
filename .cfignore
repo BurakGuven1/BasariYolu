@@ -1,0 +1,59 @@
+# Cloudflare Pages Build Ignore
+# Exclude unnecessary files from build to reduce build time
+
+# Mobile app (React Native)
+mobile/
+
+# Backend services
+backend/
+cloudflare-worker/
+
+# Documentation
+docs/
+*.md
+README.md
+EMAIL_SYSTEM_SETUP_COMPLETE.md
+GOOGLE_PLAY_CONSOLE_SETUP_GUIDE.md
+GOOGLE_PLAY_IAP_STEP_BY_STEP.md
+IAP_IMPLEMENTATION_SUMMARY.md
+RLS_GUVENLIGI_ADIMLAR.md
+SUPABASE_SMTP_SETUP.md
+TOPIC_RECOMMENDATIONS_FIX.md
+
+# SQL scripts and database files
+database/
+*.sql
+supabase-scripts/
+
+# Data files
+data/
+
+# Scripts
+scripts/
+
+# Test files
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+__tests__/
+
+# Development files
+.vscode/
+.idea/
+*.log
+.DS_Store
+*.local
+
+# Python
+*.py
+__pycache__/
+*.pyc
+temp_replace_app.py
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.bak
+*~
