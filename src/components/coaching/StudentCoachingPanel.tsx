@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Award, Calendar, Clock, Video, User, Package, TrendingUp } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Award, Calendar, Clock, Video, Package, TrendingUp } from 'lucide-react';
 import {
   getActivePackages,
   getAllCoaches,
@@ -440,7 +440,7 @@ export default function StudentCoachingPanel({ studentId }: StudentCoachingPanel
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <Video className="h-4 w-4 text-purple-600" />
-                      <span>Online görüşme (Google Meet)</span>
+                      <span>Online görüşme</span>
                     </div>
                   </div>
 

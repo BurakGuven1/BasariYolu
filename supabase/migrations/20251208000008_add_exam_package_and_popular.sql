@@ -2,10 +2,6 @@
 ALTER TABLE public.coaching_packages
 ADD COLUMN IF NOT EXISTS is_popular BOOLEAN DEFAULT false;
 
--- Add features column to coaching_packages
-ALTER TABLE public.coaching_packages
-ADD COLUMN IF NOT EXISTS features TEXT[];
-
 -- Mark Premium package (7500 TL / 24 sessions) as popular
 UPDATE public.coaching_packages
 SET is_popular = true
@@ -34,7 +30,7 @@ VALUES (
 • Özel çalışma programı
 • WhatsApp destek hattı',
   48,
-  180,
+  200, 
   13500.00,
   false,
   ARRAY[

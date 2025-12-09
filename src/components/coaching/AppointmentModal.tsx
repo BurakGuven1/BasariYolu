@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Calendar, Clock, Video, User, FileText, Save } from 'lucide-react';
 import {
   createAppointment,
@@ -277,11 +277,10 @@ export default function AppointmentModal({
               </select>
             </div>
 
-            {/* Google Meet Link */}
             <div>
               <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                 <Video className="h-4 w-4" />
-                Google Meet Linki
+                Toplantı Linkiniz
               </label>
               <input
                 type="url"
@@ -291,7 +290,7 @@ export default function AppointmentModal({
                 placeholder="https://meet.google.com/xxx-xxxx-xxx"
               />
               <p className="text-xs text-gray-500 mt-1">
-                💡 Google Meet'ten yeni bir toplantı oluşturup linkini buraya yapıştırın
+                💡 Yeni bir toplantı oluşturup linkini buraya yapıştırın
               </p>
             </div>
 

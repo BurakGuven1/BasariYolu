@@ -1,20 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Award,
-  Calendar,
   CheckCircle,
   Clock,
   MessageSquare,
   Target,
-  TrendingUp,
-  Users,
-  Video,
   Brain,
   BookOpen,
   BarChart,
-  Zap,
-  Star,
+
   ArrowRight,
   Home
 } from 'lucide-react';
@@ -374,7 +368,7 @@ export default function CoachingPage() {
       )}
 
       {/* CTA Section */}
-      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-16">
+      {/* <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-16">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <h2 className="text-4xl font-bold mb-4">Başarıya Giden Yolda Yalnız Değilsin!</h2>
           <p className="text-xl mb-8 text-purple-100">
@@ -387,7 +381,7 @@ export default function CoachingPage() {
             Ücretsiz Danışmanlık Al <ArrowRight className="inline ml-2 h-5 w-5" />
           </button>
         </div>
-      </div>
+      </div> */}
 
       {/* FAQ Section */}
       <div className="max-w-4xl mx-auto px-4 py-16 sm:px-6 lg:px-8">

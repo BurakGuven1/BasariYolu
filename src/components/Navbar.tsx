@@ -83,7 +83,6 @@ export default function Navbar({
     { id: 'coaching', label: '👨‍🏫 Koçluk', icon: Award, isRoute: true },
     { id: 'pricing', label: 'Paketler', icon: Package },
     { id: 'exam-topics', label: 'ÖSYM-MEB Çıkmış Konular', icon: Goal },
-    { id: 'teacher', label: 'Öğretmenler', icon: GraduationCap },
     { id: 'blog', label: 'Blog', icon: Book },
   ];
 
