@@ -11,6 +11,7 @@ dist/
 dist-ssr/
 build/
 *.local
+.temp/
 
 # Environment variables (CRITICAL - Contains API keys)
 .env
@@ -19,6 +20,10 @@ build/
 .env.test.local
 .env.production.local
 .env.example
+
+backend/venv/
+__pycache__/
+*.pyc
 
 # Supabase
 .supabase/

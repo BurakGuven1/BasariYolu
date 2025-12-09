@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Mail, Lock, User, Phone } from 'lucide-react';
 import { signUp, signIn, createProfile, createStudentRecord, createParentRecord, supabase } from '../lib/supabase';
+import * as authApi from '../lib/authApi';
 import PaymentPage from './PaymentPage';
 import ClassCodeLogin from './ClassCodeLogin';
 
@@ -132,6 +133,7 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
     const parentUser = {
       id: `parent_${student.id}_${Date.now()}`,
       email: `parent_${student.id}@temp.com`,
+      userType: 'parent' as const,
       profile: {
         full_name: 'Veli',
         user_type: 'parent'
@@ -176,13 +178,46 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
   return;
 }
 
-    // Student login
+    // Student login - Try Worker API first, fallback to Supabase
     try {
-      const { data, error } = await signIn(formData.email, formData.password);
-      if (error) throw error;
-      
-      if (data.user) {
-        onLogin(data.user);
+      let studentUser;
+
+      // Try Worker API (HTTP-only cookies) if available
+      try {
+        console.log('🔐 Attempting secure login with Worker API (HTTP-only cookies)');
+        const { user, access_token } = await authApi.login(formData.email, formData.password);
+
+        if (user) {
+          console.log('✅ Worker API login successful');
+          studentUser = {
+            id: user.id,
+            email: user.email || '',
+            userType: 'student' as const,
+            profile: user.user_metadata || {},
+            metadata: user.user_metadata || {},
+          };
+        }
+      } catch (workerError: any) {
+        console.warn('⚠️ Worker API unavailable, falling back to Supabase:', workerError.message);
+
+        // Fallback to Supabase direct auth
+        const { data, error } = await signIn(formData.email, formData.password);
+        if (error) throw error;
+
+        if (data.user) {
+          console.log('✅ Supabase fallback login successful');
+          studentUser = {
+            id: data.user.id,
+            email: data.user.email || '',
+            userType: 'student' as const,
+            profile: data.user.user_metadata || {},
+            metadata: data.user.user_metadata || {},
+          };
+        }
+      }
+
+      if (studentUser) {
+        onLogin(studentUser);
         onClose();
         // Reset form
         setFormData({
@@ -200,7 +235,7 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
         });
       }
     } catch (error: any) {
-      console.error('Login error:', error);
+      console.error('❌ Login error:', error);
       alert('Giriş hatası: ' + (error.message || 'Bilinmeyen hata'));
     } finally {
       setLoading(false);
@@ -661,6 +696,32 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
                 />
               </div>
             </div>
+
+            {isLoginMode && (
+              <div className="text-right">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!formData.email) {
+                      alert('Lütfen e-posta adresinizi girin');
+                      return;
+                    }
+                    try {
+                      const { error } = await supabase.auth.resetPasswordForEmail(formData.email, {
+                        redirectTo: `${window.location.origin}/auth/reset-password`,
+                      });
+                      if (error) throw error;
+                      alert('Şifre sıfırlama bağlantısı e-posta adresinize gönderildi. Lütfen gelen kutunuzu kontrol edin.');
+                    } catch (error: any) {
+                      alert('Şifre sıfırlama hatası: ' + (error.message || 'Bilinmeyen hata'));
+                    }
+                  }}
+                  className="text-sm text-blue-600 hover:text-blue-700 hover:underline"
+                >
+                  Şifremi unuttum
+                </button>
+              </div>
+            )}
 
             {!isLoginMode && (
               <div>

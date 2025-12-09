@@ -13,6 +13,22 @@ export default defineConfig({
     // Use esbuild for faster builds (default, no extra dependency needed)
     minify: 'esbuild',
 
+  build: {
+    sourcemap: false, // Disable sourcemaps in production for smaller bundle
+    minify: 'terser',
+    cssCodeSplit: true, // Split CSS for better caching
+    terserOptions: {
+      compress: {
+        drop_console: true, // Remove console.log in production
+        drop_debugger: true,
+        pure_funcs: ['console.log', 'console.info', 'console.debug'], // Remove specific console methods
+        passes: 2, // Run terser twice for better compression
+      },
+      mangle: {
+        safari10: true, // Fix Safari 10 bugs
+      },
+    },
+    // Let Vite handle chunk splitting to avoid loader order issues
     rollupOptions: {
       output: {
         manualChunks: {
@@ -51,19 +67,21 @@ export default defineConfig({
       'recharts',
       '@supabase/supabase-js',
       'leaflet',
-      'react-leaflet'
-    ]
+      'react-leaflet',
+      'lottie-react',
+      'framer-motion',
+    ],
   },
 
   server: {
     port: 5173,
     strictPort: false,
-    host: true
+    host: true,
   },
 
   preview: {
     port: 4173,
     strictPort: false,
-    host: true
-  }
+    host: true,
+  },
 })

@@ -44,7 +44,7 @@ export default function NotFoundPage({ onNavigateHome }: NotFoundPageProps) {
             {[
               {
                 title: 'Destek ekibi yanınızda',
-                description: 'support@basariyolum.com adresinden bize ulaşabilirsiniz.'
+                description: 'destek@basariyolum.com adresinden bize ulaşabilirsiniz.'
               },
               {
                 title: 'Sıkça Sorulan Sorular',

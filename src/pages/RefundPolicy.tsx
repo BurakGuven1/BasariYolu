@@ -18,12 +18,12 @@ export default function RefundPolicy() {
               </h2>
               <p className="text-gray-700">
                 İlk aboneliğinizden sonraki 7 gün içinde herhangi bir nedenle
-                memnun kalmazsanız, <strong>tam iade</strong> talep edebilirsiniz.
+                memnun kalmazsanız, <strong>kısmi iade</strong> talep edebilirsiniz.
               </p>
               <ul className="list-disc pl-6 text-gray-700 space-y-2 mt-4">
                 <li>İade için <a href="mailto:destek@basariyolum.com" className="text-blue-600 hover:underline">destek@basariyolum.com</a> adresine e-posta gönderin</li>
                 <li>İade talebi 2-5 iş günü içinde işleme alınır</li>
-                <li>Para iadeniz 7-10 iş günü içinde hesabınıza geri döner</li>
+                <li>Para iadeniz 7 iş günü içinde hesabınıza geri döner</li>
               </ul>
             </section>
 
@@ -60,7 +60,7 @@ export default function RefundPolicy() {
                 Yıllık aboneliklerde:
               </p>
               <ul className="list-disc pl-6 text-gray-700 space-y-2 mt-4">
-                <li>İlk 7 gün: Tam iade</li>
+                <li>İlk 7 gün: Kısmi iade</li>
                 <li>7 günden sonra: Kalan süre için iade yapılmaz</li>
               </ul>
             </section>
