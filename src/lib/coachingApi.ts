@@ -597,6 +597,23 @@ export async function removeAvailabilitySlot(slotId: string): Promise<void> {
   if (error) throw error;
 }
 
+// Alias functions for better naming
+export async function saveCoachAvailability(
+  coachId: string,
+  slot: {
+    day_of_week: number;
+    start_time: string;
+    end_time: string;
+    is_available?: boolean;
+  }
+): Promise<void> {
+  return addAvailabilitySlot(coachId, slot);
+}
+
+export async function deleteCoachAvailability(slotId: string): Promise<void> {
+  return removeAvailabilitySlot(slotId);
+}
+
 // Get available time slots for a coach within a date range
 export async function getAvailableTimeSlots(
   coachId: string,
