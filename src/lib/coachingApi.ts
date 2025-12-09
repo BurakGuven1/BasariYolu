@@ -62,8 +62,11 @@ export interface CoachingAppointment {
   google_meet_link: string | null;
   title: string | null;
   description: string | null;
-  status: 'scheduled' | 'completed' | 'cancelled' | 'no_show';
+  status: 'pending' | 'approved' | 'rejected' | 'scheduled' | 'completed' | 'cancelled' | 'no_show';
   cancellation_reason: string | null;
+  coach_notes: string | null;
+  approved_at: string | null;
+  rejected_at: string | null;
   completed_at: string | null;
   created_at: string;
   updated_at: string;
@@ -314,6 +317,39 @@ export async function cancelSubscription(subscriptionId: string): Promise<void> 
 // =====================================================
 // Appointments
 // =====================================================
+
+// Coach creates appointment directly (scheduled status)
+export async function createAppointment(
+  subscriptionId: string,
+  coachId: string,
+  studentId: string,
+  appointmentData: {
+    appointment_date: string;
+    duration_minutes?: number;
+    google_meet_link?: string;
+    title?: string;
+    description?: string;
+  }
+): Promise<CoachingAppointment> {
+  const { data, error } = await supabase
+    .from('coaching_appointments')
+    .insert({
+      subscription_id: subscriptionId,
+      coach_id: coachId,
+      student_id: studentId,
+      appointment_date: appointmentData.appointment_date,
+      duration_minutes: appointmentData.duration_minutes || 60,
+      google_meet_link: appointmentData.google_meet_link,
+      title: appointmentData.title,
+      description: appointmentData.description,
+      status: 'scheduled',
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
 
 // Student requests appointment (pending status)
 export async function requestAppointment(
