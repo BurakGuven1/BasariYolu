@@ -7,30 +7,40 @@ export default defineConfig({
   envPrefix: 'VITE_',
 
   build: {
-    sourcemap: false, // Disable sourcemaps in production for smaller bundle
-    minify: 'terser',
-    cssCodeSplit: true, // Split CSS for better caching
-    terserOptions: {
-      compress: {
-        drop_console: true, // Remove console.log in production
-        drop_debugger: true,
-        pure_funcs: ['console.log', 'console.info', 'console.debug'], // Remove specific console methods
-        passes: 2, // Run terser twice for better compression
-      },
-      mangle: {
-        safari10: true, // Fix Safari 10 bugs
-      },
-    },
+    // Disable sourcemap in production to speed up builds
+    sourcemap: false,
+
+    // Use esbuild for faster builds (default, no extra dependency needed)
+    minify: 'esbuild',
+
     // Let Vite handle chunk splitting to avoid loader order issues
     rollupOptions: {
       output: {
-        entryFileNames: 'assets/[name]-[hash].js',
-        chunkFileNames: 'assets/[name]-[hash].js',
-        assetFileNames: 'assets/[name]-[hash].[ext]',
-      },
+        manualChunks: {
+          // Vendor chunks
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'supabase': ['@supabase/supabase-js'],
+
+          // UI libraries
+          'ui-icons': ['lucide-react'],
+          'ui-charts': ['recharts'],
+          'ui-markdown': ['react-markdown', '@uiw/react-md-editor'],
+
+          // Maps (only if used)
+          'maps': ['leaflet', 'react-leaflet'],
+
+          // Heavy libraries
+          'pdf': ['jspdf', 'html2canvas'],
+          'math': ['react-katex']
+        }
+      }
     },
-    chunkSizeWarningLimit: 1000, // Increase limit since we're using lazy loading
-    reportCompressedSize: false, // Faster builds
+
+    chunkSizeWarningLimit: 1000,
+
+    // Optimize build performance
+    target: 'es2015',
+    cssCodeSplit: true
   },
 
   optimizeDeps: {
