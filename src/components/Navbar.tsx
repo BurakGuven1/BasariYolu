@@ -1,5 +1,5 @@
 ﻿import { useState } from 'react';
-import { User, Bell, Menu, X, Package, GraduationCap, Goal, Book, Sparkles } from 'lucide-react';
+import { User, Bell, Menu, X, Package, GraduationCap, Goal, Book, Sparkles, Award } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Logo from './Logo';
 
@@ -80,6 +80,7 @@ export default function Navbar({
 
   const navItems = [
     { id: 'features', label: 'Özellikler', icon: Sparkles, isRoute: true },
+    { id: 'coaching', label: '👨‍🏫 Koçluk', icon: Award, isRoute: true },
     { id: 'pricing', label: 'Paketler', icon: Package },
     { id: 'exam-topics', label: 'ÖSYM-MEB Çıkmış Konular', icon: Goal },
     { id: 'teacher', label: 'Öğretmenler', icon: GraduationCap },
