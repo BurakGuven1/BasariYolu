@@ -17,6 +17,8 @@ export interface CoachingPackage {
   duration_days: number;
   price: number;
   is_active: boolean;
+  is_popular?: boolean;
+  features?: string[];
   created_at: string;
   updated_at: string;
 }

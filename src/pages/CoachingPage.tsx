@@ -15,7 +15,8 @@ import {
   BarChart,
   Zap,
   Star,
-  ArrowRight
+  ArrowRight,
+  Home
 } from 'lucide-react';
 import { getActivePackages, getAllCoaches, type CoachingPackage, type CoachProfile } from '../lib/coachingApi';
 import { useAuth } from '../hooks/useAuth';
@@ -48,11 +49,11 @@ export default function CoachingPage() {
 
   const handleGetStarted = () => {
     if (!user) {
-      navigate('/login?redirect=/coaching');
+      navigate('/register?role=student');
     } else if (user.profile?.role === 'student') {
       navigate('/student-dashboard?tab=coaching');
     } else {
-      navigate('/login');
+      navigate('/register?role=student');
     }
   };
 
@@ -104,23 +105,42 @@ export default function CoachingPage() {
   const getPackageIcon = (sessionCount: number) => {
     if (sessionCount === 1) return '🎯';
     if (sessionCount === 8) return '⭐';
-    return '👑';
+    if (sessionCount === 24) return '👑';
+    if (sessionCount === 48) return '🎓';
+    return '🎯';
   };
 
   const getPackageColor = (sessionCount: number) => {
     if (sessionCount === 1) return 'from-blue-500 to-blue-600';
     if (sessionCount === 8) return 'from-purple-500 to-purple-600';
-    return 'from-amber-500 to-amber-600';
+    if (sessionCount === 24) return 'from-amber-500 to-amber-600';
+    if (sessionCount === 48) return 'from-rose-500 to-rose-600';
+    return 'from-blue-500 to-blue-600';
   };
 
   const getPackageBorderColor = (sessionCount: number) => {
     if (sessionCount === 1) return 'border-blue-200 hover:border-blue-400';
     if (sessionCount === 8) return 'border-purple-200 hover:border-purple-400';
-    return 'border-amber-200 hover:border-amber-400';
+    if (sessionCount === 24) return 'border-amber-200 hover:border-amber-400';
+    if (sessionCount === 48) return 'border-rose-200 hover:border-rose-400';
+    return 'border-blue-200 hover:border-blue-400';
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      {/* Back to Home Button */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 py-3 sm:px-6 lg:px-8">
+          <button
+            onClick={() => navigate('/')}
+            className="flex items-center gap-2 text-gray-700 hover:text-indigo-600 transition-colors font-medium"
+          >
+            <Home className="h-5 w-5" />
+            <span>Anasayfaya Dön</span>
+          </button>
+        </div>
+      </div>
+
       {/* Hero Section */}
       <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white">
         <div className="max-w-7xl mx-auto px-4 py-20 sm:px-6 lg:px-8">
@@ -251,13 +271,13 @@ export default function CoachingPage() {
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {packages.map((pkg) => (
               <div
                 key={pkg.id}
                 className={`relative bg-white rounded-2xl shadow-xl p-8 border-4 transition-all hover:scale-105 ${getPackageBorderColor(pkg.session_count)}`}
               >
-                {pkg.session_count === 8 && (
+                {pkg.is_popular && (
                   <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                     <span className="bg-gradient-to-r from-purple-500 to-purple-600 text-white px-4 py-1 rounded-full text-sm font-bold shadow-lg">
                       EN POPÜLER
