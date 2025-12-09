@@ -2,6 +2,10 @@
 ALTER TABLE public.coaching_packages
 ADD COLUMN IF NOT EXISTS is_popular BOOLEAN DEFAULT false;
 
+-- Add features column to coaching_packages
+ALTER TABLE public.coaching_packages
+ADD COLUMN IF NOT EXISTS features TEXT[];
+
 -- Mark Premium package (7500 TL / 24 sessions) as popular
 UPDATE public.coaching_packages
 SET is_popular = true
@@ -11,7 +15,7 @@ WHERE price = 7500.00 AND session_count = 24;
 INSERT INTO public.coaching_packages (name, description, session_count, duration_days, price, is_popular, features, is_active)
 VALUES (
   'Sınava Kadar Paketi',
-  '🎓 Sınav başarısı için maksimum destek! YKS/LGS''ye hazırlık sürecinde kesintisiz takip ve tercih döneminde profesyonel rehberlik. Hedefine ulaşmak için her adımda yanındayız!
+  '🎓 Sınav başarısı için maksimum destek hem platform kullanımı hem koçluk! YKS/LGS''ye hazırlık sürecinde kesintisiz takip ve tercih döneminde profesyonel rehberlik. Hedefine ulaşmak için her adımda yanındayız!
 
 📚 Paket İçeriği:
 • 48 birebir koçluk seansı
@@ -28,10 +32,9 @@ VALUES (
 • Sınırsız konu takibi
 • Gelişmiş analitik raporlar
 • Özel çalışma programı
-• Aile bilgilendirme toplantıları
 • WhatsApp destek hattı',
   48,
-  180, -- 6 months
+  180,
   13500.00,
   false,
   ARRAY[
@@ -46,7 +49,6 @@ VALUES (
     'Sınırsız konu takibi',
     'Gelişmiş analitik raporlar',
     'Özel çalışma programı',
-    'Aile bilgilendirme toplantıları',
     'WhatsApp destek hattı'
   ],
   true
