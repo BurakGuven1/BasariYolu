@@ -148,25 +148,29 @@ export async function getPackageById(packageId: string): Promise<CoachingPackage
 export async function getAllCoaches(): Promise<CoachProfile[]> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, full_name, avatar_url, is_coach, coach_bio, coach_specializations, coach_hourly_rate, coach_availability_timezone')
+    .select('user_id, full_name, avatar_url, is_coach, coach_bio, coach_specializations, coach_hourly_rate, coach_availability_timezone')
     .eq('is_coach', true)
     .eq('role', 'teacher')
     .order('full_name');
 
   if (error) throw error;
-  return data || [];
+  // Map user_id to id for consistency with the interface
+  return (data || []).map(coach => ({
+    ...coach,
+    id: coach.user_id,
+  }));
 }
 
 export async function getCoachById(coachId: string): Promise<CoachProfile | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, full_name, avatar_url, is_coach, coach_bio, coach_specializations, coach_hourly_rate, coach_availability_timezone')
-    .eq('id', coachId)
+    .select('user_id, full_name, avatar_url, is_coach, coach_bio, coach_specializations, coach_hourly_rate, coach_availability_timezone')
+    .eq('user_id', coachId)
     .eq('is_coach', true)
     .single();
 
   if (error) throw error;
-  return data;
+  return data ? { ...data, id: data.user_id } : null;
 }
 
 export async function updateCoachProfile(
@@ -180,7 +184,7 @@ export async function updateCoachProfile(
   const { error } = await supabase
     .from('profiles')
     .update(updates)
-    .eq('id', coachId);
+    .eq('user_id', coachId);
 
   if (error) throw error;
 }
@@ -189,7 +193,7 @@ export async function enableCoaching(userId: string): Promise<void> {
   const { error } = await supabase
     .from('profiles')
     .update({ is_coach: true })
-    .eq('id', userId);
+    .eq('user_id', userId);
 
   if (error) throw error;
 }
@@ -252,7 +256,7 @@ export async function getStudentSubscriptions(studentId: string): Promise<Studen
       *,
       package:coaching_packages(*),
       coach:profiles!student_coaching_subscriptions_coach_id_fkey(
-        id, full_name, avatar_url, coach_bio, coach_specializations
+        user_id, full_name, avatar_url, coach_bio, coach_specializations
       )
     `)
     .eq('student_id', studentId)
@@ -269,7 +273,7 @@ export async function getCoachSubscriptions(coachId: string): Promise<StudentCoa
       *,
       package:coaching_packages(*),
       student:profiles!student_coaching_subscriptions_student_id_fkey(
-        id, full_name, avatar_url
+        user_id, full_name, avatar_url
       )
     `)
     .eq('coach_id', coachId)
@@ -358,7 +362,7 @@ export async function getCoachAppointments(
     .select(`
       *,
       student:profiles!coaching_appointments_student_id_fkey(
-        id, full_name, avatar_url, grade
+        user_id, full_name, avatar_url, grade
       ),
       subscription:student_coaching_subscriptions(*)
     `)
@@ -395,7 +399,7 @@ export async function getStudentAppointments(
     .select(`
       *,
       coach:profiles!coaching_appointments_coach_id_fkey(
-        id, full_name, avatar_url
+        user_id, full_name, avatar_url
       ),
       subscription:student_coaching_subscriptions(*)
     `)
