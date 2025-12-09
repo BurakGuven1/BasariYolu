@@ -297,10 +297,15 @@ export default function CoachingPage() {
                 </div>
 
                 <div className="space-y-3 mb-8">
-                  {pkg.description?.split('\n').filter(line => line.trim().startsWith('📌')).map((feature, idx) => (
+                  {pkg.description?.split('\n').filter(line => {
+                    const trimmed = line.trim();
+                    return trimmed.startsWith('📌') || trimmed.startsWith('•');
+                  }).map((feature, idx) => (
                     <div key={idx} className="flex items-start gap-2">
                       <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-                      <span className="text-sm text-gray-700">{feature.replace('📌', '').trim()}</span>
+                      <span className="text-sm text-gray-700">
+                        {feature.replace('📌', '').replace('•', '').trim()}
+                      </span>
                     </div>
                   ))}
                 </div>
