@@ -1,5 +1,6 @@
 ﻿import { supabase, SUPABASE_URL } from './supabase';
 import type { InstitutionExamResult } from './institutionStudentApi';
+import * as authApi from './authApi';
 const STUDENT_ARTIFACT_BUCKET = 'student-exam-artifacts';
 const ALLOWED_ARTIFACT_MIME_TYPES = [
   'application/pdf',
@@ -483,28 +484,52 @@ export const registerInstitutionAccount = async ({
 };
 
 export const loginInstitutionAccount = async (email: string, password: string): Promise<InstitutionSession> => {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+  let authUser;
 
-  if (error) {
-    throw error;
+  // Try Worker API first, fallback to Supabase
+  try {
+    console.log('[Institution] 🔐 Attempting login with Worker API (HTTP-only cookies)');
+    const { user } = await authApi.login(email, password);
+    authUser = user;
+    console.log('[Institution] ✅ Worker API login successful');
+  } catch (workerError: any) {
+    console.warn('[Institution] ⚠️ Worker API unavailable, falling back to Supabase:', workerError.message);
+
+    // Fallback to Supabase direct auth
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    if (!data.user) {
+      console.error('[Institution] login: user not returned from auth');
+      throw new Error('Kullanıcı bulunamadı.');
+    }
+
+    authUser = data.user;
+    console.log('[Institution] ✅ Supabase fallback login successful');
   }
 
-  if (!data.user) {
-    console.error('[Institution] login: user not returned from auth');
-    throw new Error('Kullanici bulunamadi.');
+  if (!authUser) {
+    throw new Error('Kullanıcı bulunamadı.');
   }
 
-  console.log('[Institution] login auth user:', data.user.id);
+  console.log('[Institution] login auth user:', authUser.id);
 
-  const context = await getInstitutionSessionForUser(data.user.id);
+  const context = await getInstitutionSessionForUser(authUser.id);
 
   if (!context) {
     console.warn('[Institution] login: no institution context found');
+
+    // Try to sign out from both Worker API and Supabase
+    authApi.logout().catch(() => {});
     await supabase.auth.signOut();
-    throw new Error('Bu kullaniciya bagli bir kurum kaydi bulunamadi.');
+
+    throw new Error('Bu kullanıcıya bağlı bir kurum kaydı bulunamadı.');
   }
 
   console.log('[Institution] login context:', context);
@@ -513,56 +538,65 @@ export const loginInstitutionAccount = async (email: string, password: string): 
 };
 
 export const getInstitutionSessionForUser = async (userId: string): Promise<InstitutionSession | null> => {
-  const { data, error } = await supabase
-    .from('institution_members')
-    .select(
-      `
+  try {
+    // First get institution member record
+    const { data: memberData, error: memberError } = await supabase
+      .from('institution_members')
+      .select('id, role, institution_id')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true })
+      .maybeSingle();
+
+    console.log('[Institution] Member query result:', { memberData, memberError });
+
+    if (!memberData || !memberData.institution_id) {
+      console.warn('[Institution] No member record found for user', userId);
+      return null;
+    }
+
+    // Then get the institution details
+    const { data: institutionData, error: institutionError } = await supabase
+      .from('institutions')
+      .select(`
         id,
-        role,
-        institution:institutions (
-          id,
-          name,
-          logo_url,
-          contact_email,
-          contact_phone,
-          status,
-          is_active,
-          created_at,
-          student_invite_code,
-          teacher_invite_code,
-          student_quota,
-          approved_student_count
-        )
-      `,
-    )
-    .eq('user_id', userId)
-    .order('created_at', { ascending: true })
-    .maybeSingle();
+        name,
+        logo_url,
+        contact_email,
+        contact_phone,
+        status,
+        is_active,
+        created_at,
+        student_invite_code,
+        teacher_invite_code,
+        student_quota,
+        approved_student_count
+      `)
+      .eq('id', memberData.institution_id)
+      .maybeSingle();
 
-  if (error) {
+    console.log('[Institution] Institution query result:', { institutionData, institutionError });
+
+    if (!institutionData) {
+      console.warn('[Institution] No institution found with id', memberData.institution_id);
+      return null;
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+
+    return {
+      membershipId: memberData.id,
+      role: memberData.role as InstitutionSession['role'],
+      institution: institutionData,
+      user: {
+        id: userId,
+        email: user?.email ?? null,
+      },
+    };
+
+  } catch (error) {
     console.error('[Institution] getInstitutionSessionForUser error:', error);
-    throw error;
+    return null;
   }
-
-  if (!data || !data.institution) {
-  console.warn('[Institution] getInstitutionSessionForUser no data for user', userId);
-  return null;
-}
-
-console.log('[Institution] getInstitutionSessionForUser raw payload:', data);
-const institutionRecord = Array.isArray(data.institution)
-  ? data.institution[0]
-  : data.institution;
-
-return {
-  membershipId: data.id,
-  role: data.role as InstitutionSession['role'],
-  institution: institutionRecord,
-    user: {
-      id: userId,
-      email: (await supabase.auth.getUser()).data.user?.email ?? null,
-    },
-  };
 };
 
 export const refreshInstitutionSession = async (): Promise<InstitutionSession | null> => {

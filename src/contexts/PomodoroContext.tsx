@@ -101,10 +101,8 @@ async function completeTimer() {
         }]);
         
         if (error) {
-          console.error('❌ Error saving session:', error);
         }
       } catch (error) {
-        console.error('❌ Error saving session:', error);
       }
     }
     

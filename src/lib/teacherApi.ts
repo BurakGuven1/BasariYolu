@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { supabase } from './supabase';
 import { PACKAGE_OPTIONS } from '../types/teacher';
+import * as authApi from './authApi';
 
 const hashPassword = (password: string): Promise<string> =>
   new Promise((resolve, reject) => {
@@ -138,16 +139,36 @@ export const registerTeacher = async (teacherData: {
 };
 
 export const loginTeacher = async (email: string, password: string) => {
-  const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-    email,
-    password
-  });
+  let authUser;
 
-  if (authError || !authData.user) {
-    throw new Error(authError?.message || 'Email veya sifre hatali');
+  // Try Worker API first, fallback to Supabase
+  try {
+    console.log('🔐 Teacher login with Worker API (HTTP-only cookies)');
+    const { user } = await authApi.login(email, password);
+    authUser = user;
+    console.log('✅ Worker API login successful');
+  } catch (workerError: any) {
+    console.warn('⚠️ Worker API unavailable, falling back to Supabase:', workerError.message);
+
+    // Fallback to Supabase direct auth
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (authError || !authData.user) {
+      throw new Error(authError?.message || 'Email veya şifre hatalı');
+    }
+
+    authUser = authData.user;
+    console.log('✅ Supabase fallback login successful');
   }
 
-  const authUser = authData.user;
+  if (!authUser) {
+    throw new Error('Email veya şifre hatalı');
+  }
+
+  console.log('✅ Auth successful, fetching teacher record');
 
   let { data: teacher, error: teacherError } = await supabase
     .from('teachers')
@@ -202,7 +223,7 @@ export const createClass = async (classData: {
   class_name: string;
   description?: string;
   student_capacity: number;
-  package_type: 'monthly' | '3_months' | '9_months';
+  package_type: 'monthly' | '6_months' | '9_months';
 }) => {
   // Validate class name
   if (classData.class_name.length < 3 || classData.class_name.length > 50) {

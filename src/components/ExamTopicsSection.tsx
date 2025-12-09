@@ -338,15 +338,17 @@ export default function ExamTopicsSection({ user, hasClassViewerSession = false,
                   <strong>{selectedTopic}</strong> konusunun yıllara göre dağılımı
                 </p>
                 {chartData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={chartData}>
+                  <div style={{ width: '100%', height: 300, minHeight: 300 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={chartData}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="year" />
                       <YAxis />
                       <Tooltip />
                       <Bar dataKey="soru" fill="#3B82F6" name="Soru Sayısı" />
                     </BarChart>
-                  </ResponsiveContainer>
+                    </ResponsiveContainer>
+                  </div>
                 ) : (
                   <div className="flex items-center justify-center h-80 text-gray-400">
                     <div className="text-center">
@@ -495,11 +497,13 @@ export default function ExamTopicsSection({ user, hasClassViewerSession = false,
         onUpgrade={onUpgrade}
       >
         {/* Chart ve premium içerik */}
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={chartData}>
-            {/* ... */}
-          </BarChart>
-        </ResponsiveContainer>
+        <div style={{ width: '100%', height: 300, minHeight: 300 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData}>
+              {/* ... */}
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </FeatureGate>
     </div>
   );

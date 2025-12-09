@@ -16,7 +16,7 @@ export interface Class {
   description?: string;
   student_capacity: number;
   current_students: number;
-  package_type: 'monthly' | '3_months' | '9_months';
+  package_type: 'monthly' | '6_months' | '9_months';
   price_per_student: number;
   total_price: number;
   invite_code: string;
@@ -52,7 +52,7 @@ export interface ClassPayment {
 }
 
 export interface PackageOption {
-  type: 'monthly' | '3_months' | '9_months';
+  type: 'monthly' | '6_months' | '9_months';
   name: string;
   duration_months: number;
   price_per_student: number;
@@ -69,9 +69,9 @@ export const PACKAGE_OPTIONS: PackageOption[] = [
     discount_percent: 0
   },
   {
-    type: '3_months',
-    name: '3 Aylık Paket',
-    duration_months: 3,
+    type: '6_months',
+    name: '6 Aylık Paket',
+    duration_months: 6,
     price_per_student: 36,
     discount_percent: 10
   },
@@ -89,7 +89,7 @@ export const MAX_CLASS_CAPACITY = 40;
 export const MIN_CLASS_CAPACITY = 5;
 export const MAX_CLASSES_PER_STUDENT = 3;
 
-export const calculateClassPrice = (studentCount: number, packageType: 'monthly' | '3_months' | '9_months') => {
+export const calculateClassPrice = (studentCount: number, packageType: 'monthly' | '6_months' | '9_months') => {
   const packageOption = PACKAGE_OPTIONS.find(p => p.type === packageType);
   if (!packageOption) return { monthlyPrice: 0, totalPrice: 0, originalPrice: 0, savings: 0, pricePerStudent: 0, duration: 0 };
 

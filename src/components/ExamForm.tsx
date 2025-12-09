@@ -324,7 +324,6 @@ export default function ExamForm({ isOpen, onClose, studentId, onSuccess, editDa
     console.log('📦 Database result:', result);
     
     if (result.error) {
-      console.error('❌ Error:', result.error);
       alert(`Hata: ${result.error.message}`);
       setLoading(false);
       return;
