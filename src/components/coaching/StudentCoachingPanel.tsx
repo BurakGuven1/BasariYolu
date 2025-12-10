@@ -48,6 +48,10 @@ export default function StudentCoachingPanel({ studentId }: StudentCoachingPanel
         getStudentAppointments(studentId),
       ]);
 
+      console.log('🔍 [Coaching Debug] Student ID:', studentId);
+      console.log('🔍 [Coaching Debug] Fetched subscriptions:', subsData);
+      console.log('🔍 [Coaching Debug] Active subscriptions:', subsData.filter((s) => isSubscriptionActive(s)));
+
       setPackages(packagesData);
       setCoaches(coachesData);
       setSubscriptions(subsData);
@@ -55,6 +59,7 @@ export default function StudentCoachingPanel({ studentId }: StudentCoachingPanel
 
       // Show packages tab if no active subscriptions
       const hasActive = subsData.some((s) => isSubscriptionActive(s));
+      console.log('🔍 [Coaching Debug] Has active subscription:', hasActive);
       if (!hasActive) {
         setActiveTab('packages');
       }
