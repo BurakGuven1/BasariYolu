@@ -497,7 +497,6 @@ export default function CoachDashboard({ coachId }: CoachDashboardProps) {
                             <Clock className="h-4 w-4" />
                             {formatAppointmentDate(appointment.appointment_date)}
                           </span>
-                          <span>{appointment.duration_minutes} dakika</span>
                         </div>
 
                         {appointment.student && (
