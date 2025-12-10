@@ -163,17 +163,19 @@ export default function StudentCoachingPanel({ studentId }: StudentCoachingPanel
           <Calendar className="h-5 w-5" />
           Koçluğum
         </button>
-        <button
-          onClick={() => setActiveTab('packages')}
-          className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors ${
-            activeTab === 'packages'
-              ? 'bg-indigo-600 text-white'
-              : 'bg-white text-gray-700 hover:bg-gray-50 border-2 border-gray-200'
-          }`}
-        >
-          <Package className="h-5 w-5" />
-          Paketler
-        </button>
+        {activeSubscriptions.length === 0 && (
+          <button
+            onClick={() => setActiveTab('packages')}
+            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors ${
+              activeTab === 'packages'
+                ? 'bg-indigo-600 text-white'
+                : 'bg-white text-gray-700 hover:bg-gray-50 border-2 border-gray-200'
+            }`}
+          >
+            <Package className="h-5 w-5" />
+            Paketler
+          </button>
+        )}
       </div>
 
       {/* My Coaching Tab */}

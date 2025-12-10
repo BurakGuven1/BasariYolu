@@ -347,30 +347,6 @@ export default function CoachApplicationForm({
             <p className="text-sm text-red-600 mt-2">{errors.specializations}</p>
           )}
         </div>
-
-        {/* Hourly Rate */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Saatlik Ücret (TL) - Opsiyonel
-          </label>
-          <input
-            type="number"
-            min="0"
-            step="50"
-            value={formData.hourly_rate || ''}
-            onChange={(e) =>
-              setFormData((prev) => ({
-                ...prev,
-                hourly_rate: e.target.value ? parseFloat(e.target.value) : undefined,
-              }))
-            }
-            className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            placeholder="Örn: 200"
-          />
-          <p className="text-sm text-gray-500 mt-2">
-            Platform yönetimi ile birlikte belirlenebilir
-          </p>
-        </div>
       </div>
 
       {/* Terms & Conditions */}
