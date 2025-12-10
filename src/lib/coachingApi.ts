@@ -3,7 +3,7 @@
  * Handles all coaching-related operations including packages, subscriptions, and appointments
  */
 
-import { supabase } from './supabase';
+import { supabase, SUPABASE_URL } from './supabase';
 
 // =====================================================
 // Types
@@ -378,6 +378,40 @@ export async function requestAppointment(
     .single();
 
   if (error) throw error;
+
+  // Send email notification to coach
+  try {
+    const [coachData, studentData] = await Promise.all([
+      supabase.from('profiles').select('full_name, email').eq('id', coachId).single(),
+      supabase.from('profiles').select('full_name, email').eq('id', studentId).single(),
+    ]);
+
+    if (coachData.data && studentData.data) {
+      const date = new Date(appointmentData.appointment_date);
+      const formattedDate = date.toLocaleDateString('tr-TR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        weekday: 'long'
+      });
+      const formattedTime = date.toLocaleTimeString('tr-TR', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+
+      await notifyCoachOfAppointmentRequest(
+        coachData.data.email,
+        coachData.data.full_name,
+        studentData.data.full_name,
+        formattedDate,
+        formattedTime
+      );
+    }
+  } catch (emailError) {
+    console.error('Failed to send notification email:', emailError);
+    // Don't fail the appointment creation if email fails
+  }
+
   return data;
 }
 
@@ -387,6 +421,13 @@ export async function approveAppointment(
   google_meet_link?: string,
   coach_notes?: string
 ): Promise<void> {
+  // First get appointment details before updating
+  const { data: appointment } = await supabase
+    .from('coaching_appointments')
+    .select('coach_id, student_id, appointment_date')
+    .eq('id', appointmentId)
+    .single();
+
   const { error } = await supabase
     .from('coaching_appointments')
     .update({
@@ -399,6 +440,42 @@ export async function approveAppointment(
     .eq('status', 'pending');
 
   if (error) throw error;
+
+  // Send email notification to student
+  if (appointment) {
+    try {
+      const [coachData, studentData] = await Promise.all([
+        supabase.from('profiles').select('full_name').eq('id', appointment.coach_id).single(),
+        supabase.from('profiles').select('full_name, email').eq('id', appointment.student_id).single(),
+      ]);
+
+      if (coachData.data && studentData.data) {
+        const date = new Date(appointment.appointment_date);
+        const formattedDate = date.toLocaleDateString('tr-TR', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          weekday: 'long'
+        });
+        const formattedTime = date.toLocaleTimeString('tr-TR', {
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+
+        await notifyStudentOfAppointmentApproval(
+          studentData.data.email,
+          studentData.data.full_name,
+          coachData.data.full_name,
+          formattedDate,
+          formattedTime,
+          google_meet_link
+        );
+      }
+    } catch (emailError) {
+      console.error('Failed to send notification email:', emailError);
+      // Don't fail the appointment approval if email fails
+    }
+  }
 }
 
 // Coach rejects appointment
@@ -874,4 +951,154 @@ export function getSpecializationOptions(): string[] {
     'Sosyal Bilimler',
     'Yabancı Dil',
   ];
+}
+
+// =====================================================
+// Email Notification System
+// =====================================================
+
+/**
+ * Send email using Supabase Edge Function
+ */
+async function sendEmail(to: string, subject: string, html: string): Promise<void> {
+  try {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+      },
+      body: JSON.stringify({ to, subject, html }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to send email');
+    }
+  } catch (error) {
+    console.error('Error sending email:', error);
+    // Don't throw - email failure shouldn't block the main operation
+  }
+}
+
+/**
+ * Send email to coach when student requests appointment
+ */
+export async function notifyCoachOfAppointmentRequest(
+  coachEmail: string,
+  coachName: string,
+  studentName: string,
+  appointmentDate: string,
+  appointmentTime: string
+): Promise<void> {
+  const subject = '🔔 Yeni Randevu Talebi';
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+        .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
+        .button { display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; margin: 20px 0; }
+        .info-box { background: white; padding: 20px; border-left: 4px solid #667eea; margin: 20px 0; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>🎓 BaşarıYolu Koçluk</h1>
+        </div>
+        <div class="content">
+          <h2>Merhaba ${coachName},</h2>
+          <p>Yeni bir randevu talebiniz var!</p>
+
+          <div class="info-box">
+            <strong>📋 Talep Detayları:</strong><br><br>
+            <strong>Öğrenci:</strong> ${studentName}<br>
+            <strong>Tarih:</strong> ${appointmentDate}<br>
+            <strong>Saat:</strong> ${appointmentTime}<br>
+          </div>
+
+          <p>Talebi değerlendirmek için lütfen koçluk panelinize giriş yapın.</p>
+
+          <a href="https://basariyolum.com" class="button">Koçluk Paneline Git</a>
+
+          <p style="margin-top: 30px; color: #666; font-size: 14px;">
+            Bu e-posta BaşarıYolu platformu tarafından otomatik olarak gönderilmiştir.
+          </p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  await sendEmail(coachEmail, subject, html);
+}
+
+/**
+ * Send email to student when coach approves appointment
+ */
+export async function notifyStudentOfAppointmentApproval(
+  studentEmail: string,
+  studentName: string,
+  coachName: string,
+  appointmentDate: string,
+  appointmentTime: string,
+  meetLink?: string
+): Promise<void> {
+  const subject = '✅ Randevunuz Onaylandı!';
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+        .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
+        .button { display: inline-block; background: #10b981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; margin: 20px 0; }
+        .info-box { background: white; padding: 20px; border-left: 4px solid #10b981; margin: 20px 0; }
+        .success { color: #10b981; font-size: 48px; text-align: center; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <div class="success">✓</div>
+          <h1>Randevunuz Onaylandı!</h1>
+        </div>
+        <div class="content">
+          <h2>Merhaba ${studentName},</h2>
+          <p>Koçluk randevunuz onaylandı! 🎉</p>
+
+          <div class="info-box">
+            <strong>📋 Randevu Detayları:</strong><br><br>
+            <strong>Koç:</strong> ${coachName}<br>
+            <strong>Tarih:</strong> ${appointmentDate}<br>
+            <strong>Saat:</strong> ${appointmentTime}<br>
+          </div>
+
+          ${meetLink ? `
+          <p><strong>Toplantı Linki:</strong></p>
+          <a href="${meetLink}" class="button">Görüşmeye Katıl</a>
+          ` : ''}
+
+          <p>Randevunuza zamanında katılmayı unutmayın!</p>
+
+          <a href="https://basariyolum.com" class="button">Koçluk Paneline Git</a>
+
+          <p style="margin-top: 30px; color: #666; font-size: 14px;">
+            Bu e-posta BaşarıYolu platformu tarafından otomatik olarak gönderilmiştir.
+          </p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  await sendEmail(studentEmail, subject, html);
 }
