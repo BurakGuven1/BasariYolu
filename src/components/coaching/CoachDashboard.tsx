@@ -304,8 +304,8 @@ export default function CoachDashboard({ coachId }: CoachDashboardProps) {
                               </div>
                             )}
                             <span className="text-sm font-medium">{appointment.student.full_name}</span>
-                            {appointment.student.grade && (
-                              <span className="text-xs text-gray-500">({appointment.student.grade}. sınıf)</span>
+                            {appointment.student.grade_level && (
+                              <span className="text-xs text-gray-500">({appointment.student.grade_level}. sınıf)</span>
                             )}
                           </div>
                         )}

@@ -75,7 +75,7 @@ export interface CoachingAppointment {
     id: string;
     full_name: string;
     avatar_url: string | null;
-    grade: number | null;
+    grade_level: number | null;
   };
   coach?: {
     id: string;
@@ -433,7 +433,7 @@ export async function getCoachAppointments(
     .select(`
       *,
       student:profiles!coaching_appointments_student_id_fkey(
-        id, full_name, avatar_url
+        id, full_name, avatar_url, grade_level
       ),
       subscription:student_coaching_subscriptions!coaching_appointments_subscription_id_fkey(
         id,
