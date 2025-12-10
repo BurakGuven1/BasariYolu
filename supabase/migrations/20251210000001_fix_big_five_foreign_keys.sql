@@ -27,30 +27,25 @@ DROP POLICY IF EXISTS "Students can insert their own responses" ON public.big_fi
 DROP POLICY IF EXISTS "Students can view their own responses" ON public.big_five_responses;
 DROP POLICY IF EXISTS "Students can update their own responses" ON public.big_five_responses;
 
--- Create new policies using user_id from profiles
+-- Create new policies
+-- Note: profiles.id = auth.uid() (1-to-1 mapping in Supabase)
 CREATE POLICY "Students can insert their own responses"
 ON public.big_five_responses
 FOR INSERT
 TO authenticated
-WITH CHECK (
-  student_id IN (SELECT id FROM public.profiles WHERE user_id = auth.uid())
-);
+WITH CHECK (student_id = auth.uid());
 
 CREATE POLICY "Students can view their own responses"
 ON public.big_five_responses
 FOR SELECT
 TO authenticated
-USING (
-  student_id IN (SELECT id FROM public.profiles WHERE user_id = auth.uid())
-);
+USING (student_id = auth.uid());
 
 CREATE POLICY "Students can update their own responses"
 ON public.big_five_responses
 FOR UPDATE
 TO authenticated
-USING (
-  student_id IN (SELECT id FROM public.profiles WHERE user_id = auth.uid())
-);
+USING (student_id = auth.uid());
 
 -- RLS policies for big_five_results
 ALTER TABLE public.big_five_results ENABLE ROW LEVEL SECURITY;
@@ -65,22 +60,16 @@ CREATE POLICY "Students can insert their own results"
 ON public.big_five_results
 FOR INSERT
 TO authenticated
-WITH CHECK (
-  student_id IN (SELECT id FROM public.profiles WHERE user_id = auth.uid())
-);
+WITH CHECK (student_id = auth.uid());
 
 CREATE POLICY "Students can view their own results"
 ON public.big_five_results
 FOR SELECT
 TO authenticated
-USING (
-  student_id IN (SELECT id FROM public.profiles WHERE user_id = auth.uid())
-);
+USING (student_id = auth.uid());
 
 CREATE POLICY "Students can update their own results"
 ON public.big_five_results
 FOR UPDATE
 TO authenticated
-USING (
-  student_id IN (SELECT id FROM public.profiles WHERE user_id = auth.uid())
-);
+USING (student_id = auth.uid());
