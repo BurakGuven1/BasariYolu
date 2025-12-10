@@ -9,6 +9,7 @@ import {
   getSubscriptionProgress,
   isSubscriptionActive,
   formatAppointmentDate,
+  ensureAbsoluteUrl,
   type CoachingPackage,
   type CoachProfile,
   type StudentCoachingSubscription,
@@ -391,7 +392,7 @@ export default function StudentCoachingPanel({ studentId }: StudentCoachingPanel
 
                           {appointment.google_meet_link && (
                             <a
-                              href={appointment.google_meet_link}
+                              href={ensureAbsoluteUrl(appointment.google_meet_link) || '#'}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="flex items-center gap-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium whitespace-nowrap ml-4"

@@ -6,6 +6,7 @@ import {
   getCoachStats,
   formatAppointmentDate,
   getTeacherCoachApplication,
+  ensureAbsoluteUrl,
   type StudentCoachingSubscription,
   type CoachingAppointment,
   type CoachStats,
@@ -523,7 +524,7 @@ export default function CoachDashboard({ coachId }: CoachDashboardProps) {
 
                       {appointment.google_meet_link && appointment.status === 'approved' && (
                         <a
-                          href={appointment.google_meet_link}
+                          href={ensureAbsoluteUrl(appointment.google_meet_link) || '#'}
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}

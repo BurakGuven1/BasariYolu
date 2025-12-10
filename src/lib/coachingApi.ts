@@ -1102,3 +1102,25 @@ export async function notifyStudentOfAppointmentApproval(
 
   await sendEmail(studentEmail, subject, html);
 }
+
+// =====================================================
+// Utility Functions
+// =====================================================
+
+/**
+ * Ensures URL has proper protocol (https:// or http://)
+ * Prevents relative URL issues in browser
+ */
+export function ensureAbsoluteUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+
+  const trimmedUrl = url.trim();
+
+  // Already has protocol
+  if (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://')) {
+    return trimmedUrl;
+  }
+
+  // Add https:// by default
+  return `https://${trimmedUrl}`;
+}
