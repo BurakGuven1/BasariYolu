@@ -10,16 +10,18 @@ import CoachTermsModal from './CoachTermsModal';
 
 interface CoachApplicationFormProps {
   teacherId: string;
-  teacherEmail: string;
-  teacherName: string;
+  teacherEmail?: string;
+  teacherName?: string;
   onSuccess: () => void;
+  onClose?: () => void;
 }
 
 export default function CoachApplicationForm({
   teacherId,
-  teacherEmail,
-  teacherName,
+  teacherEmail = '',
+  teacherName = '',
   onSuccess,
+  onClose,
 }: CoachApplicationFormProps) {
   const [loading, setLoading] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);

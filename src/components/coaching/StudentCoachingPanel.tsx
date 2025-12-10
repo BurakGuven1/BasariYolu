@@ -100,7 +100,7 @@ export default function StudentCoachingPanel({ studentId }: StudentCoachingPanel
   };
 
   const activeSubscriptions = subscriptions.filter((s) => isSubscriptionActive(s));
-  const upcomingAppointments = appointments.filter((a) => a.status === 'approved' || a.status === 'scheduled');
+  const upcomingAppointments = appointments.filter((a) => a.status === 'approved');
   const pendingAppointments = appointments.filter((a) => a.status === 'pending');
 
   const handleRequestAppointment = (subscription: StudentCoachingSubscription) => {
@@ -406,12 +406,12 @@ export default function StudentCoachingPanel({ studentId }: StudentCoachingPanel
               </div>
 
               {/* Past Appointments */}
-              {appointments.filter((a) => a.status !== 'scheduled').length > 0 && (
+              {appointments.filter((a) => a.status !== 'approved' && a.status !== 'pending').length > 0 && (
                 <div className="bg-white rounded-lg shadow-md p-6">
                   <h3 className="text-lg font-bold text-gray-900 mb-4">📝 Geçmiş Görüşmeler</h3>
                   <div className="space-y-2">
                     {appointments
-                      .filter((a) => a.status !== 'scheduled')
+                      .filter((a) => a.status !== 'approved' && a.status !== 'pending')
                       .slice(0, 5)
                       .map((appointment) => (
                         <div key={appointment.id} className="flex items-center justify-between py-2 border-b border-gray-100">
