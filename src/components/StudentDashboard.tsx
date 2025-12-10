@@ -1397,8 +1397,8 @@ export default function StudentDashboard({ authUser }: StudentDashboardProps) {
             gradeLevel={studentData.profile?.grade || 9}
           />
         )}
-        {activeTab === 'coaching' && studentData && (
-          <StudentCoachingPanel studentId={studentData.id} />
+        {activeTab === 'coaching' && user && (
+          <StudentCoachingPanel studentId={user.id} />
         )}
         {activeTab === 'classes' && (
           showInstitutionPortal ? (
