@@ -110,7 +110,6 @@ export default function CoachDashboard({ coachId }: CoachDashboardProps) {
       case 'pending':
         return <Clock className="h-4 w-4 text-yellow-600" />;
       case 'approved':
-      case 'scheduled':
         return <Clock className="h-4 w-4 text-blue-600" />;
       case 'rejected':
         return <XCircle className="h-4 w-4 text-red-600" />;
@@ -130,7 +129,6 @@ export default function CoachDashboard({ coachId }: CoachDashboardProps) {
       case 'pending':
         return 'bg-yellow-50 text-yellow-700 border-yellow-200';
       case 'approved':
-      case 'scheduled':
         return 'bg-blue-50 text-blue-700 border-blue-200';
       case 'rejected':
         return 'bg-red-50 text-red-700 border-red-200';
@@ -153,8 +151,6 @@ export default function CoachDashboard({ coachId }: CoachDashboardProps) {
         return 'Onaylandı';
       case 'rejected':
         return 'Reddedildi';
-      case 'scheduled':
-        return 'Planlandı';
       case 'completed':
         return 'Tamamlandı';
       case 'cancelled':
@@ -167,7 +163,7 @@ export default function CoachDashboard({ coachId }: CoachDashboardProps) {
   };
 
   const activeStudents = subscriptions.filter((s) => s.status === 'active');
-  const upcomingAppointments = appointments.filter((a) => a.status === 'approved' || a.status === 'scheduled');
+  const upcomingAppointments = appointments.filter((a) => a.status === 'approved');
 
   if (loading) {
     return (
@@ -525,7 +521,7 @@ export default function CoachDashboard({ coachId }: CoachDashboardProps) {
                         )}
                       </div>
 
-                      {appointment.google_meet_link && appointment.status === 'scheduled' && (
+                      {appointment.google_meet_link && appointment.status === 'approved' && (
                         <a
                           href={appointment.google_meet_link}
                           target="_blank"
