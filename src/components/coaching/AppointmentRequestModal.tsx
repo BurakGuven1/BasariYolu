@@ -63,11 +63,16 @@ export default function AppointmentRequestModal({
 
     try {
       setRequesting(true);
-      const appointmentDate = `${selectedSlot.date}T${selectedSlot.time}:00`;
+
+      // Create date in local timezone (Turkey/Istanbul)
+      const localDateTime = new Date(`${selectedSlot.date}T${selectedSlot.time}:00`);
+
+      // Convert to ISO string for database
+      const appointmentDate = localDateTime.toISOString();
 
       await requestAppointment(subscription.id, subscription.coach_id, studentId, {
         appointment_date: appointmentDate,
-        duration_minutes: 60,
+        duration_minutes: 45,
         title: title || undefined,
         description: description || undefined,
       });

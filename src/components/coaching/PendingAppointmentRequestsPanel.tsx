@@ -137,10 +137,6 @@ export default function PendingAppointmentRequestsPanel({
                         <Calendar className="h-4 w-4 text-indigo-600" />
                         <span className="font-medium">{formatAppointmentDate(appointment.appointment_date)}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-gray-700">
-                        <Clock className="h-4 w-4 text-indigo-600" />
-                        <span>{appointment.duration_minutes} dakika</span>
-                      </div>
                     </div>
 
                     {/* Student's Description/Notes */}
@@ -242,9 +238,6 @@ function ApproveModal({ appointment, onApprove, onClose, processing }: ApproveMo
               <p className="text-sm text-gray-600">
                 <strong>Tarih:</strong> {formatAppointmentDate(appointment.appointment_date)}
               </p>
-              <p className="text-sm text-gray-600">
-                <strong>Süre:</strong> {appointment.duration_minutes} dakika
-              </p>
             </div>
 
             <div>
@@ -332,9 +325,6 @@ function RejectModal({ appointment, onReject, onClose, processing }: RejectModal
             <div className="bg-gray-50 p-3 rounded-lg">
               <p className="text-sm text-gray-600">
                 <strong>Tarih:</strong> {formatAppointmentDate(appointment.appointment_date)}
-              </p>
-              <p className="text-sm text-gray-600">
-                <strong>Süre:</strong> {appointment.duration_minutes} dakika
               </p>
             </div>
 

@@ -301,7 +301,6 @@ export default function StudentCoachingPanel({ studentId }: StudentCoachingPanel
                                 <Clock className="h-4 w-4" />
                                 {formatAppointmentDate(appointment.appointment_date)}
                               </span>
-                              <span className="text-gray-600">{appointment.duration_minutes} dakika</span>
                             </div>
 
                             {appointment.coach && (
@@ -365,7 +364,6 @@ export default function StudentCoachingPanel({ studentId }: StudentCoachingPanel
                                 <Clock className="h-4 w-4" />
                                 {formatAppointmentDate(appointment.appointment_date)}
                               </span>
-                              <span className="text-gray-600">{appointment.duration_minutes} dakika</span>
                             </div>
 
                             {appointment.coach && (
