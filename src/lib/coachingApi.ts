@@ -725,3 +725,153 @@ export function getSubscriptionProgress(subscription: StudentCoachingSubscriptio
     ((subscription.total_sessions - subscription.remaining_sessions) / subscription.total_sessions) * 100
   );
 }
+
+// =====================================================
+// Coach Application System
+// =====================================================
+
+export interface CoachApplication {
+  id: string;
+  teacher_id: string;
+  full_name: string;
+  email: string;
+  phone: string;
+  avatar_url: string | null;
+  experience_years: number;
+  bio: string;
+  specializations: string[];
+  hourly_rate: number | null;
+  terms_accepted: boolean;
+  terms_accepted_at: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  admin_notes: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CoachApplicationInput {
+  full_name: string;
+  email: string;
+  phone: string;
+  avatar_url?: string;
+  experience_years: number;
+  bio: string;
+  specializations: string[];
+  hourly_rate?: number;
+  terms_accepted: boolean;
+}
+
+/**
+ * Submit coach application
+ */
+export async function submitCoachApplication(
+  teacherId: string,
+  application: CoachApplicationInput
+): Promise<CoachApplication> {
+  const { data, error } = await supabase
+    .from('coach_applications')
+    .insert({
+      teacher_id: teacherId,
+      ...application,
+      terms_accepted_at: application.terms_accepted ? new Date().toISOString() : null,
+      status: 'pending',
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Get teacher's coach application
+ */
+export async function getTeacherCoachApplication(teacherId: string): Promise<CoachApplication | null> {
+  const { data, error } = await supabase
+    .from('coach_applications')
+    .select('*')
+    .eq('teacher_id', teacherId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Update coach application (only if pending)
+ */
+export async function updateCoachApplication(
+  applicationId: string,
+  updates: Partial<CoachApplicationInput>
+): Promise<void> {
+  const { error } = await supabase
+    .from('coach_applications')
+    .update({
+      ...updates,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', applicationId)
+    .eq('status', 'pending');
+
+  if (error) throw error;
+}
+
+/**
+ * Upload coach avatar to storage
+ */
+export async function uploadCoachAvatar(teacherId: string, file: File): Promise<string> {
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${teacherId}/${Date.now()}.${fileExt}`;
+
+  const { data, error } = await supabase.storage
+    .from('coach-avatars')
+    .upload(fileName, file, {
+      cacheControl: '3600',
+      upsert: true,
+    });
+
+  if (error) throw error;
+
+  const { data: { publicUrl } } = supabase.storage
+    .from('coach-avatars')
+    .getPublicUrl(data.path);
+
+  return publicUrl;
+}
+
+/**
+ * Delete coach avatar from storage
+ */
+export async function deleteCoachAvatar(avatarUrl: string): Promise<void> {
+  const path = avatarUrl.split('/coach-avatars/').pop();
+  if (!path) return;
+
+  const { error } = await supabase.storage
+    .from('coach-avatars')
+    .remove([path]);
+
+  if (error) throw error;
+}
+
+/**
+ * Get all specialization options
+ */
+export function getSpecializationOptions(): string[] {
+  return [
+    'Sınav Stratejileri',
+    'Motivasyon Koçluğu',
+    'Zaman Yönetimi',
+    'Stres Yönetimi',
+    'Kariyer Danışmanlığı',
+    'Üniversite Yerleştirme',
+    'Bölüm Seçimi',
+    'Ders Çalışma Teknikleri',
+    'Matematik',
+    'Fen Bilimleri',
+    'Türkçe-Edebiyat',
+    'Sosyal Bilimler',
+    'Yabancı Dil',
+  ];
+}

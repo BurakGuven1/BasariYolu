@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Users, Clock, Video, Plus, CheckCircle, XCircle, AlertCircle, Settings, Bell } from 'lucide-react';
+import { Calendar, Users, Clock, Video, Plus, CheckCircle, XCircle, AlertCircle, Settings, Bell, FileText, Loader } from 'lucide-react';
 import {
   getCoachSubscriptions,
   getCoachAppointments,
   getCoachStats,
   formatAppointmentDate,
+  getTeacherCoachApplication,
   type StudentCoachingSubscription,
   type CoachingAppointment,
   type CoachStats,
+  type CoachApplication,
 } from '../../lib/coachingApi';
 import AppointmentModal from './AppointmentModal';
 import CoachAvailabilityManager from './CoachAvailabilityManager';
 import PendingAppointmentRequestsPanel from './PendingAppointmentRequestsPanel';
+import CoachApplicationForm from './CoachApplicationForm';
 
 interface CoachDashboardProps {
   coachId: string;
@@ -19,6 +22,8 @@ interface CoachDashboardProps {
 
 export default function CoachDashboard({ coachId }: CoachDashboardProps) {
   const [loading, setLoading] = useState(true);
+  const [application, setApplication] = useState<CoachApplication | null | undefined>(undefined);
+  const [showApplicationForm, setShowApplicationForm] = useState(false);
   const [activeTab, setActiveTab] = useState<'calendar' | 'students' | 'availability' | 'requests'>('requests');
   const [subscriptions, setSubscriptions] = useState<StudentCoachingSubscription[]>([]);
   const [appointments, setAppointments] = useState<CoachingAppointment[]>([]);
@@ -29,8 +34,27 @@ export default function CoachDashboard({ coachId }: CoachDashboardProps) {
   const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
-    loadData();
+    loadApplication();
   }, [coachId]);
+
+  useEffect(() => {
+    if (application?.status === 'approved') {
+      loadData();
+    }
+  }, [coachId, application]);
+
+  const loadApplication = async () => {
+    try {
+      setLoading(true);
+      const app = await getTeacherCoachApplication(coachId);
+      setApplication(app);
+    } catch (error) {
+      console.error('Error loading application:', error);
+      setApplication(null);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -153,6 +177,195 @@ export default function CoachDashboard({ coachId }: CoachDashboardProps) {
     );
   }
 
+  // No application - Show intro screen
+  if (application === null) {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl shadow-xl p-8 md:p-12 border-2 border-indigo-200">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-indigo-600 rounded-full mb-6">
+              <Users className="h-10 w-10 text-white" />
+            </div>
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              BaşarıYolu'nda Koç Olmak İster Misiniz?
+            </h1>
+            <p className="text-lg text-gray-700 max-w-2xl mx-auto mb-8">
+              Deneyimlerinizi öğrencilerle paylaşın, onların akademik başarılarına katkıda bulunun ve ek gelir elde edin.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6 mb-8">
+            <div className="bg-white rounded-lg p-6 shadow-md">
+              <div className="text-indigo-600 mb-3">
+                <CheckCircle className="h-8 w-8" />
+              </div>
+              <h3 className="font-bold text-gray-900 mb-2">Esnek Çalışma</h3>
+              <p className="text-gray-600 text-sm">
+                Kendi müsaitlik saatlerinizi belirleyin, istediğiniz zaman koçluk yapın.
+              </p>
+            </div>
+
+            <div className="bg-white rounded-lg p-6 shadow-md">
+              <div className="text-indigo-600 mb-3">
+                <Users className="h-8 w-8" />
+              </div>
+              <h3 className="font-bold text-gray-900 mb-2">Geniş Öğrenci Ağı</h3>
+              <p className="text-gray-600 text-sm">
+                Platformumuzda binlerce öğrenci size ulaşmayı bekliyor.
+              </p>
+            </div>
+
+            <div className="bg-white rounded-lg p-6 shadow-md">
+              <div className="text-indigo-600 mb-3">
+                <Settings className="h-8 w-8" />
+              </div>
+              <h3 className="font-bold text-gray-900 mb-2">Kolay Yönetim</h3>
+              <p className="text-gray-600 text-sm">
+                Randevu, ödeme ve öğrenci takibi için tüm araçlar tek platformda.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg p-6 shadow-md mb-8">
+            <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <FileText className="h-5 w-5 text-indigo-600" />
+              Başvuru Süreci
+            </h3>
+            <ol className="space-y-3 text-gray-700">
+              <li className="flex items-start gap-3">
+                <span className="flex-shrink-0 w-6 h-6 bg-indigo-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                  1
+                </span>
+                <span>Başvuru formunu doldurun ve deneyimlerinizi paylaşın</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="flex-shrink-0 w-6 h-6 bg-indigo-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                  2
+                </span>
+                <span>Platformumuz başvurunuzu inceleyecektir (1-3 iş günü)</span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="flex-shrink-0 w-6 h-6 bg-indigo-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                  3
+                </span>
+                <span>Onaylandıktan sonra koçluk yapmaya başlayabilirsiniz</span>
+              </li>
+            </ol>
+          </div>
+
+          <div className="text-center">
+            <button
+              onClick={() => setShowApplicationForm(true)}
+              className="inline-flex items-center gap-2 px-8 py-4 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-bold text-lg shadow-lg"
+            >
+              <FileText className="h-6 w-6" />
+              Koç Başvurusunu Başlat
+            </button>
+          </div>
+        </div>
+
+        {showApplicationForm && (
+          <CoachApplicationForm teacherId={coachId} onClose={() => setShowApplicationForm(false)} onSuccess={loadApplication} />
+        )}
+      </div>
+    );
+  }
+
+  // Pending application
+  if (application?.status === 'pending') {
+    return (
+      <div className="max-w-3xl mx-auto">
+        <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl shadow-lg p-8 md:p-12">
+          <div className="text-center">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-yellow-400 rounded-full mb-6">
+              <Clock className="h-10 w-10 text-yellow-800" />
+            </div>
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
+              Başvurunuz İnceleniyor
+            </h2>
+            <p className="text-lg text-gray-700 mb-6">
+              Koç başvurunuz platformumuz tarafından değerlendiriliyor. Bu işlem genellikle 1-3 iş günü sürmektedir.
+            </p>
+
+            <div className="bg-white rounded-lg p-6 mb-6 text-left">
+              <h3 className="font-bold text-gray-900 mb-3">Başvuru Bilgileriniz:</h3>
+              <div className="space-y-2 text-sm text-gray-700">
+                <div className="flex justify-between">
+                  <span className="font-medium">Ad Soyad:</span>
+                  <span>{application.full_name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">E-posta:</span>
+                  <span>{application.email}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Deneyim:</span>
+                  <span>{application.experience_years} yıl</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Uzmanlık Alanları:</span>
+                  <span>{application.specializations.length} alan</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Başvuru Tarihi:</span>
+                  <span>{new Date(application.created_at).toLocaleDateString('tr-TR')}</span>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-gray-600 text-sm">
+              Başvurunuzla ilgili güncellemeler e-posta adresinize gönderilecektir.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Rejected application
+  if (application?.status === 'rejected') {
+    return (
+      <div className="max-w-3xl mx-auto">
+        <div className="bg-red-50 border-2 border-red-300 rounded-xl shadow-lg p-8 md:p-12">
+          <div className="text-center">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-red-400 rounded-full mb-6">
+              <XCircle className="h-10 w-10 text-red-800" />
+            </div>
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
+              Başvurunuz Değerlendirildi
+            </h2>
+            <p className="text-lg text-gray-700 mb-6">
+              Üzgünüz, şu anda koç başvurunuz onaylanmadı.
+            </p>
+
+            {application.admin_notes && (
+              <div className="bg-white rounded-lg p-6 mb-6 text-left">
+                <h3 className="font-bold text-gray-900 mb-2">Değerlendirme Notu:</h3>
+                <p className="text-gray-700">{application.admin_notes}</p>
+              </div>
+            )}
+
+            <p className="text-gray-600 mb-6">
+              Daha fazla deneyim kazandıktan sonra tekrar başvurabilirsiniz. Sorularınız için bizimle iletişime geçebilirsiniz.
+            </p>
+
+            <button
+              onClick={() => setShowApplicationForm(true)}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+            >
+              Tekrar Başvur
+            </button>
+          </div>
+        </div>
+
+        {showApplicationForm && (
+          <CoachApplicationForm teacherId={coachId} onClose={() => setShowApplicationForm(false)} onSuccess={loadApplication} />
+        )}
+      </div>
+    );
+  }
+
+  // Approved - Show normal dashboard
   return (
     <div className="space-y-6">
       {/* Header Stats */}
