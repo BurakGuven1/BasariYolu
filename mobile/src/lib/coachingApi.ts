@@ -56,7 +56,7 @@ export interface CoachingAppointment {
   google_meet_link: string | null;
   title: string | null;
   description: string | null;
-  status: 'scheduled' | 'completed' | 'cancelled' | 'no_show';
+  status: 'pending' | 'approved' | 'rejected' | 'completed' | 'cancelled' | 'no_show';
   cancellation_reason: string | null;
   completed_at: string | null;
   created_at: string;

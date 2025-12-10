@@ -62,7 +62,7 @@ export interface CoachingAppointment {
   google_meet_link: string | null;
   title: string | null;
   description: string | null;
-  status: 'pending' | 'approved' | 'rejected' | 'scheduled' | 'completed' | 'cancelled' | 'no_show';
+  status: 'pending' | 'approved' | 'rejected' | 'completed' | 'cancelled' | 'no_show';
   cancellation_reason: string | null;
   coach_notes: string | null;
   approved_at: string | null;
@@ -341,7 +341,7 @@ export async function createAppointment(
       google_meet_link: appointmentData.google_meet_link,
       title: appointmentData.title,
       description: appointmentData.description,
-      status: 'scheduled',
+      status: 'approved',
     })
     .select()
     .single();
