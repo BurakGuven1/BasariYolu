@@ -66,12 +66,12 @@ export const useStudentData = (userId?: string) => {
     refetchOnReconnect: false,
   });
 
-  const classAssignmentsQuery = useQuery({
+  const classAssignmentsQuery = useQuery<any[]>({
     queryKey: ['classAssignments', studentId],
     queryFn: async () => {
       if (!studentId) return [];
       const { data } = await getClassAssignmentsForStudent(studentId);
-      return data ?? [];
+      return (data ?? []) as any[];
     },
     enabled: Boolean(studentId),
     staleTime: CACHE_STALE_TIME,
@@ -79,12 +79,12 @@ export const useStudentData = (userId?: string) => {
     refetchOnReconnect: false,
   });
 
-  const classAnnouncementsQuery = useQuery({
+  const classAnnouncementsQuery = useQuery<any[]>({
     queryKey: ['classAnnouncements', studentId],
     queryFn: async () => {
       if (!studentId) return [];
       const { data } = await getClassAnnouncementsForStudent(studentId);
-      return data ?? [];
+      return (data ?? []) as any[];
     },
     enabled: Boolean(studentId),
     staleTime: CACHE_STALE_TIME,
@@ -92,12 +92,12 @@ export const useStudentData = (userId?: string) => {
     refetchOnReconnect: false,
   });
 
-  const classExamResultsQuery = useQuery({
+  const classExamResultsQuery = useQuery<any[]>({
     queryKey: ['classExamResults', studentId],
     queryFn: async () => {
       if (!studentId) return [];
       const { data } = await getClassExamResultsForStudent(studentId);
-      return data ?? [];
+      return (data ?? []) as any[];
     },
     enabled: Boolean(studentId),
     staleTime: CACHE_STALE_TIME,
