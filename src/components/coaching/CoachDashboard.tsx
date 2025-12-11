@@ -554,14 +554,7 @@ export default function CoachDashboard({ coachId }: CoachDashboardProps) {
             </div>
           ) : (
             <div className="space-y-3">
-              {activeStudents.map((subscription) => {
-                const getGradeText = (grade: number | null | undefined) => {
-                  if (!grade) return 'Belirtilmemiş';
-                  if (grade === 13) return 'Mezun';
-                  return `${grade}. Sınıf`;
-                };
-
-                return (
+              {activeStudents.map((subscription) => (
                   <div key={subscription.id} className="border-2 border-gray-200 rounded-lg p-5 hover:shadow-md transition-shadow bg-white">
                     <div className="flex items-start gap-4">
                       {/* Avatar */}
@@ -587,17 +580,6 @@ export default function CoachDashboard({ coachId }: CoachDashboardProps) {
                             <h4 className="font-bold text-gray-900 text-lg mb-1">
                               {subscription.student?.full_name}
                             </h4>
-                            {subscription.student?.phone && (
-                              <p className="text-sm text-gray-600 flex items-center gap-1">
-                                📱 {subscription.student.phone}
-                              </p>
-                            )}
-                          </div>
-                          <div className="text-sm">
-                            <span className="text-gray-500">Sınıf:</span>{' '}
-                            <span className="font-medium text-gray-900">
-                              {getGradeText(subscription.student?.grade)}
-                            </span>
                           </div>
                         </div>
 
@@ -658,8 +640,7 @@ export default function CoachDashboard({ coachId }: CoachDashboardProps) {
                       </div>
                     </div>
                   </div>
-                );
-              })}
+              ))}
             </div>
           )}
         </div>
