@@ -3,6 +3,8 @@ import { X, Mail, Lock, User, Phone } from 'lucide-react';
 import { signUp, signIn, createProfile, createStudentRecord, createParentRecord, supabase } from '../lib/supabase';
 import * as authApi from '../lib/authApi';
 import ClassCodeLogin from './ClassCodeLogin';
+import EmailVerificationScreen from './EmailVerificationScreen';
+import { useToast } from '../contexts/ToastContext';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -12,11 +14,14 @@ interface LoginModalProps {
 }
 
 export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: LoginModalProps) {
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState<'student' | 'parent'>('student');
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [userType] = useState<'student' | 'parent'>('student');
   const [loading, setLoading] = useState(false);
   const [showClassCodeLogin, setShowClassCodeLogin] = useState(false);
+  const [showEmailVerification, setShowEmailVerification] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState('');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
