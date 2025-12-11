@@ -49,8 +49,6 @@ export interface StudentCoachingSubscription {
     id: string;
     full_name: string;
     avatar_url: string | null;
-    phone: string | null;
-    grade: number | null;
   };
   // Computed fields
   last_appointment_date?: string | null;
@@ -277,7 +275,7 @@ export async function getCoachSubscriptions(coachId: string): Promise<StudentCoa
       *,
       package:coaching_packages(*),
       student:profiles!student_coaching_subscriptions_student_id_fkey(
-        id, full_name, avatar_url, phone, grade
+        id, full_name, avatar_url
       )
     `)
     .eq('coach_id', coachId)
