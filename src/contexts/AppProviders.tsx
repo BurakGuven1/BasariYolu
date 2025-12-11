@@ -7,6 +7,7 @@ import { NotificationProvider } from './NotificationContext';
 import { ThemeProvider } from './ThemeContext';
 import { PomodoroProvider } from './PomodoroContext';
 import { ParentSessionProvider } from './ParentSessionContext';
+import { ToastProvider } from './ToastContext';
 
 /**
  * PomodoroProvider wrapper that injects studentId from AuthContext
@@ -34,21 +35,23 @@ function PomodoroProviderWrapper({ children }: { children: React.ReactNode }) {
 export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider>
-      <NotificationProvider>
-        <AuthProvider>
-          <ParentSessionProvider>
-            <StudentProvider>
-              <InstitutionProvider>
-                <ExamProvider>
-                  <PomodoroProviderWrapper>
-                    {children}
-                  </PomodoroProviderWrapper>
-                </ExamProvider>
-              </InstitutionProvider>
-            </StudentProvider>
-          </ParentSessionProvider>
-        </AuthProvider>
-      </NotificationProvider>
+      <ToastProvider>
+        <NotificationProvider>
+          <AuthProvider>
+            <ParentSessionProvider>
+              <StudentProvider>
+                <InstitutionProvider>
+                  <ExamProvider>
+                    <PomodoroProviderWrapper>
+                      {children}
+                    </PomodoroProviderWrapper>
+                  </ExamProvider>
+                </InstitutionProvider>
+              </StudentProvider>
+            </ParentSessionProvider>
+          </AuthProvider>
+        </NotificationProvider>
+      </ToastProvider>
     </ThemeProvider>
   );
 }
