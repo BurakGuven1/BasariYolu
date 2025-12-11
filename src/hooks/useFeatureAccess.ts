@@ -19,7 +19,6 @@ async function getAdvancedPlanInfo(): Promise<SubscriptionPlan | null> {
       .limit(1);
 
     if (error) {
-      console.error('Failed to load advanced plan info:', error);
       return null;
     }
 
@@ -28,7 +27,7 @@ async function getAdvancedPlanInfo(): Promise<SubscriptionPlan | null> {
       return cachedAdvancedPlan;
     }
   } catch (err) {
-    console.error('Failed to load advanced plan info:', err);
+    // Silently fail
   }
 
   return null;
@@ -44,6 +43,7 @@ export function useFeatureAccess() {
     limit: 0,
     remaining: 0,
   });
+  const hasLoadedRef = useRef(false);
 
   const activeSubscription = subscription ?? institutionSubscription;
   const activeRef = useRef<UserSubscription | null>(activeSubscription);
@@ -57,9 +57,16 @@ export function useFeatureAccess() {
         setSubscription(null);
         setInstitutionSubscription(null);
         setLoading(false);
+        hasLoadedRef.current = false;
         return;
       }
 
+      // Only load once per user session, not on every tab switch
+      if (hasLoadedRef.current) {
+        return;
+      }
+
+      hasLoadedRef.current = true;
       setLoading(true);
       try {
         await Promise.all([
@@ -85,7 +92,6 @@ export function useFeatureAccess() {
       const { data } = await getUserSubscription(userId);
       setSubscription(data);
     } catch (error) {
-      console.error('Error loading subscription:', error);
       setSubscription(null);
     }
   };
@@ -95,7 +101,7 @@ export function useFeatureAccess() {
       const stats = await getExamCountForPeriod(userId);
       setExamStats(stats);
     } catch (error) {
-      console.error('Error loading exam stats:', error);
+      // Silently fail
     }
   };
 
@@ -163,7 +169,6 @@ export function useFeatureAccess() {
         setInstitutionSubscription(null);
       }
     } catch (err) {
-      console.error('Error loading institution access:', err);
       setInstitutionSubscription(null);
     }
   };
