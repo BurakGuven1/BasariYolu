@@ -553,58 +553,113 @@ export default function CoachDashboard({ coachId }: CoachDashboardProps) {
               <p className="text-gray-500">Henüz aktif öğrenciniz bulunmuyor</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {activeStudents.map((subscription) => (
-                <div key={subscription.id} className="border-2 border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                  <div className="flex items-center gap-3 mb-3">
-                    {subscription.student?.avatar_url ? (
-                      <img
-                        src={subscription.student.avatar_url}
-                        alt={subscription.student.full_name}
-                        className="w-12 h-12 rounded-full"
-                      />
-                    ) : (
-                      <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-xl font-bold text-indigo-600">
-                        {subscription.student?.full_name?.[0] || '?'}
+            <div className="space-y-3">
+              {activeStudents.map((subscription) => {
+                const getGradeText = (grade: number | null | undefined) => {
+                  if (!grade) return 'Belirtilmemiş';
+                  if (grade === 13) return 'Mezun';
+                  return `${grade}. Sınıf`;
+                };
+
+                return (
+                  <div key={subscription.id} className="border-2 border-gray-200 rounded-lg p-5 hover:shadow-md transition-shadow bg-white">
+                    <div className="flex items-start gap-4">
+                      {/* Avatar */}
+                      <div className="flex-shrink-0">
+                        {subscription.student?.avatar_url ? (
+                          <img
+                            src={subscription.student.avatar_url}
+                            alt={subscription.student.full_name}
+                            className="w-16 h-16 rounded-full border-2 border-indigo-200"
+                          />
+                        ) : (
+                          <div className="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center text-2xl font-bold text-indigo-600 border-2 border-indigo-200">
+                            {subscription.student?.full_name?.[0] || '?'}
+                          </div>
+                        )}
                       </div>
-                    )}
-                    <div>
-                      <h4 className="font-semibold text-gray-900">{subscription.student?.full_name}</h4>
-                      <p className="text-sm text-gray-500">{subscription.package?.name}</p>
-                    </div>
-                  </div>
 
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Kalan Seans:</span>
-                      <span className="font-semibold text-indigo-600">
-                        {subscription.remaining_sessions} / {subscription.total_sessions}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Bitiş:</span>
-                      <span className="font-medium">
-                        {new Date(subscription.end_date).toLocaleDateString('tr-TR')}
-                      </span>
-                    </div>
-                  </div>
+                      {/* Student Info */}
+                      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {/* Column 1: Basics */}
+                        <div className="space-y-2">
+                          <div>
+                            <h4 className="font-bold text-gray-900 text-lg mb-1">
+                              {subscription.student?.full_name}
+                            </h4>
+                            {subscription.student?.phone && (
+                              <p className="text-sm text-gray-600 flex items-center gap-1">
+                                📱 {subscription.student.phone}
+                              </p>
+                            )}
+                          </div>
+                          <div className="text-sm">
+                            <span className="text-gray-500">Sınıf:</span>{' '}
+                            <span className="font-medium text-gray-900">
+                              {getGradeText(subscription.student?.grade)}
+                            </span>
+                          </div>
+                        </div>
 
-                  <div className="mt-3 pt-3 border-t border-gray-200">
-                    <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-indigo-600"
-                        style={{
-                          width: `${
-                            ((subscription.total_sessions - subscription.remaining_sessions) /
-                              subscription.total_sessions) *
-                            100
-                          }%`,
-                        }}
-                      />
+                        {/* Column 2: Package & Sessions */}
+                        <div className="space-y-2">
+                          <div className="text-sm">
+                            <span className="text-gray-500">Paket:</span>{' '}
+                            <span className="font-medium text-indigo-600">
+                              {subscription.package?.name}
+                            </span>
+                          </div>
+                          <div className="text-sm">
+                            <span className="text-gray-500">Kalan Seans:</span>{' '}
+                            <span className="font-bold text-green-600">
+                              {subscription.remaining_sessions} / {subscription.total_sessions}
+                            </span>
+                          </div>
+                          <div className="text-sm">
+                            <span className="text-gray-500">Bitiş:</span>{' '}
+                            <span className="font-medium text-gray-900">
+                              {new Date(subscription.end_date).toLocaleDateString('tr-TR')}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Column 3: Last Appointment */}
+                        <div className="space-y-2">
+                          <div className="text-sm">
+                            <span className="text-gray-500">Son Görüşme:</span>{' '}
+                            <span className="font-medium text-gray-900">
+                              {subscription.last_appointment_date
+                                ? new Date(subscription.last_appointment_date).toLocaleDateString('tr-TR', {
+                                    day: '2-digit',
+                                    month: 'short',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })
+                                : 'Henüz görüşme yok'}
+                            </span>
+                          </div>
+                          {/* Progress bar */}
+                          <div className="mt-3">
+                            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-indigo-600 transition-all"
+                                style={{
+                                  width: `${
+                                    ((subscription.total_sessions - subscription.remaining_sessions) /
+                                      subscription.total_sessions) *
+                                    100
+                                  }%`,
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

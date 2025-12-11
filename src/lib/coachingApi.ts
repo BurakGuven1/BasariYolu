@@ -49,7 +49,11 @@ export interface StudentCoachingSubscription {
     id: string;
     full_name: string;
     avatar_url: string | null;
+    phone: string | null;
+    grade: number | null;
   };
+  // Computed fields
+  last_appointment_date?: string | null;
 }
 
 export interface CoachingAppointment {
@@ -273,7 +277,7 @@ export async function getCoachSubscriptions(coachId: string): Promise<StudentCoa
       *,
       package:coaching_packages(*),
       student:profiles!student_coaching_subscriptions_student_id_fkey(
-        id, full_name, avatar_url
+        id, full_name, avatar_url, phone, grade
       )
     `)
     .eq('coach_id', coachId)
@@ -281,7 +285,31 @@ export async function getCoachSubscriptions(coachId: string): Promise<StudentCoa
     .order('created_at', { ascending: false });
 
   if (error) throw error;
-  return data || [];
+
+  // Get last appointment date for each subscription
+  if (data) {
+    const subscriptionsWithLastAppointment = await Promise.all(
+      data.map(async (subscription) => {
+        const { data: lastAppointment } = await supabase
+          .from('coaching_appointments')
+          .select('appointment_date')
+          .eq('subscription_id', subscription.id)
+          .in('status', ['completed', 'approved'])
+          .order('appointment_date', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        return {
+          ...subscription,
+          last_appointment_date: lastAppointment?.appointment_date || null,
+        };
+      })
+    );
+
+    return subscriptionsWithLastAppointment;
+  }
+
+  return [];
 }
 
 export async function getActiveSubscription(
