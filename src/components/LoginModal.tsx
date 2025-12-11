@@ -24,6 +24,7 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
     confirmPassword: '',
     grade: '',
     schoolName: '',
+    phone: '',
     parentCode: '',
     parentPhone: '',
     classCode: ''
@@ -198,6 +199,7 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
           confirmPassword: '',
           grade: '',
           schoolName: '',
+          phone: '',
           parentCode: '',
           parentPhone: '',
           classCode: ''
@@ -284,7 +286,8 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
           const studentData = {
             user_id: authData.user.id,
             grade: parseInt(formData.grade),
-            school_name: formData.schoolName
+            school_name: formData.schoolName,
+            phone: formData.phone
           };
           console.log('Creating student:', studentData);
           const { error: studentError } = await createStudentRecord(studentData);
@@ -339,6 +342,7 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
           confirmPassword: '',
           grade: '',
           schoolName: '',
+          phone: '',
           parentCode: '',
           parentPhone: '',
           classCode: ''
@@ -522,6 +526,7 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
                     <option value="10">10. Sınıf</option>
                     <option value="11">11. Sınıf</option>
                     <option value="12">12. Sınıf</option>
+                    <option value="13">Mezun</option>
                   </select>
                 </div>
 
@@ -538,6 +543,24 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
                     placeholder="Okul adınızı giriniz"
                     required
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Telefon Numarası
+                  </label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="05XX XXX XX XX"
+                      required
+                    />
+                  </div>
                 </div>
 
                 <div>
