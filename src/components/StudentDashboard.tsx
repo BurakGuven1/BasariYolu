@@ -32,6 +32,7 @@ import ErrorBoundary from './ErrorBoundary';
 import TopicTracking from './TopicTracking';
 import BigFiveAssessment from './BigFiveAssessment';
 import StudentCoachingPanel from './coaching/StudentCoachingPanel';
+import PremiumRequiredScreen from './PremiumRequiredScreen';
 import type { InstitutionExamBlueprint } from '../lib/institutionQuestionApi';
 import {
   fetchInstitutionStudentPortalData,
@@ -462,6 +463,11 @@ export default function StudentDashboard({ authUser }: StudentDashboardProps) {
         </div>
       </div>
     );
+  }
+
+  // Check for premium subscription
+  if (!subscription && !isInstitutionStudent) {
+    return <PremiumRequiredScreen userType="student" />;
   }
 
   if (!studentData) {
