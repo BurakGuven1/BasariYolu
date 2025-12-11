@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { ArrowLeft, CreditCard, Shield, Check, X, Calendar, Star } from 'lucide-react';
+import React from 'react';
+import { ArrowLeft, X, Smartphone, Check, Shield, Download, Apple } from 'lucide-react';
 import { packages } from '../data/packages';
 
 interface PaymentPageProps {
@@ -18,83 +18,19 @@ interface PaymentPageProps {
   };
 }
 
-export default function PaymentPage({ isOpen, onClose, onPaymentSuccess, registrationData }: PaymentPageProps) {
-  const [loading, setLoading] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'bank'>('card');
-  const [cardData, setCardData] = useState({
-    cardNumber: '',
-    expiryDate: '',
-    cvv: '',
-    cardHolder: ''
-  });
-
+export default function PaymentPage({ isOpen, onClose, registrationData }: PaymentPageProps) {
   if (!isOpen) return null;
 
   const selectedPackage = packages.find(pkg => pkg.id === registrationData.packageType);
   if (!selectedPackage) return null;
 
-  const currentPrice = registrationData.billingCycle === 'monthly' 
-    ? selectedPackage.monthlyPrice 
+  const currentPrice = registrationData.billingCycle === 'monthly'
+    ? selectedPackage.monthlyPrice
     : selectedPackage.yearlyPrice;
-  
-  const monthlyEquivalent = registrationData.billingCycle === 'yearly' 
-    ? selectedPackage.yearlyPrice / 12 
-    : selectedPackage.monthlyPrice;
-  
-  const savings = registrationData.billingCycle === 'yearly' 
-    ? (selectedPackage.monthlyPrice * 12) - selectedPackage.yearlyPrice 
-    : 0;
-
-  const handlePayment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Simulate payment success (90% success rate for demo)
-      const isSuccess = Math.random() > 0.1;
-      
-      if (isSuccess) {
-        alert('Ödeme başarılı! Hesabınız oluşturuluyor...');
-        onPaymentSuccess();
-      } else {
-        throw new Error('Ödeme işlemi başarısız oldu');
-      }
-    } catch (error: any) {
-      alert('Ödeme hatası: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const formatCardNumber = (value: string) => {
-    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-    const matches = v.match(/\d{4,16}/g);
-    const match = matches && matches[0] || '';
-    const parts = [];
-    for (let i = 0, len = match.length; i < len; i += 4) {
-      parts.push(match.substring(i, i + 4));
-    }
-    if (parts.length) {
-      return parts.join(' ');
-    } else {
-      return v;
-    }
-  };
-
-  const formatExpiryDate = (value: string) => {
-    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-    if (v.length >= 2) {
-      return v.substring(0, 2) + '/' + v.substring(2, 4);
-    }
-    return v;
-  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl max-w-4xl w-full p-6 relative max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-xl max-w-3xl w-full p-6 relative max-h-[90vh] overflow-y-auto">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
@@ -111,264 +47,126 @@ export default function PaymentPage({ isOpen, onClose, onPaymentSuccess, registr
             <span>Geri</span>
           </button>
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Ödeme Sayfası</h2>
-            <p className="text-gray-600">Seçtiğiniz paketi satın alın ve hesabınızı aktifleştirin</p>
+            <h2 className="text-2xl font-bold text-gray-900">Mobil Uygulamamızdan Devam Edin</h2>
+            <p className="text-gray-600">Güvenli ödeme için mobil uygulamamızı kullanın</p>
           </div>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8">
-          {/* Left Side - Package Summary */}
-          <div className="space-y-6">
-            <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
-              <h3 className="text-lg font-semibold text-blue-900 mb-4">Sipariş Özeti</h3>
-              
-              <div className="space-y-4">
-                <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-start">
-                  <div>
-                    <h4 className="font-semibold text-blue-800">{selectedPackage.name}</h4>
-                    <p className="text-sm text-blue-600">
-                      {registrationData.billingCycle === 'yearly' ? 'Yıllık Ödeme' : 'Aylık Ödeme'}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-xl font-bold text-blue-600">
-                      {currentPrice.toLocaleString()}₺
-                    </div>
-                    {registrationData.billingCycle === 'yearly' && (
-                      <div className="text-sm text-green-600">
-                        Aylık {monthlyEquivalent.toFixed(0)}₺'ye denk geliyor
-                      </div>
-                    )}
-                  </div>
-                </div>
+        {/* Mobile App Info Card */}
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-8 mb-6 border-2 border-blue-200">
+          <div className="flex justify-center mb-6">
+            <div className="bg-blue-600 rounded-full p-4">
+              <Smartphone className="h-12 w-12 text-white" />
+            </div>
+          </div>
 
-                {savings > 0 && (
-                  <div className="bg-green-100 p-3 rounded-lg">
-                    <div className="text-green-800 text-center">
-                      <div className="font-semibold flex items-center justify-center">
-                        <Star className="h-4 w-4 mr-1" />
-                        {savings.toLocaleString()}₺ Tasarruf!
-                      </div>
-                      <div className="text-sm">
-                        Aylık ödemeye göre %{Math.round((savings / (selectedPackage.monthlyPrice * 12)) * 100)} indirim
-                      </div>
-                    </div>
-                  </div>
-                )}
+          <h3 className="text-xl font-bold text-center text-gray-900 mb-4">
+            Paket Satın Alımları Mobil Uygulama Üzerinden Yapılmaktadır
+          </h3>
 
-                <div className="border-t border-blue-200 pt-4">
-                  <h5 className="font-medium text-blue-800 mb-2">Paket Avantajları:</h5>
-                  <ul className="text-sm text-blue-700 space-y-1">
-                    {selectedPackage.features.slice(0, 4).map((feature, index) => (
-                      <li key={index} className="flex items-start">
-                        <Check className="h-4 w-4 text-green-600 mr-2 mt-0.5 flex-shrink-0" />
-                        {feature}
-                      </li>
-                    ))}
-                    {selectedPackage.features.length > 4 && (
-                      <li className="text-blue-600 font-medium">
-                        +{selectedPackage.features.length - 4} özellik daha...
-                      </li>
-                    )}
-                  </ul>
-                </div>
+          <div className="space-y-3 mb-6">
+            <div className="flex items-start gap-3 bg-white rounded-lg p-4">
+              <Shield className="h-6 w-6 text-green-600 flex-shrink-0 mt-1" />
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-1">Güvenli Ödeme</h4>
+                <p className="text-sm text-gray-600">
+                  Ödemeleriniz Google Play ve App Store'un güvenli altyapısı üzerinden işlenir
+                </p>
               </div>
             </div>
 
-            {/* User Info Summary */}
-            <div className="bg-gray-50 rounded-xl p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Hesap Bilgileri</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
-                  <span className="text-gray-600">Ad Soyad:</span>
-                  <span className="font-medium">{registrationData.name}</span>
-                </div>
-                <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
-                  <span className="text-gray-600">E-posta:</span>
-                  <span className="font-medium">{registrationData.email}</span>
-                </div>
-                <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
-                  <span className="text-gray-600">Sınıf:</span>
-                  <span className="font-medium">{registrationData.grade}. Sınıf</span>
-                </div>
-                <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
-                  <span className="text-gray-600">Okul:</span>
-                  <span className="font-medium">{registrationData.schoolName}</span>
-                </div>
-                {registrationData.classCode && (
-                  <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
-                    <span className="text-gray-600">Sınıf Kodu:</span>
-                    <span className="font-medium font-mono">{registrationData.classCode}</span>
-                  </div>
-                )}
+            <div className="flex items-start gap-3 bg-white rounded-lg p-4">
+              <Check className="h-6 w-6 text-green-600 flex-shrink-0 mt-1" />
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-1">Her Platformda Kullanın</h4>
+                <p className="text-sm text-gray-600">
+                  Mobil uygulamadan satın aldığınız paketi hem mobil hem de web platformlarında kullanabilirsiniz
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3 bg-white rounded-lg p-4">
+              <Download className="h-6 w-6 text-green-600 flex-shrink-0 mt-1" />
+              <div>
+                <h4 className="font-semibold text-gray-900 mb-1">Kolay Kurulum</h4>
+                <p className="text-sm text-gray-600">
+                  Uygulamamızı indirin, giriş yapın ve paketinizi güvenle satın alın
+                </p>
               </div>
             </div>
           </div>
 
-          {/* Right Side - Payment Form */}
-          <div className="space-y-6">
-            {/* Payment Method Selection */}
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Ödeme Yöntemi</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <button
-                  onClick={() => setPaymentMethod('card')}
-                  className={`p-4 rounded-lg border-2 transition-colors ${
-                    paymentMethod === 'card'
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <CreditCard className="h-6 w-6 mx-auto mb-2 text-blue-600" />
-                  <div className="text-sm font-medium">Kredi Kartı</div>
-                </button>
-                <button
-                  onClick={() => setPaymentMethod('bank')}
-                  className={`p-4 rounded-lg border-2 transition-colors ${
-                    paymentMethod === 'bank'
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <Calendar className="h-6 w-6 mx-auto mb-2 text-blue-600" />
-                  <div className="text-sm font-medium">Havale/EFT</div>
-                </button>
+          {/* Package Summary */}
+          <div className="bg-white rounded-xl p-6 mb-6 border border-blue-200">
+            <h4 className="font-semibold text-gray-900 mb-3">Seçtiğiniz Paket:</h4>
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <h5 className="font-semibold text-blue-800">{selectedPackage.name}</h5>
+                <p className="text-sm text-gray-600">
+                  {registrationData.billingCycle === 'yearly' ? 'Yıllık Ödeme' : 'Aylık Ödeme'}
+                </p>
+              </div>
+              <div className="text-right">
+                <div className="text-xl font-bold text-blue-600">
+                  {currentPrice.toLocaleString()}₺
+                </div>
               </div>
             </div>
-
-            {/* Payment Form */}
-            <form onSubmit={handlePayment} className="space-y-4">
-              {paymentMethod === 'card' ? (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Kart Numarası
-                    </label>
-                    <input
-                      type="text"
-                      value={cardData.cardNumber}
-                      onChange={(e) => setCardData(prev => ({ 
-                        ...prev, 
-                        cardNumber: formatCardNumber(e.target.value) 
-                      }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="1234 5678 9012 3456"
-                      maxLength={19}
-                      required
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Son Kullanma Tarihi
-                      </label>
-                      <input
-                        type="text"
-                        value={cardData.expiryDate}
-                        onChange={(e) => setCardData(prev => ({ 
-                          ...prev, 
-                          expiryDate: formatExpiryDate(e.target.value) 
-                        }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="MM/YY"
-                        maxLength={5}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        CVV
-                      </label>
-                      <input
-                        type="text"
-                        value={cardData.cvv}
-                        onChange={(e) => setCardData(prev => ({ 
-                          ...prev, 
-                          cvv: e.target.value.replace(/\D/g, '') 
-                        }))}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="123"
-                        maxLength={4}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Kart Sahibinin Adı
-                    </label>
-                    <input
-                      type="text"
-                      value={cardData.cardHolder}
-                      onChange={(e) => setCardData(prev => ({ 
-                        ...prev, 
-                        cardHolder: e.target.value.toUpperCase() 
-                      }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="AD SOYAD"
-                      required
-                    />
-                  </div>
-                </>
-              ) : (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <h4 className="font-semibold text-yellow-800 mb-2">Havale/EFT Bilgileri</h4>
-                  <div className="text-sm text-yellow-700 space-y-1">
-                    <p><strong>Banka:</strong> Türkiye İş Bankası</p>
-                    <p><strong>Hesap No:</strong> 1234-5678-9012-3456</p>
-                    <p><strong>IBAN:</strong> TR12 0006 4000 0011 2345 6789 01</p>
-                    <p><strong>Tutar:</strong> {currentPrice.toLocaleString()}₺</p>
-                    <p className="mt-2 text-yellow-600">
-                      Havale/EFT sonrası dekont fotoğrafını WhatsApp ile gönderiniz: 0850 123 45 67
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Security Info */}
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <div className="flex items-center">
-                  <Shield className="h-5 w-5 text-green-600 mr-2" />
-                  <div className="text-sm text-green-700">
-                    <strong>Güvenli Ödeme:</strong> Tüm ödeme bilgileriniz SSL ile şifrelenir
-                  </div>
-                </div>
-              </div>
-
-              {/* Payment Button */}
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? (
-                  <div className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                    {paymentMethod === 'card' ? 'Ödeme İşleniyor...' : 'Onaylanıyor...'}
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center">
-                    <CreditCard className="h-5 w-5 mr-2" />
-                    {paymentMethod === 'card' 
-                      ? `${currentPrice.toLocaleString()}₺ Öde` 
-                      : 'Havale Bilgilerini Onayladım'
-                    }
-                  </div>
-                )}
-              </button>
-            </form>
-
-            {/* Terms */}
-            <div className="text-xs text-gray-500 text-center">
-              Ödeme yaparak{' '}
-              <a href="#" className="text-blue-600 hover:underline">Kullanım Şartları</a>
-              {' '}ve{' '}
-              <a href="#" className="text-blue-600 hover:underline">Gizlilik Politikası</a>
-              'nı kabul etmiş olursunuz.
+            <div className="border-t border-gray-200 pt-3 mt-3">
+              <p className="text-sm text-gray-600">
+                Ad Soyad: <span className="font-medium text-gray-900">{registrationData.name}</span>
+              </p>
+              <p className="text-sm text-gray-600">
+                E-posta: <span className="font-medium text-gray-900">{registrationData.email}</span>
+              </p>
             </div>
           </div>
+
+          {/* Download Buttons */}
+          <div className="space-y-3">
+            <a
+              href="https://apps.apple.com/app/basariyolu"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-3 w-full bg-black text-white py-4 px-6 rounded-xl font-semibold hover:bg-gray-800 transition-colors"
+            >
+              <Apple className="h-6 w-6" />
+              <div className="text-left">
+                <div className="text-xs">App Store'dan İndirin</div>
+                <div className="text-sm font-bold">iOS Uygulamamız</div>
+              </div>
+            </a>
+
+            <a
+              href="https://play.google.com/store/apps/details?id=com.basariyolu"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-3 w-full bg-green-600 text-white py-4 px-6 rounded-xl font-semibold hover:bg-green-700 transition-colors"
+            >
+              <svg className="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.6 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.16,10.81C20.5,11.08 20.75,11.5 20.75,12C20.75,12.5 20.53,12.9 20.18,13.18L17.89,14.5L15.39,12L17.89,9.5L20.16,10.81M6.05,2.66L16.81,8.88L14.54,11.15L6.05,2.66Z" />
+              </svg>
+              <div className="text-left">
+                <div className="text-xs">Google Play'den İndirin</div>
+                <div className="text-sm font-bold">Android Uygulamamız</div>
+              </div>
+            </a>
+          </div>
+
+          <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p className="text-sm text-yellow-800 text-center">
+              <strong>Not:</strong> Mobil uygulamamızı indirip giriş yaptıktan sonra, istediğiniz paketi seçip güvenle satın alabilirsiniz.
+            </p>
+          </div>
+        </div>
+
+        {/* Terms */}
+        <div className="text-xs text-gray-500 text-center">
+          Ödeme yaparak{' '}
+          <a href="#" className="text-blue-600 hover:underline">Kullanım Şartları</a>
+          {' '}ve{' '}
+          <a href="#" className="text-blue-600 hover:underline">Gizlilik Politikası</a>
+          'nı kabul etmiş olursunuz.
         </div>
       </div>
     </div>
