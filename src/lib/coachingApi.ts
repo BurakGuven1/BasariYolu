@@ -49,6 +49,8 @@ export interface StudentCoachingSubscription {
     id: string;
     full_name: string;
     avatar_url: string | null;
+    phone?: string | null;
+    grade?: number | null;
   };
   // Computed fields
   last_appointment_date?: string | null;
@@ -284,10 +286,11 @@ export async function getCoachSubscriptions(coachId: string): Promise<StudentCoa
 
   if (error) throw error;
 
-  // Get last appointment date for each subscription
+  // Get last appointment date and student details for each subscription
   if (data) {
-    const subscriptionsWithLastAppointment = await Promise.all(
+    const subscriptionsWithDetails = await Promise.all(
       data.map(async (subscription) => {
+        // Get last appointment
         const { data: lastAppointment } = await supabase
           .from('coaching_appointments')
           .select('appointment_date')
@@ -297,14 +300,35 @@ export async function getCoachSubscriptions(coachId: string): Promise<StudentCoa
           .limit(1)
           .maybeSingle();
 
+        // Get student phone and grade from students table
+        let studentPhone = null;
+        let studentGrade = null;
+        if (subscription.student?.id) {
+          const { data: studentData } = await supabase
+            .from('students')
+            .select('phone, grade')
+            .eq('user_id', subscription.student.id)
+            .maybeSingle();
+
+          if (studentData) {
+            studentPhone = studentData.phone;
+            studentGrade = studentData.grade;
+          }
+        }
+
         return {
           ...subscription,
           last_appointment_date: lastAppointment?.appointment_date || null,
+          student: {
+            ...subscription.student,
+            phone: studentPhone,
+            grade: studentGrade,
+          },
         };
       })
     );
 
-    return subscriptionsWithLastAppointment;
+    return subscriptionsWithDetails;
   }
 
   return [];

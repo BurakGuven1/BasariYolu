@@ -577,6 +577,24 @@ export default function CoachDashboard({ coachId }: CoachDashboardProps) {
                               {subscription.student?.full_name}
                             </h4>
                           </div>
+                          {subscription.student?.phone && (
+                            <div className="text-sm">
+                              <span className="text-gray-500">📱 Telefon:</span>{' '}
+                              <span className="font-medium text-gray-900">
+                                {subscription.student.phone}
+                              </span>
+                            </div>
+                          )}
+                          {subscription.student?.grade && (
+                            <div className="text-sm">
+                              <span className="text-gray-500">🎓 Sınıf:</span>{' '}
+                              <span className="font-medium text-gray-900">
+                                {subscription.student.grade === 13
+                                  ? 'Mezun'
+                                  : `${subscription.student.grade}. Sınıf`}
+                              </span>
+                            </div>
+                          )}
                         </div>
 
                         {/* Column 2: Package & Sessions */}

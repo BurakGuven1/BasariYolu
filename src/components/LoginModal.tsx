@@ -3,6 +3,8 @@ import { X, Mail, Lock, User, Phone } from 'lucide-react';
 import { signUp, signIn, createProfile, createStudentRecord, createParentRecord, supabase } from '../lib/supabase';
 import * as authApi from '../lib/authApi';
 import ClassCodeLogin from './ClassCodeLogin';
+import EmailVerificationScreen from './EmailVerificationScreen';
+import { useToast } from '../contexts/ToastContext';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -12,11 +14,14 @@ interface LoginModalProps {
 }
 
 export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: LoginModalProps) {
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState<'student' | 'parent'>('student');
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [userType] = useState<'student' | 'parent'>('student');
   const [loading, setLoading] = useState(false);
   const [showClassCodeLogin, setShowClassCodeLogin] = useState(false);
+  const [showEmailVerification, setShowEmailVerification] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState('');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -24,6 +29,7 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
     confirmPassword: '',
     grade: '',
     schoolName: '',
+    phone: '',
     parentCode: '',
     parentPhone: '',
     classCode: ''
@@ -52,7 +58,7 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
   const handleLogin = async () => {
   if (activeTab === 'parent') {
   if (!formData.parentCode.trim()) {
-    alert('Lütfen davet kodunu girin');
+    toast.error('Lütfen davet kodunu girin');
     setLoading(false);
     return;
   }
@@ -142,7 +148,7 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
     onClose();
   } catch (error: any) {
     console.error('❌ Parent login error:', error);
-    alert('Veli girişi hatası: ' + (error.message || 'Bilinmeyen hata'));
+    toast.error('Veli girişi hatası: ' + (error.message || 'Bilinmeyen hata'));
   } finally {
     setLoading(false);
   }
@@ -198,6 +204,7 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
           confirmPassword: '',
           grade: '',
           schoolName: '',
+          phone: '',
           parentCode: '',
           parentPhone: '',
           classCode: ''
@@ -205,7 +212,7 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
       }
     } catch (error: any) {
       console.error('❌ Login error:', error);
-      alert('Giriş hatası: ' + (error.message || 'Bilinmeyen hata'));
+      toast.error('Giriş hatası: ' + (error.message || 'Bilinmeyen hata'));
     } finally {
       setLoading(false);
     }
@@ -213,13 +220,13 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
 
   const handleRegister = async () => {
     if (formData.password !== formData.confirmPassword) {
-      alert('Şifreler eşleşmiyor');
+      toast.error('Şifreler eşleşmiyor');
       setLoading(false);
       return;
     }
 
     if (userType === 'student' && (!formData.grade || !formData.schoolName)) {
-      alert('Öğrenci için sınıf ve okul bilgisi gereklidir');
+      toast.error('Öğrenci için sınıf ve okul bilgisi gereklidir');
       setLoading(false);
       return;
     }
@@ -284,7 +291,8 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
           const studentData = {
             user_id: authData.user.id,
             grade: parseInt(formData.grade),
-            school_name: formData.schoolName
+            school_name: formData.schoolName,
+            phone: formData.phone
           };
           console.log('Creating student:', studentData);
           const { error: studentError } = await createStudentRecord(studentData);
@@ -313,7 +321,7 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
               if (joinError) {
                 console.error('Class join error:', joinError);
                 // Don't fail registration, just warn
-                alert('Kayıt başarılı ancak sınıfa katılımda sorun oluştu. Daha sonra tekrar deneyebilirsiniz.');
+                toast.warning('Kayıt başarılı ancak sınıfa katılımda sorun oluştu. Daha sonra tekrar deneyebilirsiniz.');
               }
             }
           }
@@ -329,7 +337,9 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
           }
         }
 
-        onLogin(authData.user);
+        // Show email verification screen instead of logging in
+        setRegisteredEmail(formData.email);
+        setShowEmailVerification(true);
 
         // Reset form
         setFormData({
@@ -339,17 +349,15 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
           confirmPassword: '',
           grade: '',
           schoolName: '',
+          phone: '',
           parentCode: '',
           parentPhone: '',
           classCode: ''
         });
-
-        onClose();
-        alert('Kayıt başarılı! Hoş geldiniz! Premium özelliklere erişmek için mobil uygulamamızdan paket satın alabilirsiniz.');
       }
     } catch (error: any) {
       console.error('Registration error:', error);
-      alert('Hesap oluşturma hatası: ' + (error.message || 'Bilinmeyen hata'));
+      toast.error('Hesap oluşturma hatası: ' + (error.message || 'Bilinmeyen hata'));
     } finally {
       setLoading(false);
     }
@@ -522,6 +530,7 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
                     <option value="10">10. Sınıf</option>
                     <option value="11">11. Sınıf</option>
                     <option value="12">12. Sınıf</option>
+                    <option value="13">Mezun</option>
                   </select>
                 </div>
 
@@ -538,6 +547,24 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
                     placeholder="Okul adınızı giriniz"
                     required
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Telefon Numarası
+                  </label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="05XX XXX XX XX"
+                      required
+                    />
+                  </div>
                 </div>
 
                 <div>
@@ -606,7 +633,7 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
                   type="button"
                   onClick={async () => {
                     if (!formData.email) {
-                      alert('Lütfen e-posta adresinizi girin');
+                      toast.error('Lütfen e-posta adresinizi girin');
                       return;
                     }
                     try {
@@ -614,9 +641,9 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
                         redirectTo: `${window.location.origin}/auth/reset-password`,
                       });
                       if (error) throw error;
-                      alert('Şifre sıfırlama bağlantısı e-posta adresinize gönderildi. Lütfen gelen kutunuzu kontrol edin.');
+                      toast.success('Şifre sıfırlama bağlantısı e-posta adresinize gönderildi. Lütfen gelen kutunuzu kontrol edin.');
                     } catch (error: any) {
-                      alert('Şifre sıfırlama hatası: ' + (error.message || 'Bilinmeyen hata'));
+                      toast.error('Şifre sıfırlama hatası: ' + (error.message || 'Bilinmeyen hata'));
                     }
                   }}
                   className="text-sm text-blue-600 hover:text-blue-700 hover:underline"
@@ -695,6 +722,15 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
           onClose();
         }}
       />
+      {showEmailVerification && (
+        <EmailVerificationScreen
+          email={registeredEmail}
+          onClose={() => {
+            setShowEmailVerification(false);
+            onClose();
+          }}
+        />
+      )}
     </div>
   );
 }
