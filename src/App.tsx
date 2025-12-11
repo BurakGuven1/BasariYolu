@@ -40,7 +40,6 @@ const TeacherDashboard = lazy(() => import('./components/TeacherDashboard'));
 const HeroV2 = lazy(() => import('./components/HeroV2'));
 const CoachingPage = lazy(() => import('./pages/CoachingPage'));
 const ProblemSection = lazy(() => import('./components/ProblemSection'));
-const VisionSection = lazy(() => import('./components/VisionSection'));
 const ProductShowcase = lazy(() => import('./components/ProductShowcase'));
 const CTASection = lazy(() => import('./components/CTASection'));
 const UpgradeModal = lazy(() => import('./components/UpgradeModal'));
@@ -474,7 +473,6 @@ function App() {
         <HeroV2 onGetStarted={handleGetStarted} />
         <LiveStats />
         <ProblemSection />
-        <VisionSection />
         <ProductShowcase />
         <Testimonials />
         <PricingSection onSelectPackage={handleSelectPackage} />
