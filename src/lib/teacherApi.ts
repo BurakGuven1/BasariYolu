@@ -179,7 +179,7 @@ export const loginTeacher = async (email: string, password: string) => {
   if (profile && profile.role !== 'teacher') {
     // Sign out silently (security: don't reveal user role existence)
     await supabase.auth.signOut().catch(() => {});
-    authApi.logout().catch(() => {});
+    // Note: Skip Worker API logout to avoid CORS errors in production
     throw new Error('E-posta veya şifre hatalı. Lütfen bilgilerinizi kontrol edin.');
   }
 
