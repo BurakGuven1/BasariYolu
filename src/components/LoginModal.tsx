@@ -194,6 +194,41 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
       }
 
       if (studentUser) {
+        // Verify user role before allowing login
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', studentUser.id)
+          .single();
+
+        if (profileError) {
+          console.error('Profile fetch error:', profileError);
+          toast.error('Profil bilgisi alınamadı. Lütfen tekrar deneyin.');
+          setLoading(false);
+          return;
+        }
+
+        // Check if user role matches the login type
+        const expectedRole = activeTab === 'parent' ? 'parent' : 'student';
+        if (profile.role !== expectedRole) {
+          const roleNames: Record<string, string> = {
+            student: 'öğrenci',
+            parent: 'veli',
+            teacher: 'öğretmen',
+            institution: 'kurum',
+          };
+
+          const currentRoleName = roleNames[profile.role] || profile.role;
+          const expectedRoleName = roleNames[expectedRole] || expectedRole;
+
+          toast.error(
+            `Bu hesap ${currentRoleName} hesabıdır. Lütfen ${currentRoleName} girişini kullanın.`,
+            7000
+          );
+          setLoading(false);
+          return;
+        }
+
         onLogin(studentUser);
         onClose();
         // Reset form

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { X, Mail, Lock, Building2, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { X, Mail, Lock, Building2, Eye, EyeOff } from 'lucide-react';
 import { loginInstitutionAccount, InstitutionSession } from '../lib/institutionApi';
+import { useToast } from '../contexts/ToastContext';
 
 interface InstitutionLoginModalProps {
   isOpen: boolean;
@@ -15,15 +16,14 @@ export default function InstitutionLoginModal({
   onSuccess,
   onSwitchToRegister,
 }: InstitutionLoginModalProps) {
+  const toast = useToast();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
   React.useEffect(() => {
     if (!isOpen) {
       setFormData({ email: '', password: '' });
-      setError(null);
       setLoading(false);
       setShowPassword(false);
     }
@@ -34,7 +34,6 @@ export default function InstitutionLoginModal({
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    if (error) setError(null);
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -43,15 +42,15 @@ export default function InstitutionLoginModal({
     if (loading) return;
 
     setLoading(true);
-    setError(null);
 
     try {
       const session = await loginInstitutionAccount(formData.email.trim().toLowerCase(), formData.password);
       localStorage.setItem('institutionSession', JSON.stringify(session));
       onSuccess(session);
       onClose();
+      toast.success('Başarıyla giriş yaptınız!');
     } catch (err: any) {
-      setError(err?.message || 'Giriş işlemi başarısız oldu. Lütfen bilgilerinizi kontrol edin.');
+      toast.error(err?.message || 'Giriş işlemi başarısız oldu. Lütfen bilgilerinizi kontrol edin.');
     } finally {
       setLoading(false);
     }
@@ -79,13 +78,6 @@ export default function InstitutionLoginModal({
             Soru bankası, ders planları ve raporlara erişmek için hesabınızla giriş yapın.
           </p>
         </div>
-
-        {error && (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 flex items-start gap-2">
-            <AlertCircle className="h-5 w-5 flex-shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

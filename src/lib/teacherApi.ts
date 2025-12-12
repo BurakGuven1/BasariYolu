@@ -168,7 +168,29 @@ export const loginTeacher = async (email: string, password: string) => {
     throw new Error('Email veya şifre hatalı');
   }
 
-  console.log('✅ Auth successful, fetching teacher record');
+  console.log('✅ Auth successful, verifying role and fetching teacher record');
+
+  // First, verify the user's role
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', authUser.id)
+    .maybeSingle();
+
+  if (profileError) {
+    throw new Error('Profil bilgisi alınamadı');
+  }
+
+  if (profile && profile.role !== 'teacher') {
+    const roleNames: Record<string, string> = {
+      student: 'öğrenci',
+      parent: 'veli',
+      teacher: 'öğretmen',
+      institution: 'kurum',
+    };
+    const roleName = roleNames[profile.role] || profile.role;
+    throw new Error(`Bu hesap ${roleName} hesabıdır. Lütfen ${roleName} girişini kullanın.`);
+  }
 
   let { data: teacher, error: teacherError } = await supabase
     .from('teachers')
