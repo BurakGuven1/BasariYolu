@@ -84,6 +84,28 @@ export const registerTeacher = async (teacherData: {
     throw new Error('Supabase auth kullanıcısı oluşturulamadı');
   }
 
+  console.log('[Teacher] signUp success user:', authUserId);
+
+  // Wait for auth to settle
+  await new Promise(resolve => setTimeout(resolve, 1000));
+
+  // Create profile with correct role
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .insert([{
+      id: authUserId,
+      email: teacherData.email,
+      full_name: teacherData.full_name,
+      role: 'teacher'
+    }]);
+
+  if (profileError) {
+    console.error('[Teacher] profile insert error:', profileError);
+    throw profileError;
+  }
+
+  console.log('[Teacher] profile created with role: teacher');
+
   const hashedPassword = await hashPassword(teacherData.password);
 
   let teacherRecord;
