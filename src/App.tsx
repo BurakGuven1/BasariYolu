@@ -96,13 +96,18 @@ function App() {
   const closeInstitutionModals = React.useCallback(() => {
     institutionModalReturnPathRef.current = null;
 
-    // Kullanıcı varsa kendi rolüne uygun dashboard'a yönlendir
-    // DashboardRoute zaten user.userType'a göre doğru yeri gösterecek
-    if (user) {
-      navigate('/dashboard', { replace: true });
-    } else {
-      // Kullanıcı yoksa ana sayfaya git
+    // Modal kapatıldığında kullanıcı yoksa ana sayfaya git
+    // Kullanıcı varsa bulunduğu yerde kal (modal açmadan önceki sayfa)
+    if (!user) {
       navigate('/', { replace: true });
+    } else {
+      // Kullanıcı giriş yapmış ama modal'ı X ile kapattıysa
+      // Son bulunduğu geçerli sayfaya dön veya kendi dashboard'una git
+      if (user.userType === 'institution') {
+        navigate('/institution', { replace: true });
+      } else {
+        navigate('/dashboard', { replace: true });
+      }
     }
   }, [navigate, user]);
 

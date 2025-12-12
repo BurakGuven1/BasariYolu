@@ -478,36 +478,27 @@ export const registerInstitutionAccount = async ({
 };
 
 export const loginInstitutionAccount = async (email: string, password: string): Promise<InstitutionSession> => {
-  let authUser;
+  // Use Supabase directly for institution login (no Worker API)
+  console.log('[Institution] 🔐 Attempting login with Supabase');
 
-  // Try Worker API first, fallback to Supabase
-  try {
-    const { user } = await authApi.login(email, password);
-    authUser = user;
-  } catch (workerError: any) {
-    console.warn('[Institution] ⚠️ Worker API unavailable, falling back to Supabase:', workerError.message);
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
 
-    // Fallback to Supabase direct auth
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      throw error;
-    }
-
-    if (!data.user) {
-      console.error('[Institution] login: user not returned from auth');
-      throw new Error('Kullanıcı bulunamadı.');
-    }
-
-    authUser = data.user;
+  if (error) {
+    console.error('[Institution] login error:', error);
+    throw new Error('E-posta veya şifre hatalı. Lütfen bilgilerinizi kontrol edin.');
   }
 
-  if (!authUser) {
+  if (!data.user) {
+    console.error('[Institution] login: user not returned from auth');
     throw new Error('Kullanıcı bulunamadı.');
   }
+
+  const authUser = data.user;
+  console.log('[Institution] ✅ Supabase login successful');
+  console.log('[Institution] login auth user:', authUser.id);
 
   // Validate user role before proceeding
   const { data: profile } = await supabase
@@ -528,8 +519,7 @@ export const loginInstitutionAccount = async (email: string, password: string): 
   if (!context) {
     console.warn('[Institution] login: no institution context found');
 
-    // Try to sign out from both Worker API and Supabase
-    authApi.logout().catch(() => {});
+    // Sign out from Supabase
     await supabase.auth.signOut();
 
     throw new Error('Bu kullanıcıya bağlı bir kurum kaydı bulunamadı.');
