@@ -486,44 +486,46 @@ export const loginInstitutionAccount = async (email: string, password: string): 
     password,
   });
 
-  if (error) {
+  if (error || !data.user) {
     console.error('[Institution] login error:', error);
     throw new Error('E-posta veya şifre hatalı. Lütfen bilgilerinizi kontrol edin.');
   }
 
-  if (!data.user) {
-    console.error('[Institution] login: user not returned from auth');
-    throw new Error('Kullanıcı bulunamadı.');
-  }
-
   const authUser = data.user;
   console.log('[Institution] ✅ Supabase login successful');
-  console.log('[Institution] login auth user:', authUser.id);
+  console.log('[Institution] ✅ Auth successful, verifying role and fetching institution record');
 
-  // Validate user role before proceeding
-  const { data: profile } = await supabase
+  // Verify the user's role
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('role')
     .eq('id', authUser.id)
     .maybeSingle();
 
+  if (profileError) {
+    console.error('[Institution] Profile fetch error:', profileError);
+    throw new Error('Profil bilgisi alınamadı');
+  }
+
+  console.log('[Institution] Profile role:', profile?.role);
+
   if (profile && profile.role !== 'institution') {
     // Sign out silently (security: don't reveal user role existence)
     await supabase.auth.signOut().catch(() => {});
-    // Note: Skip Worker API logout to avoid CORS errors in production
     throw new Error('E-posta veya şifre hatalı. Lütfen bilgilerinizi kontrol edin.');
   }
 
+  // Get institution context
   const context = await getInstitutionSessionForUser(authUser.id);
 
   if (!context) {
     console.warn('[Institution] login: no institution context found');
-
     // Sign out from Supabase
     await supabase.auth.signOut();
-
     throw new Error('Bu kullanıcıya bağlı bir kurum kaydı bulunamadı.');
   }
+
+  console.log('[Institution] ✅ Login successful, institution:', context.institution.name);
 
   return context;
 };
