@@ -24,7 +24,6 @@ export default function ParentDashboard() {
 
     setLoading(true);
     try {
-      console.log('🔍 Searching for student:', inviteCode.trim());
       
       const { data: student, error: studentError } = await supabase
         .from('students')
@@ -40,8 +39,6 @@ export default function ParentDashboard() {
         setLoading(false);
         return;
       }
-
-      console.log('✅ Student found:', student.profiles?.full_name);
 
       // Get all data
       const [examResults, homeworks, studySessions, weeklyGoal] = await Promise.all([
@@ -81,7 +78,6 @@ export default function ParentDashboard() {
   // Auto-select first child
   React.useEffect(() => {
     if (children.length > 0 && !selectedChild) {
-      console.log('✅ Auto-selecting first child:', children[0].id);
       setSelectedChild(children[0].id);
     }
   }, [children.length, selectedChild]);

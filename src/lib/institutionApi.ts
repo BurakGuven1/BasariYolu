@@ -413,8 +413,6 @@ export const registerInstitutionAccount = async ({
     throw new Error('Kullanici olusturulamadi. Lutfen tekrar deneyin.');
   }
 
-  console.log('[Institution] signUp success user:', user.id);
-
   const logoUrl = await uploadInstitutionLogo(logoFile, user.id);
 
   const { data: institution, error: institutionError } = await supabase
@@ -436,8 +434,6 @@ export const registerInstitutionAccount = async ({
     throw institutionError;
   }
 
-  console.log('[Institution] institution inserted:', institution?.id);
-
   const { data: membership, error: membershipError } = await supabase
     .from('institution_members')
     .insert([
@@ -454,8 +450,6 @@ export const registerInstitutionAccount = async ({
     console.error('[Institution] membership insert error:', membershipError);
     throw membershipError;
   }
-
-  console.log('[Institution] membership inserted:', membership?.id);
 
   const session: InstitutionSession = {
     membershipId: membership.id,
@@ -488,10 +482,8 @@ export const loginInstitutionAccount = async (email: string, password: string): 
 
   // Try Worker API first, fallback to Supabase
   try {
-    console.log('[Institution] 🔐 Attempting login with Worker API (HTTP-only cookies)');
     const { user } = await authApi.login(email, password);
     authUser = user;
-    console.log('[Institution] ✅ Worker API login successful');
   } catch (workerError: any) {
     console.warn('[Institution] ⚠️ Worker API unavailable, falling back to Supabase:', workerError.message);
 
@@ -511,17 +503,14 @@ export const loginInstitutionAccount = async (email: string, password: string): 
     }
 
     authUser = data.user;
-    console.log('[Institution] ✅ Supabase fallback login successful');
   }
 
   if (!authUser) {
     throw new Error('Kullanıcı bulunamadı.');
   }
 
-  console.log('[Institution] login auth user:', authUser.id);
-
   // Validate user role before proceeding
-  const { data: profile, error: profileError } = await supabase
+  const { data: profile } = await supabase
     .from('profiles')
     .select('role')
     .eq('id', authUser.id)
@@ -546,22 +535,18 @@ export const loginInstitutionAccount = async (email: string, password: string): 
     throw new Error('Bu kullanıcıya bağlı bir kurum kaydı bulunamadı.');
   }
 
-  console.log('[Institution] login context:', context);
-
   return context;
 };
 
 export const getInstitutionSessionForUser = async (userId: string): Promise<InstitutionSession | null> => {
   try {
     // First get institution member record
-    const { data: memberData, error: memberError } = await supabase
+    const { data: memberData } = await supabase
       .from('institution_members')
       .select('id, role, institution_id')
       .eq('user_id', userId)
       .order('created_at', { ascending: true })
       .maybeSingle();
-
-    console.log('[Institution] Member query result:', { memberData, memberError });
 
     if (!memberData || !memberData.institution_id) {
       console.warn('[Institution] No member record found for user', userId);
@@ -569,7 +554,7 @@ export const getInstitutionSessionForUser = async (userId: string): Promise<Inst
     }
 
     // Then get the institution details
-    const { data: institutionData, error: institutionError } = await supabase
+    const { data: institutionData } = await supabase
       .from('institutions')
       .select(`
         id,
@@ -587,8 +572,6 @@ export const getInstitutionSessionForUser = async (userId: string): Promise<Inst
       `)
       .eq('id', memberData.institution_id)
       .maybeSingle();
-
-    console.log('[Institution] Institution query result:', { institutionData, institutionError });
 
     if (!institutionData) {
       console.warn('[Institution] No institution found with id', memberData.institution_id);

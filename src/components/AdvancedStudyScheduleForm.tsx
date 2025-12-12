@@ -87,7 +87,6 @@ export default function AdvancedStudyScheduleForm({
 const loadStudents = async () => {
   setStudentsLoading(true);
   try {
-    console.log('Sinif ogrenci listesi yukleniyor:', classId);
 
     const { data: classStudentsData, error: classError } = await supabase
       .from('class_students')
@@ -101,13 +100,11 @@ const loadStudents = async () => {
     }
 
     if (!classStudentsData || classStudentsData.length === 0) {
-      console.log('Sinifta aktif ogrenci bulunamadi');
       setStudents([]);
       return;
     }
 
     const studentIds = classStudentsData.map(cs => cs.student_id);
-    console.log('Ogrenci kimlikleri:', studentIds);
 
     const { data: studentsData, error: studentsError } = await supabase
       .from('students')
@@ -122,8 +119,6 @@ const loadStudents = async () => {
 
     if (studentsError) throw studentsError;
 
-    console.log('Ogrenci verisi:', studentsData);
-
     const studentList = (studentsData as Array<{
       id: string;
       grade: number | null;
@@ -134,7 +129,6 @@ const loadStudents = async () => {
       grade: student.grade ?? 9
     }));
 
-    console.log('Ogrenci listesi olusturuldu:', studentList);
     setStudents(studentList);
 
   } catch (error) {
@@ -154,7 +148,6 @@ const loadStudents = async () => {
       }));
 
       setStudents(fallbackList);
-      console.log('Yedek ogrenci listesi kullanildi:', fallbackList);
     } catch (fallbackError) {
       console.error('Yedek ogrenci listesi de yuklenemedi:', fallbackError);
       setStudents([]);

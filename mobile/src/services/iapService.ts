@@ -32,7 +32,6 @@ export class IAPService {
     try {
       // Connection kurulumu
       await RNIap.initConnection();
-      console.log('✅ IAP connection established');
 
       // Platform belirleme
       const platform = Platform.OS === 'ios' ? 'ios' : 'android';
@@ -44,8 +43,6 @@ export class IAPService {
       } else {
         this.products = await RNIap.getProducts({ skus: productIds });
       }
-
-      console.log('✅ Products loaded:', this.products.length);
 
       // Satın alma listener'ları
       this.setupPurchaseListeners();
@@ -67,7 +64,6 @@ export class IAPService {
     // Satın alma başarılı olduğunda
     this.purchaseUpdateSubscription = purchaseUpdatedListener(
       async (purchase: ProductPurchase) => {
-        console.log('📦 Purchase received:', purchase.productId);
 
         try {
           // Receipt'i backend'e gönder ve doğrula
@@ -76,7 +72,6 @@ export class IAPService {
           if (isValid) {
             // Satın alma başarılı, finish et
             await RNIap.finishTransaction({ purchase, isConsumable: false });
-            console.log('✅ Purchase finished successfully');
           } else {
             console.error('❌ Purchase validation failed');
           }
@@ -100,13 +95,11 @@ export class IAPService {
   private async clearPendingTransactions(): Promise<void> {
     try {
       const availablePurchases = await RNIap.getAvailablePurchases();
-      console.log(`🔄 Found ${availablePurchases.length} pending transactions`);
 
       for (const purchase of availablePurchases) {
         await RNIap.finishTransaction({ purchase, isConsumable: false });
       }
 
-      console.log('✅ Pending transactions cleared');
     } catch (error) {
       console.error('❌ Error clearing pending transactions:', error);
     }
@@ -134,8 +127,6 @@ export class IAPService {
     studentCount: number
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      console.log(`🛒 Starting purchase for: ${productId}, students: ${studentCount}`);
-
       // Ürünü kontrol et
       const product = this.getProduct(productId);
       if (!product) {
@@ -161,7 +152,6 @@ export class IAPService {
    */
   private async validatePurchase(purchase: ProductPurchase): Promise<boolean> {
     try {
-      console.log('🔐 Validating purchase with backend...');
 
       // Backend'e receipt gönder
       const { data, error } = await supabase.functions.invoke('validate-iap-purchase', {
@@ -177,8 +167,6 @@ export class IAPService {
         console.error('❌ Backend validation error:', error);
         return false;
       }
-
-      console.log('✅ Purchase validated by backend:', data);
       return data.valid === true;
     } catch (error) {
       console.error('❌ Error validating purchase:', error);
@@ -191,9 +179,8 @@ export class IAPService {
    */
   async restorePurchases(): Promise<ProductPurchase[]> {
     try {
-      console.log('🔄 Restoring purchases...');
+
       const purchases = await RNIap.getAvailablePurchases();
-      console.log(`✅ Found ${purchases.length} purchases to restore`);
       return purchases;
     } catch (error) {
       console.error('❌ Error restoring purchases:', error);
@@ -213,7 +200,6 @@ export class IAPService {
         this.purchaseErrorSubscription.remove();
       }
       await RNIap.endConnection();
-      console.log('✅ IAP connection closed');
     } catch (error) {
       console.error('❌ Error disconnecting IAP:', error);
     }

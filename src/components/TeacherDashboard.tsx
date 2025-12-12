@@ -5,7 +5,6 @@ import { PACKAGE_OPTIONS, calculateClassPrice } from '../types/teacher';
 import ClassManagementPanel from './ClassManagementPanel';
 import { sendAnnouncementNotification } from '../lib/notificationApi';
 import { supabase } from '../lib/supabase';
-import InstitutionQuestionBankPanel from './InstitutionQuestionBankPanel';
 import InstitutionStudentExamPanel from './InstitutionStudentExamPanel';
 import InstitutionExternalExamPanel from './InstitutionExternalExamPanel';
 import TeacherSchedulePanel from './TeacherSchedulePanel';
@@ -71,7 +70,6 @@ export default function TeacherDashboard({ teacherUser, onLogout }: TeacherDashb
       loadTeacherInstitutions(teacherUser.id);
       loadTeacherRequests(teacherUser.id);
     } else {
-      console.log('TeacherDashboard - no teacherUser provided');
       setLoading(false);
     }
   }, [teacherUser]);

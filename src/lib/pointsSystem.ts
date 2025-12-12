@@ -99,19 +99,13 @@ export const addPoints = async (
       return { success: false, error: 'Not authenticated' };
     }
 
-    console.log('🔍 addPoints called:', {
-      inputStudentId: studentId,
-      authUid: user.id,
-      match: studentId === user.id
-    });
 
     // Eğer studentId = auth.uid() ise direkt kullan
     // Değilse, auth user'ın student kaydını bul
     let actualStudentId = studentId;
 
     if (studentId !== user.id) {
-      console.log('⚠️ studentId ≠ auth.uid(), finding correct student_id...');
-      
+
       // Auth user'ın student kaydını bul
       const { data: studentData, error: studentError } = await supabase
         .from('students')
@@ -129,7 +123,7 @@ export const addPoints = async (
       }
 
       actualStudentId = studentData.id;
-      console.log('✅ Found correct student_id:', actualStudentId);
+
     }
 
     // Puan ekle
@@ -146,7 +140,6 @@ export const addPoints = async (
       return { success: false, error: error.message };
     }
 
-    console.log('✅ Points added successfully!');
     return { success: true };
   } catch (error: any) {
     console.error('💥 Exception in addPoints:', error);

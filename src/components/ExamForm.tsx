@@ -294,12 +294,10 @@ export default function ExamForm({ isOpen, onClose, studentId, onSuccess, editDa
   e.preventDefault();
   
   if (loading) {
-    console.log('⏳ Already submitting...');
     return;
   }
   
   setLoading(true);
-  console.log('📝 Submitting exam form');
 
   try {
     const examDataToSave = {
@@ -318,10 +316,8 @@ export default function ExamForm({ isOpen, onClose, studentId, onSuccess, editDa
       })
     };
 
-    console.log('📡 Sending to database...');
     const result = await addExamResult(examDataToSave);
     
-    console.log('📦 Database result:', result);
     
     if (result.error) {
       alert(`Hata: ${result.error.message}`);
@@ -337,7 +333,6 @@ export default function ExamForm({ isOpen, onClose, studentId, onSuccess, editDa
     }
 
     const examId = result.data[0].id;
-    console.log('✅ Exam saved with ID:', examId);
 
     // Zayıf konuları kaydet
     // Zayıf konuları kaydet
@@ -346,7 +341,6 @@ const validTopics = weakTopics.filter(t =>
 );
 
 if (validTopics.length > 0) {
-  console.log('💡 Saving weak topics:', validTopics);
   
   try {
     // 1. Weak topics'i kaydet
@@ -369,23 +363,14 @@ if (validTopics.length > 0) {
       throw topicsError;
     }
     
-    console.log('✅ Weak topics saved successfully');
-    
-    // 2. AI recommendations oluştur
-    console.log('🤖 Generating AI recommendations...');
     
     const { generateTopicRecommendations, saveTopicRecommendations } = await import(
       '../lib/aiTopicAnalyzer'
     );
-    
-    console.log('📊 Calling generateTopicRecommendations with:', {
-      studentId,
-      validTopics
-    });
+
     
     const recommendations = await generateTopicRecommendations(studentId, validTopics);
     
-    console.log('📋 Generated recommendations:', recommendations);
     
     if (recommendations.length === 0) {
       console.warn('⚠️ No recommendations generated!');
@@ -393,7 +378,6 @@ if (validTopics.length > 0) {
     
     const saveResult = await saveTopicRecommendations(studentId, recommendations);
     
-    console.log('💾 Save result:', saveResult);
     
     if (saveResult.success) {
       console.log('✅ AI recommendations saved successfully');
