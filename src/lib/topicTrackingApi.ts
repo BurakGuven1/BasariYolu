@@ -164,6 +164,8 @@ export const upsertTopicProgress = async (
       student_id: studentId,
       topic_id: topicId,
       ...progress,
+    }, {
+      onConflict: 'student_id,topic_id',
     })
     .select()
     .single();
@@ -188,6 +190,8 @@ export const updateCompletionPercentage = async (
       completion_percentage: percentage,
       is_completed: percentage === 100,
       started_at: new Date().toISOString(),
+    }, {
+      onConflict: 'student_id,topic_id',
     });
 
   if (error) throw error;
@@ -208,6 +212,8 @@ export const markTopicCompleted = async (
       completion_percentage: 100,
       is_completed: true,
       completed_at: new Date().toISOString(),
+    }, {
+      onConflict: 'student_id,topic_id',
     });
 
   if (error) throw error;
@@ -233,6 +239,8 @@ export const updateQuestionStats = async (
       total_questions_solved: stats.totalQuestions,
       correct_answers: stats.correctAnswers,
       wrong_answers: stats.wrongAnswers,
+    }, {
+      onConflict: 'student_id,topic_id',
     });
 
   if (error) throw error;
@@ -264,6 +272,8 @@ export const addSourceBook = async (
         student_id: studentId,
         topic_id: topicId,
         source_books: [...currentBooks, bookName],
+      }, {
+        onConflict: 'student_id,topic_id',
       });
 
     if (error) throw error;
@@ -380,6 +390,8 @@ const updateProgressFromSession = async (
       correct_answers: correctAnswers,
       wrong_answers: wrongAnswers,
       last_studied_at: new Date().toISOString(),
+    }, {
+      onConflict: 'student_id,topic_id',
     });
 };
 
