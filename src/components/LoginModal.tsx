@@ -194,6 +194,41 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
       }
 
       if (studentUser) {
+        // Verify user role before allowing login
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', studentUser.id)
+          .single();
+
+        if (profileError) {
+          console.error('Profile fetch error:', profileError);
+          toast.error('Profil bilgisi alınamadı. Lütfen tekrar deneyin.');
+          setLoading(false);
+          return;
+        }
+
+        // Check if user role matches the login type
+        const expectedRole = activeTab === 'parent' ? 'parent' : 'student';
+        if (profile.role !== expectedRole) {
+          const roleNames: Record<string, string> = {
+            student: 'öğrenci',
+            parent: 'veli',
+            teacher: 'öğretmen',
+            institution: 'kurum',
+          };
+
+          const currentRoleName = roleNames[profile.role] || profile.role;
+          const expectedRoleName = roleNames[expectedRole] || expectedRole;
+
+          toast.error(
+            `Bu hesap ${currentRoleName} hesabıdır. Lütfen ${currentRoleName} girişini kullanın.`,
+            7000
+          );
+          setLoading(false);
+          return;
+        }
+
         onLogin(studentUser);
         onClose();
         // Reset form
@@ -229,6 +264,18 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
       toast.error('Öğrenci için sınıf ve okul bilgisi gereklidir');
       setLoading(false);
       return;
+    }
+
+    // Validate phone number (Turkish format)
+    if (userType === 'student' && formData.phone) {
+      const phoneRegex = /^0[5][0-5][0-9]{8}$/;
+      const cleanPhone = formData.phone.replace(/\s/g, ''); // Remove spaces
+
+      if (!phoneRegex.test(cleanPhone)) {
+        toast.error('Geçerli bir Türk cep telefonu numarası giriniz (örn: 05XX XXX XX XX)');
+        setLoading(false);
+        return;
+      }
     }
 
     try {
@@ -292,7 +339,7 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
             user_id: authData.user.id,
             grade: parseInt(formData.grade),
             school_name: formData.schoolName,
-            phone: formData.phone
+            phone: formData.phone.replace(/\s/g, '') // Remove spaces from phone
           };
           console.log('Creating student:', studentData);
           const { error: studentError } = await createStudentRecord(studentData);
@@ -357,7 +404,19 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
       }
     } catch (error: any) {
       console.error('Registration error:', error);
-      toast.error('Hesap oluşturma hatası: ' + (error.message || 'Bilinmeyen hata'));
+
+      // Handle specific error cases
+      if (error.message?.includes('security purposes') || error.status === 429) {
+        toast.error('Çok fazla deneme yaptınız. Lütfen bir dakika bekleyip tekrar deneyin.', 8000);
+      } else if (error.message?.includes('User already registered')) {
+        toast.error('Bu e-posta adresi zaten kayıtlı. Giriş yapmayı deneyin.');
+      } else if (error.message?.includes('Invalid email')) {
+        toast.error('Geçersiz e-posta adresi. Lütfen kontrol edin.');
+      } else if (error.message?.includes('Password')) {
+        toast.error('Şifre en az 6 karakter olmalıdır.');
+      } else {
+        toast.error('Hesap oluşturma hatası: ' + (error.message || 'Bilinmeyen hata'));
+      }
     } finally {
       setLoading(false);
     }
@@ -562,6 +621,10 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
                       onChange={handleInputChange}
                       className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="05XX XXX XX XX"
+                      pattern="[0][5][0-5][0-9]{8}"
+                      maxLength={11}
+                      inputMode="tel"
+                      autoComplete="tel"
                       required
                     />
                   </div>
@@ -667,6 +730,7 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
                     onChange={handleInputChange}
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Şifrenizi tekrar giriniz"
+                    autoComplete="new-password"
                     required
                   />
                 </div>

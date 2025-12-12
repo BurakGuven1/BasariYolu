@@ -520,6 +520,28 @@ export const loginInstitutionAccount = async (email: string, password: string): 
 
   console.log('[Institution] login auth user:', authUser.id);
 
+  // Validate user role before proceeding
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', authUser.id)
+    .maybeSingle();
+
+  if (profile && profile.role !== 'institution') {
+    // Try to sign out from both Worker API and Supabase
+    authApi.logout().catch(() => {});
+    await supabase.auth.signOut();
+
+    const roleNames: Record<string, string> = {
+      student: 'öğrenci',
+      parent: 'veli',
+      teacher: 'öğretmen',
+      institution: 'kurum',
+    };
+    const roleName = roleNames[profile.role] || profile.role;
+    throw new Error(`Bu hesap ${roleName} hesabıdır. Lütfen ${roleName} girişini kullanın.`);
+  }
+
   const context = await getInstitutionSessionForUser(authUser.id);
 
   if (!context) {
