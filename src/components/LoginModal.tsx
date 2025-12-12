@@ -213,7 +213,7 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
         if (profile.role !== expectedRole) {
           // Sign out silently (security: don't reveal user role existence)
           await supabase.auth.signOut().catch(() => {});
-          authApi.logout().catch(() => {});
+          // Note: Skip Worker API logout to avoid CORS errors in production
 
           toast.error('E-posta veya şifre hatalı. Lütfen bilgilerinizi kontrol edin.');
           setLoading(false);
