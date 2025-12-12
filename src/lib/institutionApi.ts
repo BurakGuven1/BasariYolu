@@ -413,6 +413,28 @@ export const registerInstitutionAccount = async ({
     throw new Error('Kullanici olusturulamadi. Lutfen tekrar deneyin.');
   }
 
+  console.log('[Institution] signUp success user:', user.id);
+
+  // Wait for auth to settle
+  await new Promise(resolve => setTimeout(resolve, 1000));
+
+  // Create profile with correct role
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .insert([{
+      id: user.id,
+      email: email,
+      full_name: fullName,
+      role: 'institution'
+    }]);
+
+  if (profileError) {
+    console.error('[Institution] profile insert error:', profileError);
+    throw profileError;
+  }
+
+  console.log('[Institution] profile created with role: institution');
+
   const logoUrl = await uploadInstitutionLogo(logoFile, user.id);
 
   const { data: institution, error: institutionError } = await supabase
