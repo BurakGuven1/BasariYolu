@@ -25,7 +25,7 @@ export default function AppointmentModal({
   const [selectedSubscription, setSelectedSubscription] = useState<string>('');
   const [appointmentDate, setAppointmentDate] = useState('');
   const [appointmentTime, setAppointmentTime] = useState('');
-  const [duration, setDuration] = useState('60');
+  const [duration, setDuration] = useState('45');
   const [googleMeetLink, setGoogleMeetLink] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -49,7 +49,7 @@ export default function AppointmentModal({
       const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
       setAppointmentDate(tomorrow.toISOString().split('T')[0]);
       setAppointmentTime('10:00');
-      setDuration('60');
+      setDuration('45');
       setTitle('Koçluk Görüşmesi');
     }
   }, [editingAppointment]);
@@ -269,11 +269,7 @@ export default function AppointmentModal({
                 onChange={(e) => setDuration(e.target.value)}
                 className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               >
-                <option value="30">30 dakika</option>
                 <option value="45">45 dakika</option>
-                <option value="60">60 dakika (1 saat)</option>
-                <option value="90">90 dakika (1.5 saat)</option>
-                <option value="120">120 dakika (2 saat)</option>
               </select>
             </div>
 

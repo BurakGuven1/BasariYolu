@@ -305,7 +305,7 @@ export const TopicTrackingTab: React.FC<TopicTrackingTabProps> = ({
         <Text style={styles.emptyIcon}>📚</Text>
         <Text style={styles.emptyTitle}>Henüz konu eklenmemiş</Text>
         <Text style={styles.emptyText}>
-          {gradeLevel}. sınıf için konu bulunamadı
+          Lütfen konu seçiniz
         </Text>
       </View>
     );
@@ -428,9 +428,9 @@ export const TopicTrackingTab: React.FC<TopicTrackingTabProps> = ({
         {topics.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyIcon}>🎯</Text>
-            <Text style={styles.emptyTitle}>Konu bulunamadı</Text>
+            <Text style={styles.emptyTitle}>Konu seçiniz</Text>
             <Text style={styles.emptyText}>
-              {selectedSubject} için konu bulunmuyor
+              Konu takibi için lütfen konu seçiniz
             </Text>
           </View>
         ) : (

@@ -64,7 +64,6 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
   }
   
   try {
-    console.log('👨‍👩‍👧 Parent login started with code:', formData.parentCode.trim());
     
     // Find student
     const { data: student, error: studentError } = await supabase
@@ -80,7 +79,7 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
       throw new Error('Geçersiz davet kodu');
     }
 
-    console.log('✅ Student found:', student.id, student.profiles?.full_name);
+
 
     // Get all student data
     const [examResults, homeworks, studySessions, weeklyGoal] = await Promise.all([
@@ -89,13 +88,6 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
       supabase.from('study_sessions').select('*').eq('student_id', student.id).order('session_date', { ascending: false }),
       supabase.from('weekly_study_goals').select('*').eq('student_id', student.id).eq('is_active', true).maybeSingle()
     ]);
-
-    console.log('📊 Data loaded:', {
-      exams: examResults.data?.length || 0,
-      homeworks: homeworks.data?.length || 0,
-      sessions: studySessions.data?.length || 0,
-      hasGoal: !!weeklyGoal.data
-    });
 
     // Complete student object
     const completeStudent = {
@@ -119,14 +111,11 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
       connectedStudents: [completeStudent]
     };
 
-    console.log('✅ Parent user created');
-
     // ✅ setUserState kullan
     if (setUserState) {
-      console.log('✅ Using setUserState directly');
       setUserState(parentUser);
     } else {
-      console.log('✅ Using onLogin callback');
+
       onLogin(parentUser);
     }
     
@@ -161,11 +150,9 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
 
       // Try Worker API (HTTP-only cookies) if available
       try {
-        console.log('🔐 Attempting secure login with Worker API (HTTP-only cookies)');
-        const { user, access_token } = await authApi.login(formData.email, formData.password);
+        const { user} = await authApi.login(formData.email, formData.password);
 
         if (user) {
-          console.log('✅ Worker API login successful');
           studentUser = {
             id: user.id,
             email: user.email || '',
@@ -182,7 +169,6 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
         if (error) throw error;
 
         if (data.user) {
-          console.log('✅ Supabase fallback login successful');
           studentUser = {
             id: data.user.id,
             email: data.user.email || '',
@@ -304,7 +290,6 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
       }
 
       if (authData.user) {
-        console.log('User created:', authData.user.id);
 
         // Wait a moment for auth to settle
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -317,7 +302,6 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
           role: userType
         };
 
-        console.log('Creating profile:', profileData);
         const { error: profileError } = await createProfile(profileData);
         if (profileError) {
           console.error('Profile error:', profileError);
@@ -332,7 +316,6 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
             school_name: formData.schoolName,
             phone: formData.phone.replace(/\s/g, '') // Remove spaces from phone
           };
-          console.log('Creating student:', studentData);
           const { error: studentError } = await createStudentRecord(studentData);
           if (studentError) {
             console.error('Student error:', studentError);
@@ -367,7 +350,6 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
           const parentData = {
             user_id: authData.user.id
           };
-          console.log('Creating parent:', parentData);
           const { error: parentError } = await createParentRecord(parentData);
           if (parentError) {
             console.error('Parent error:', parentError);

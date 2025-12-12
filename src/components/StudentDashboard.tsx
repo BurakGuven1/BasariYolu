@@ -110,7 +110,7 @@ type StudentDashboardProps = {
   authUser?: any;
 };
 
-export default function StudentDashboard({ authUser }: StudentDashboardProps) {
+export default function StudentDashboard({ }: StudentDashboardProps) {
   const [insights, setInsights] = useState<any[]>([]);
   const [dailyChallenge, setDailyChallenge] = useState<any>(null);
   const { planName } = useFeatureAccess();
@@ -493,7 +493,6 @@ export default function StudentDashboard({ authUser }: StudentDashboardProps) {
   }
 
   const handleLogout = async () => {
-    console.log('StudentDashboard logout başlatıldı');
     try {
       await clearUser();
     } catch (error) {

@@ -44,7 +44,6 @@ export function PackageSelectionScreen({ navigation, route }: Props) {
       await iapService.initialize();
       const loadedProducts = iapService.getProducts();
       setProducts(loadedProducts);
-      console.log(`✅ Loaded ${loadedProducts.length} products from store`);
     } catch (error: any) {
       console.error('❌ IAP initialization failed:', error);
       Alert.alert(

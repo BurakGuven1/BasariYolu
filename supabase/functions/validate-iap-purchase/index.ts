@@ -257,7 +257,6 @@ async function updateUserSubscription(
       console.warn('Subscription table insert warning:', subError);
     }
 
-    console.log(`✅ Subscription updated for user ${userId}: ${subscription.productId}`);
   } catch (error: any) {
     console.error('Error updating subscription:', error);
     throw error;
@@ -311,8 +310,6 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    console.log(`🔐 Validating ${platform} purchase: ${productId}`);
 
     // Validate receipt based on platform
     let validationResult: ValidationResponse;

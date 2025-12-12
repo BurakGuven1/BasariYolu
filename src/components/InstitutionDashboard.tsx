@@ -2,7 +2,6 @@
 import { useMemo, useState, type ComponentType } from 'react';
 import { Building2, Users, FileSpreadsheet, ClipboardList, ShieldCheck, LogOut, Mail, CheckCircle2, Layers, Copy, Download, BarChart3, Calendar, Award, Upload, Phone, Check, X, UserCheck } from 'lucide-react';
 import { InstitutionSession } from '../lib/institutionApi';
-import InstitutionQuestionBankPanel from './InstitutionQuestionBankPanel';
 import InstitutionStudentApprovalPanel from './InstitutionStudentApprovalPanel';
 import InstitutionStudentListPanel from './InstitutionStudentListPanel';
 import InstitutionEngagementPanel from './InstitutionEngagementPanel';
@@ -691,13 +690,6 @@ export default function InstitutionDashboard({ session, onLogout, onRefresh }: I
               )
             ) : (
               renderPanelMessage('Analitik dashboard yalnızca kurum yöneticilerine açıktır.')
-            ))}
-
-          {resolvedPanel === 'question-bank' &&
-            (canAccessQuestionBank ? (
-              <InstitutionQuestionBankPanel session={session} />
-            ) : (
-              renderPanelMessage('Soru bankasına erişim için kurum yönetici rolü gerekir.')
             ))}
 
           {resolvedPanel === 'schedule' &&

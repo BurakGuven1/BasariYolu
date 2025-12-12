@@ -368,7 +368,7 @@ export default function CoachDashboard({ coachId }: CoachDashboardProps) {
       {/* Header Stats */}
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl shadow-lg p-6 text-white">
         <h1 className="text-2xl font-bold mb-4">👨‍🏫 Koçluk Paneli</h1>
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <div className="text-center">
             <div className="text-3xl font-bold">{stats?.total_students || 0}</div>
             <div className="text-sm text-indigo-100 mt-1">Aktif Öğrenci</div>
@@ -380,10 +380,6 @@ export default function CoachDashboard({ coachId }: CoachDashboardProps) {
           <div className="text-center">
             <div className="text-3xl font-bold">{stats?.completed_sessions || 0}</div>
             <div className="text-sm text-indigo-100 mt-1">Tamamlanan</div>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl font-bold">{stats?.coach_hourly_rate?.toFixed(0) || '0'}₺</div>
-            <div className="text-sm text-indigo-100 mt-1">Saatlik Ücret</div>
           </div>
         </div>
       </div>

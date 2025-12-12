@@ -224,12 +224,6 @@ export async function bulkInsertQuestionsWithCroppedImages(
     const questionNumber = q.question_number;
     const imageUrl = questionNumber ? questionImageMap.get(questionNumber) : undefined;
 
-    if (questionNumber && imageUrl) {
-      console.log(`✅ Matched Question ${questionNumber} with image: ${imageUrl.slice(0, 50)}...`);
-    } else if (questionNumber) {
-      console.warn(`⚠️ No image found for Question ${questionNumber}`);
-    }
-
     return {
       ...q,
       page_image_url: imageUrl,
