@@ -546,7 +546,6 @@ useEffect(() => {
                       {derivedInstitutionSession.institution.contact_email || 'E-posta yok'}
                     </p>
                   </div>
-                  <InstitutionQuestionBankPanel session={derivedInstitutionSession} />
                   <InstitutionStudentExamPanel
                     institutionId={derivedInstitutionSession.institution.id}
                     institutionName={derivedInstitutionSession.institution.name}
