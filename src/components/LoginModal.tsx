@@ -211,20 +211,11 @@ export default function LoginModal({ isOpen, onClose, onLogin, setUserState }: L
         // Check if user role matches the login type
         const expectedRole = activeTab === 'parent' ? 'parent' : 'student';
         if (profile.role !== expectedRole) {
-          const roleNames: Record<string, string> = {
-            student: 'öğrenci',
-            parent: 'veli',
-            teacher: 'öğretmen',
-            institution: 'kurum',
-          };
+          // Sign out silently (security: don't reveal user role existence)
+          await supabase.auth.signOut().catch(() => {});
+          authApi.logout().catch(() => {});
 
-          const currentRoleName = roleNames[profile.role] || profile.role;
-          const expectedRoleName = roleNames[expectedRole] || expectedRole;
-
-          toast.error(
-            `Bu hesap ${currentRoleName} hesabıdır. Lütfen ${currentRoleName} girişini kullanın.`,
-            7000
-          );
+          toast.error('E-posta veya şifre hatalı. Lütfen bilgilerinizi kontrol edin.');
           setLoading(false);
           return;
         }

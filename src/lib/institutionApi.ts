@@ -528,18 +528,10 @@ export const loginInstitutionAccount = async (email: string, password: string): 
     .maybeSingle();
 
   if (profile && profile.role !== 'institution') {
-    // Try to sign out from both Worker API and Supabase
+    // Sign out silently (security: don't reveal user role existence)
+    await supabase.auth.signOut().catch(() => {});
     authApi.logout().catch(() => {});
-    await supabase.auth.signOut();
-
-    const roleNames: Record<string, string> = {
-      student: 'öğrenci',
-      parent: 'veli',
-      teacher: 'öğretmen',
-      institution: 'kurum',
-    };
-    const roleName = roleNames[profile.role] || profile.role;
-    throw new Error(`Bu hesap ${roleName} hesabıdır. Lütfen ${roleName} girişini kullanın.`);
+    throw new Error('E-posta veya şifre hatalı. Lütfen bilgilerinizi kontrol edin.');
   }
 
   const context = await getInstitutionSessionForUser(authUser.id);

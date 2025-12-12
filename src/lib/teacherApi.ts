@@ -182,14 +182,10 @@ export const loginTeacher = async (email: string, password: string) => {
   }
 
   if (profile && profile.role !== 'teacher') {
-    const roleNames: Record<string, string> = {
-      student: 'öğrenci',
-      parent: 'veli',
-      teacher: 'öğretmen',
-      institution: 'kurum',
-    };
-    const roleName = roleNames[profile.role] || profile.role;
-    throw new Error(`Bu hesap ${roleName} hesabıdır. Lütfen ${roleName} girişini kullanın.`);
+    // Sign out silently (security: don't reveal user role existence)
+    await supabase.auth.signOut().catch(() => {});
+    authApi.logout().catch(() => {});
+    throw new Error('E-posta veya şifre hatalı. Lütfen bilgilerinizi kontrol edin.');
   }
 
   let { data: teacher, error: teacherError } = await supabase
