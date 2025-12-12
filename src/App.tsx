@@ -1,7 +1,6 @@
 import React, { lazy, Suspense } from 'react';
 import { useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { BookOpenCheck } from 'lucide-react';
 import ErrorBoundary from './components/ErrorBoundary';
 import { useAuth } from './contexts/AppProviders';
 import { packages } from './data/packages';
@@ -38,8 +37,8 @@ const ExamTopicsSection = lazy(() => import('./components/ExamTopicsSection'));
 const TeacherLogin = lazy(() => import('./components/TeacherLogin'));
 const TeacherDashboard = lazy(() => import('./components/TeacherDashboard'));
 const HeroV2 = lazy(() => import('./components/HeroV2'));
+const CoachingPage = lazy(() => import('./pages/CoachingPage'));
 const ProblemSection = lazy(() => import('./components/ProblemSection'));
-const VisionSection = lazy(() => import('./components/VisionSection'));
 const ProductShowcase = lazy(() => import('./components/ProductShowcase'));
 const CTASection = lazy(() => import('./components/CTASection'));
 const UpgradeModal = lazy(() => import('./components/UpgradeModal'));
@@ -48,7 +47,6 @@ const BlogDetail = lazy(() => import('./components/BlogDetail'));
 const TermsOfService = lazy(() => import('./pages/TermsOfService'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 const RefundPolicy = lazy(() => import('./pages/RefundPolicy'));
-const QuestionBankPage = lazy(() => import('./pages/QuestionBankPage'));
 const InstitutionRegisterModal = lazy(() => import('./components/InstitutionRegisterModal'));
 const InstitutionLoginModal = lazy(() => import('./components/InstitutionLoginModal'));
 const InstitutionDashboard = lazy(() => import('./components/InstitutionDashboard'));
@@ -213,17 +211,6 @@ function App() {
       return;
     }
 
-    if (location.pathname === '/institution') {
-      applySeo({
-        title: 'BasariYolu | Kurum Paneli',
-        description: 'BasariYolu kurum paneli ile ogretmen ve siniflarini tek yerden yonet, soru bankasi olustur.',
-        path: '/institution',
-        type: 'website',
-        noIndex: true,
-      });
-      return;
-    }
-
     if (['/', '/institution/login', '/institution/register'].includes(location.pathname)) {
       applySeo({
         title: 'BasariYolu | Yapay Zeka Destekli Sinav Hazirlik Platformu',
@@ -356,8 +343,6 @@ function App() {
   };
 
   const handleInstitutionLogout = async () => {
-    console.log('🏛️ Institution logout initiated');
-
     // CRITICAL: Immediately clear institution data before calling logout
     // This prevents race condition where component tries to render during redirect
     localStorage.removeItem('institutionSession');
@@ -408,18 +393,6 @@ function App() {
     navigate('/refund-policy');
     window.scrollTo(0, 0);
   };
-
-  React.useEffect(() => {
-    if (user && location.pathname === '/' && !isInstitutionUser) {
-      navigate('/dashboard', { replace: true });
-    }
-  }, [user, location.pathname, isInstitutionUser, navigate]);
-
-  React.useEffect(() => {
-    if (!loading && !user && location.pathname === '/dashboard') {
-      navigate('/', { replace: true });
-    }
-  }, [loading, user, location.pathname, navigate]);
 
   if (loading) {
     return (
@@ -473,7 +446,6 @@ function App() {
         <HeroV2 onGetStarted={handleGetStarted} />
         <LiveStats />
         <ProblemSection />
-        <VisionSection />
         <ProductShowcase />
         <Testimonials />
         <PricingSection onSelectPackage={handleSelectPackage} />
@@ -495,7 +467,6 @@ function App() {
   );
 
   const HomePageContent = () => renderHomePage();
-  const isQuestionBankAllowed = Boolean(user);
 
 
   const isBlogDetailPath = location.pathname.startsWith('/blog/') && location.pathname !== '/blog';
@@ -503,7 +474,6 @@ function App() {
     (
       location.pathname === '/' ||
       location.pathname === '/blog' ||
-      location.pathname === '/question-bank' ||
       isBlogDetailPath ||
       location.pathname === '/terms-of-service' ||
       location.pathname === '/privacy-policy' ||
@@ -529,10 +499,8 @@ function App() {
       <Route path="/iade-politikasi" element={<Navigate to="/refund-policy" replace />} />
       <Route path="/features" element={<Suspense fallback={<LoadingSpinner />}><FeaturesShowcase /></Suspense>} />
       <Route path="/ozellikler" element={<Navigate to="/features" replace />} />
-      <Route
-        path="/question-bank"
-        element={isQuestionBankAllowed ? <Suspense fallback={<LoadingSpinner />}><QuestionBankPage /></Suspense> : <Navigate to="/" replace />}
-      />
+      <Route path="/coaching" element={<Suspense fallback={<LoadingSpinner />}><CoachingPage /></Suspense>} />
+      <Route path="/kocluk" element={<Navigate to="/coaching" replace />} />
       <Route path="/dashboard" element={<DashboardRoute />} />
       <Route path="/institution" element={<InstitutionDashboardRoute />} />
       <Route path="/auth/callback" element={<Suspense fallback={<LoadingSpinner />}><AuthCallback /></Suspense>} />
@@ -626,16 +594,6 @@ function App() {
           />
         )}
       </Suspense>
-
-      {isQuestionBankAllowed && location.pathname !== '/question-bank' && (
-        <button
-          onClick={handleNavigateToQuestionBank}
-          className="fixed bottom-6 right-6 z-40 inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-indigo-700 active:scale-95"
-        >
-          <BookOpenCheck className="h-4 w-4" />
-          Soru Bankası
-        </button>
-      )}
     </>
   );
 

@@ -38,18 +38,6 @@ export default function StudentExternalExams({ userId, institutionId }: StudentE
       setLoading(true);
       setError(null);
       const data = await fetchStudentAssignedExams(userId);
-      console.log('📚 Loaded assignments:', data);
-
-      // Check if template data is properly loaded
-      data.forEach((assignment, index) => {
-        console.log(`📋 Assignment ${index + 1}:`, {
-          id: assignment.id,
-          template_id: assignment.template_id,
-          template: assignment.template,
-          totalQuestions: assignment.template?.total_questions,
-          answerKey: assignment.template?.answer_key ? Object.keys(assignment.template.answer_key).length : 0
-        });
-      });
 
       setAssignments(data);
     } catch (error: any) {
@@ -320,11 +308,6 @@ function StudentAnswerEntry({
 }: StudentAnswerEntryProps) {
   const template = assignment.template as any;
   const totalQuestions = template?.total_questions || 0;
-
-  console.log('StudentAnswerEntry - assignment:', assignment);
-  console.log('StudentAnswerEntry - template:', template);
-  console.log('StudentAnswerEntry - totalQuestions:', totalQuestions);
-
   const [answers, setAnswers] = useState<Record<number, 'A' | 'B' | 'C' | 'D' | 'E' | 'X'>>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);

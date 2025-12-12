@@ -121,7 +121,6 @@ export async function parsePDFWithBackend(
     // Page count is total questions (each question can be on different page)
     const pageCount = result.total_questions;
 
-    console.log(`✅ Backend parsed ${result.total_questions} questions from ${pageCount} pages`);
 
     return {
       questionImages,

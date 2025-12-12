@@ -143,10 +143,8 @@ export const loginTeacher = async (email: string, password: string) => {
 
   // Try Worker API first, fallback to Supabase
   try {
-    console.log('🔐 Teacher login with Worker API (HTTP-only cookies)');
     const { user } = await authApi.login(email, password);
     authUser = user;
-    console.log('✅ Worker API login successful');
   } catch (workerError: any) {
     console.warn('⚠️ Worker API unavailable, falling back to Supabase:', workerError.message);
 
@@ -161,14 +159,29 @@ export const loginTeacher = async (email: string, password: string) => {
     }
 
     authUser = authData.user;
-    console.log('✅ Supabase fallback login successful');
   }
 
   if (!authUser) {
     throw new Error('Email veya şifre hatalı');
   }
 
-  console.log('✅ Auth successful, fetching teacher record');
+  // First, verify the user's role
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', authUser.id)
+    .maybeSingle();
+
+  if (profileError) {
+    throw new Error('Profil bilgisi alınamadı');
+  }
+
+  if (profile && profile.role !== 'teacher') {
+    // Sign out silently (security: don't reveal user role existence)
+    await supabase.auth.signOut().catch(() => {});
+    authApi.logout().catch(() => {});
+    throw new Error('E-posta veya şifre hatalı. Lütfen bilgilerinizi kontrol edin.');
+  }
 
   let { data: teacher, error: teacherError } = await supabase
     .from('teachers')

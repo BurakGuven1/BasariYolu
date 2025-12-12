@@ -14,8 +14,6 @@ export async function getSubscriptionPlans() {
 
 // Get user's current subscription
 export async function getUserSubscription(userId: string) {
-  console.log('📡 Fetching subscription for user:', userId);
-  
   const { data, error } = await supabase
     .from('user_subscriptions')
     .select(`
@@ -27,12 +25,9 @@ export async function getUserSubscription(userId: string) {
     .maybeSingle();
 
   if (error) {
-    console.error('❌ Subscription fetch error:', error);
     throw error;
   }
 
-  console.log('✅ Subscription data:', data);
-  
   return { data: data as UserSubscription | null };
 }
 

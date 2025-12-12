@@ -79,8 +79,6 @@ export const createStudySchedule = async (scheduleData: StudySchedule): Promise<
       throw scheduleError;
     }
 
-    console.log('✅ Schedule created:', schedule.id);
-
     // Items ekle
     if (scheduleData.items && scheduleData.items.length > 0) {
       const items = scheduleData.items.map(item => ({
@@ -104,7 +102,6 @@ export const createStudySchedule = async (scheduleData: StudySchedule): Promise<
         throw itemsError;
       }
 
-      console.log('✅ Items created:', items.length);
     }
 
     return { data: schedule, error: null };
@@ -433,12 +430,6 @@ export const getCurrentWeekSchedule = async (studentId: string): Promise<{ data:
     const endRange = new Date(today);
     endRange.setDate(today.getDate() + 28);
 
-    console.log('🔍 Fetching schedules between:', {
-      start: startRange.toISOString().split('T')[0],
-      end: endRange.toISOString().split('T')[0],
-      studentId
-    });
-
     const { data, error } = await supabase
       .from('study_schedules')
       .select(`
@@ -453,8 +444,6 @@ export const getCurrentWeekSchedule = async (studentId: string): Promise<{ data:
       .lte('week_start_date', endRange.toISOString().split('T')[0])
       .order('week_start_date', { ascending: false })
       .limit(1);
-
-    console.log('📊 Query result:', { data, error });
 
     if (error && error.code !== 'PGRST116') throw error;
 

@@ -39,8 +39,8 @@ export default function AuthConfirm() {
 
         // Redirect to login after 3 seconds
         setTimeout(() => {
-          navigate('/login');
-        }, 3000);
+          navigate('/');
+        }, 2000);
       } catch (err: any) {
         console.error('Confirmation error:', err);
         setStatus('error');

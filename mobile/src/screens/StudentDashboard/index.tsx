@@ -121,7 +121,7 @@ export const StudentDashboard: React.FC<DashboardProps> = ({ navigation }) => {
           {() => <GoalsTab studentId={student.id} />}
         </Tab.Screen>
         <Tab.Screen name="BigFive" options={{ title: 'Big Five' }}>
-          {() => <BigFiveTab studentId={student.id} gradeLevel={profile?.grade || 9} />}
+          {() => <BigFiveTab studentId={user?.id || ''} gradeLevel={profile?.grade || 9} />}
         </Tab.Screen>
         <Tab.Screen name="Schedule" options={{ title: 'Program' }}>
           {() => <ScheduleTab studentId={student.id} />}

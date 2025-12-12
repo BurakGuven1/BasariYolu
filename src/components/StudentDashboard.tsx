@@ -31,6 +31,8 @@ import StudentExternalExams from './StudentExternalExams';
 import ErrorBoundary from './ErrorBoundary';
 import TopicTracking from './TopicTracking';
 import BigFiveAssessment from './BigFiveAssessment';
+import StudentCoachingPanel from './coaching/StudentCoachingPanel';
+import PremiumRequiredScreen from './PremiumRequiredScreen';
 import type { InstitutionExamBlueprint } from '../lib/institutionQuestionApi';
 import {
   fetchInstitutionStudentPortalData,
@@ -58,7 +60,8 @@ type DashboardTab =
   | 'soru-portali'
   | 'kurumsal-sinavlar'
   | 'topic-tracking'
-  | 'big-five';
+  | 'big-five'
+  | 'coaching';
 
 const DASHBOARD_TAB_KEY = 'studentDashboardActiveTab';
 const DASHBOARD_TABS: DashboardTab[] = [
@@ -79,6 +82,7 @@ const DASHBOARD_TABS: DashboardTab[] = [
   'kurumsal-sinavlar',
   'topic-tracking',
   'big-five',
+  'coaching',
 ];
 
 const getCurrentWeekRange = () => {
@@ -106,11 +110,11 @@ type StudentDashboardProps = {
   authUser?: any;
 };
 
-export default function StudentDashboard({ authUser }: StudentDashboardProps) {
+export default function StudentDashboard({ }: StudentDashboardProps) {
   const [insights, setInsights] = useState<any[]>([]);
   const [dailyChallenge, setDailyChallenge] = useState<any>(null);
   const { planName } = useFeatureAccess();
-  const { user, clearUser } = useAuth(authUser);
+  const { user, clearUser } = useAuth();
   const [activeTab, setActiveTab] = useState<DashboardTab>(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem(DASHBOARD_TAB_KEY) as DashboardTab | null;
@@ -461,6 +465,11 @@ export default function StudentDashboard({ authUser }: StudentDashboardProps) {
     );
   }
 
+  // Check for premium subscription
+  if (!subscription && !isInstitutionStudent) {
+    return <PremiumRequiredScreen userType="student" />;
+  }
+
   if (!studentData) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4">
@@ -484,7 +493,6 @@ export default function StudentDashboard({ authUser }: StudentDashboardProps) {
   }
 
   const handleLogout = async () => {
-    console.log('StudentDashboard logout başlatıldı');
     try {
       await clearUser();
     } catch (error) {
@@ -1261,6 +1269,7 @@ export default function StudentDashboard({ authUser }: StudentDashboardProps) {
     { key: 'pomodoro', label: 'Pomodoro', icon: Timer },
     { key: 'maps', label: 'Tarih/Coğrafya', icon: MapIcon },
     { key: 'notes', label: 'Notlarım', icon: StickyNote },
+    { key: 'coaching', label: '👨‍🏫 Koçluk', icon: Award },
     { key: 'subscription', label: 'Aboneliğim', icon: Crown },
   ];
 
@@ -1392,6 +1401,9 @@ export default function StudentDashboard({ authUser }: StudentDashboardProps) {
             studentId={studentData.id}
             gradeLevel={studentData.profile?.grade || 9}
           />
+        )}
+        {activeTab === 'coaching' && user && (
+          <StudentCoachingPanel studentId={user.id} />
         )}
         {activeTab === 'classes' && (
           showInstitutionPortal ? (

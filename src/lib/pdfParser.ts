@@ -259,7 +259,6 @@ export async function extractQuestionImages(
         }
       }
 
-      console.log(`Page ${pageNum}: Found ${imagePositions.length} images at positions:`, imagePositions);
 
       // Find question number positions directly (not text boundaries)
       const questionPositions = new Map<number, number>(); // questionNumber -> Y position in PDF coords
@@ -337,8 +336,6 @@ export async function extractQuestionImages(
           }
         });
 
-        console.log(`Question ${question.question_number}: Found ${imagesInQuestion.length} images in range [${endY}, ${questionY}]`);
-
         // Convert PDF coordinates (bottom-up) to canvas coordinates (top-down)
         // PDF: Y=0 is at bottom, Canvas: Y=0 is at top
         let startY = viewport.height - questionY;
@@ -353,7 +350,6 @@ export async function extractQuestionImages(
           startY = Math.min(startY, imgTopCanvas);
           canvasEndY = Math.max(canvasEndY, imgBottomCanvas);
 
-          console.log(`  - Image extends crop: top=${imgTopCanvas.toFixed(0)}, bottom=${imgBottomCanvas.toFixed(0)}`);
         }
 
         // Add padding (but keep within page bounds)
@@ -417,7 +413,6 @@ export async function extractQuestionImages(
           },
         });
 
-        console.log(`Cropped question ${question.question_number}: Y=${cropStartY.toFixed(0)}-${cropEndY.toFixed(0)}, H=${cropHeight.toFixed(0)}px`);
       }
     }
 

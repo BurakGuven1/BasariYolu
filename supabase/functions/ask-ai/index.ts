@@ -76,13 +76,6 @@ serve(async (req) => {
       imageBase64,
     }: RequestBody = await req.json();
 
-    // Log request details for debugging
-    console.log('=== Request Received ===');
-    console.log('Question:', question);
-    console.log('ConversationId:', conversationId);
-    console.log('Messages count:', messages?.length || 0);
-    console.log('Has imageUrl:', !!imageUrl);
-    console.log('Has imageBase64:', !!imageBase64);
 
     if (!question || question.trim().length === 0) {
       throw new Error('Question is required');
@@ -302,12 +295,6 @@ Görevlerin:
         content: question,
       });
     }
-
-    // Log the messages being sent to OpenAI for debugging
-    console.log('=== OpenAI Request ===');
-    console.log('Model:', model);
-    console.log('Messages count:', openaiMessages.length);
-    console.log('Messages:', JSON.stringify(openaiMessages, null, 2));
 
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',

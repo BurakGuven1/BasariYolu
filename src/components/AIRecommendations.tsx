@@ -26,13 +26,11 @@ export default function AIRecommendations({ studentId }: AIRecommendationsProps)
       return;
     }
 
-    console.log('🔄 AIRecommendations: Loading for student:', studentId);
     setLoading(true);
     setError(null);
 
     try {
       const data = await getStudentRecommendations(studentId);
-      console.log('✅ AIRecommendations: Loaded', data.length, 'recommendations');
       setRecommendations(data || []);
     } catch (err: any) {
       console.error('❌ AIRecommendations: Error loading:', err);

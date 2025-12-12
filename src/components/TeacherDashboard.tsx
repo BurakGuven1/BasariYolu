@@ -5,10 +5,10 @@ import { PACKAGE_OPTIONS, calculateClassPrice } from '../types/teacher';
 import ClassManagementPanel from './ClassManagementPanel';
 import { sendAnnouncementNotification } from '../lib/notificationApi';
 import { supabase } from '../lib/supabase';
-import InstitutionQuestionBankPanel from './InstitutionQuestionBankPanel';
 import InstitutionStudentExamPanel from './InstitutionStudentExamPanel';
 import InstitutionExternalExamPanel from './InstitutionExternalExamPanel';
 import TeacherSchedulePanel from './TeacherSchedulePanel';
+import CoachDashboard from './coaching/CoachDashboard';
 import {
   acceptInstitutionTeacherInvite,
   listTeacherInstitutionRequests,
@@ -44,7 +44,7 @@ export default function TeacherDashboard({ teacherUser, onLogout }: TeacherDashb
   });
   const [createLoading, setCreateLoading] = useState(false);
 
-  type PanelKey = 'overview' | 'classes' | 'institutions' | 'schedule';
+  type PanelKey = 'overview' | 'classes' | 'institutions' | 'schedule' | 'coaching';
   const [activePanel, setActivePanel] = useState<PanelKey>('overview');
   const [institutionMemberships, setInstitutionMemberships] = useState<TeacherInstitutionMembership[]>([]);
   const [institutionsLoading, setInstitutionsLoading] = useState(false);
@@ -70,7 +70,6 @@ export default function TeacherDashboard({ teacherUser, onLogout }: TeacherDashb
       loadTeacherInstitutions(teacherUser.id);
       loadTeacherRequests(teacherUser.id);
     } else {
-      console.log('TeacherDashboard - no teacherUser provided');
       setLoading(false);
     }
   }, [teacherUser]);
@@ -335,6 +334,13 @@ useEffect(() => {
         visible: true,
       },
       {
+        key: 'coaching',
+        label: '👨‍🏫 Koçluk Paneli',
+        description: 'Öğrenci koçluğu ve randevu yönetimi',
+        icon: Users,
+        visible: true,
+      },
+      {
         key: 'institutions',
         label: 'Kurumlarım',
         description: 'Bağlı olduğunuz kurumlar',
@@ -540,7 +546,6 @@ useEffect(() => {
                       {derivedInstitutionSession.institution.contact_email || 'E-posta yok'}
                     </p>
                   </div>
-                  <InstitutionQuestionBankPanel session={derivedInstitutionSession} />
                   <InstitutionStudentExamPanel
                     institutionId={derivedInstitutionSession.institution.id}
                     institutionName={derivedInstitutionSession.institution.name}
@@ -1057,6 +1062,10 @@ useEffect(() => {
               teacherId={teacher.id}
               institutionId={selectedMembership.institution.id}
             />
+          )}
+
+          {resolvedPanel === 'coaching' && teacher && (
+            <CoachDashboard coachId={teacher.id} />
           )}
 
           {resolvedPanel === 'institutions' && (

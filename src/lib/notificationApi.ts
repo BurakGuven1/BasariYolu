@@ -27,11 +27,10 @@ export interface NotificationLog {
  */
 export const sendWhatsAppMessage = async (
   phone: string,
-  message: string,
+  _message: string,
   _metadata?: Record<string, any>
 ): Promise<{ success: boolean; error?: string; messageId?: string }> => {
   try {
-    console.log('📱 WhatsApp Message (MOCK):', { phone, message });
 
     // Telefon numarası formatı kontrolü
     const cleanPhone = phone.replace(/\D/g, '');
@@ -64,7 +63,6 @@ export const sendEmail = async (
       return { success: false, error: "Geçersiz email adresi" };
     }
 
-    console.log("📧 Sending email:", email);
 
     // notificationApi.ts içinde:
     const { data, error } = await supabase.functions.invoke("send-email", {
@@ -304,16 +302,12 @@ export const sendAttendanceNotification = async (
   }
 ): Promise<{ data: { sent: number; failed: number }; error: any }> => {
   try {
-    console.log('📧 sendAttendanceNotification çağrıldı:', { institutionId, studentId, attendanceData });
 
     // Öğrencinin velilerini al (tüm veli kayıtlarını kontrol et)
     const { data: allParents } = await supabase
       .from('parent_contacts')
       .select('*')
       .eq('student_id', studentId);
-
-    console.log('🔍 Bu öğrencinin TÜM veli kayıtları (institution bakmadan):', allParents);
-
     // Kurum ve aktif filtreli veli kayıtları
     const { data: parents, error: parentsError } = await supabase
       .from('parent_contacts')
@@ -321,9 +315,6 @@ export const sendAttendanceNotification = async (
       .eq('institution_id', institutionId)
       .eq('student_id', studentId)
       .eq('is_active', true);
-
-    console.log('👨‍👩‍👧 Bulunan veli sayısı (kuruma özel):', parents?.length || 0, parents);
-    console.log('🏢 Aranan institution_id:', institutionId);
 
     if (parentsError) throw parentsError;
 
@@ -387,7 +378,6 @@ Bilgilerinize sunarız.
           .lte('created_at', `${attendanceData.date}T23:59:59`);
 
         if (todayWhatsApp && todayWhatsApp.length > 0) {
-          console.log('⚠️ Bu öğrenci için bugün zaten WhatsApp mesajı gönderilmiş, atlanıyor');
         } else {
           const result = await sendWhatsAppMessage(parent.phone, plainMessage);
 
@@ -413,7 +403,7 @@ Bilgilerinize sunarız.
 
       // Email (Her zaman gönder, günlük limit yok)
       if (parent.email) {
-        console.log('📧 Email gönderiliyor:', parent.email, 'Method:', parent.preferred_contact_method);
+
         const result = await sendEmail(
           parent.email,
           `${studentName} - ${attendanceData.status === 'absent' ? 'Devamsızlık' : attendanceData.status === 'late' ? 'Geç Kalma' : 'Mazeretli'} Bildirimi`,
@@ -452,8 +442,6 @@ Bilgilerinize sunarız.
  */
 export const sendAnnouncementNotification = async (announcementId: string) => {
   try {
-    console.log('📧 Triggering notification for announcement:', announcementId);
-
     const { data, error } = await supabase.functions.invoke('SmtpSend', {
       body: { announcement_id: announcementId }
     });
@@ -463,7 +451,6 @@ export const sendAnnouncementNotification = async (announcementId: string) => {
       throw error;
     }
 
-    console.log('✅ Notification sent successfully:', data);
     return { success: true, data };
   } catch (error: any) {
     console.error('❌ Failed to send notification:', error);

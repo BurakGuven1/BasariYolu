@@ -123,20 +123,3 @@ export async function bulkImportQuestions(
 
   return { success, failed, errors };
 }
-
-/**
- * Import questions from JSON file
- * Example usage in a React component:
- *
- * import questionsData from './questions_12sinif_problemler.json';
- * import { bulkImportQuestions } from './utils/importQuestions';
- *
- * const handleImport = async () => {
- *   const result = await bulkImportQuestions(
- *     questionsData,
- *     'your-institution-id',
- *     'your-user-id'
- *   );
- *   console.log(`Imported: ${result.success}, Failed: ${result.failed}`);
- * };
- */

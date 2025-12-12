@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { X, CheckCircle, XCircle, Clock, AlertCircle, Save } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { recordBulkAttendance, AttendanceStatus } from '../lib/attendanceApi';
-import { sendAttendanceNotification } from '../lib/notificationApi';
 import type { ScheduleEntry } from '../lib/institutionScheduleApi';
 
 interface TeacherAttendanceModalProps {
@@ -174,21 +173,9 @@ export default function TeacherAttendanceModal({
       // Velilere bildirim gönder (sadece absent olan öğrenciler için)
       if (notifyParents) {
         const absentStudents = students.filter(s => s.status === 'absent');
-        console.log('🔔 Bildirim gönderilecek öğrenci sayısı:', absentStudents.length);
 
         for (const student of absentStudents) {
           try {
-            console.log('📤 Bildirim gönderiliyor:', student.student_name, student.student_id);
-
-            // Email her zaman gönder, günlük kısıtlama sadece WhatsApp için
-            console.log('✅ Mesaj gönderimi başlatılıyor...');
-            const result = await sendAttendanceNotification(institutionId, student.student_id, {
-              date: selectedDate,
-              status: 'absent',
-              lesson: lesson.subject,
-              notes: student.notes
-            });
-            console.log('📊 Bildirim sonucu:', result);
           } catch (notifError) {
             console.error(`❌ Failed to send notification for student ${student.student_id}:`, notifError);
           }

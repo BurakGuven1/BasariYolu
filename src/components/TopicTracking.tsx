@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Target, TrendingUp, BookOpen, Trophy, CheckCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Target, BookOpen, CheckCircle } from 'lucide-react';
 import {
   getTopicsByGrade,
   getSubjectsByGrade,

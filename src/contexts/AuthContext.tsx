@@ -108,7 +108,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             ...additionalData,
           };
 
-          console.log('✅ Restored Supabase session:', userType);
           setUser(authUser);
           saveSession(authUser);
         } else {
@@ -119,7 +118,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               const parsedStored = JSON.parse(stored);
               // ONLY restore if teacher or institution AND session is still valid
               if (parsedStored.userType === 'teacher' || parsedStored.userType === 'institution') {
-                console.log('✅ Restored non-Supabase session:', parsedStored.userType);
                 setUser(parsedStored);
               } else {
                 // Clear invalid session
@@ -148,7 +146,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // CRITICAL: Don't process auth events during logout
       const logoutInProgress = sessionStorage.getItem('logout_in_progress');
       if (logoutInProgress) {
-        console.log('⚠️ Ignoring auth event during logout:', event);
         return; // Skip all events during logout
       }
 
@@ -231,7 +228,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Logout function - SECURE: Uses Worker API to clear HTTP-only cookies
   const logout = useCallback(async (options?: LogoutOptions) => {
-    console.log('🚪 Logout initiated for user:', user?.userType);
     const redirectPath = options?.redirectTo ?? '/';
 
     // STEP 0: Set logout flag to prevent auto re-login on redirect
@@ -259,8 +255,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
       keysToRemove.forEach(key => localStorage.removeItem(key));
-
-      console.log('🧹 LocalStorage cleared');
     } catch (e) {
       console.warn('localStorage clear error:', e);
     }
@@ -273,7 +267,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // STEP 4: Sign out from Supabase BEFORE redirect (CRITICAL for institution)
     if (user?.userType === 'student' || user?.userType === 'parent' || user?.userType === 'teacher' || user?.userType === 'institution') {
-      console.log('🔐 Signing out from Supabase before redirect...');
 
       // WAIT for Supabase signOut to complete (max 2 seconds)
       const signOutPromise = supabase.auth.signOut({ scope: 'local' });
@@ -284,13 +277,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.warn('Supabase signOut error:', err);
         })
         .finally(() => {
-          console.log('✅ Redirecting to:', redirectPath);
           // Redirect after Supabase signOut completes
           window.location.replace(redirectPath);
         });
     } else {
-      // For parent or other non-Supabase users, redirect immediately
-      console.log('✅ Redirecting to:', redirectPath);
+
       setTimeout(() => {
         window.location.replace(redirectPath);
       }, 50);
@@ -305,11 +296,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // For Supabase users (student/parent) - Use Worker API
       if (user?.userType === 'student' || user?.userType === 'parent') {
         try {
-          console.log('🔄 Refreshing token via Worker API (HTTP-only cookie)');
           const refreshData = await authApi.refreshToken();
 
           if (refreshData?.user) {
-            console.log('✅ Token refreshed successfully');
             const updatedUser: AuthUser = {
               ...user,
               id: refreshData.user.id,

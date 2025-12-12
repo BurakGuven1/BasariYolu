@@ -112,11 +112,16 @@ export const saveBigFiveResponse = async (
 ): Promise<void> => {
   const { error } = await supabase
     .from('big_five_responses')
-    .upsert({
-      student_id: studentId,
-      question_id: questionId,
-      response_value: responseValue,
-    });
+    .upsert(
+      {
+        student_id: studentId,
+        question_id: questionId,
+        response_value: responseValue,
+      },
+      {
+        onConflict: 'student_id,question_id',
+      }
+    );
 
   if (error) throw error;
 };
@@ -136,7 +141,9 @@ export const saveBigFiveResponses = async (
 
   const { error } = await supabase
     .from('big_five_responses')
-    .upsert(responseData);
+    .upsert(responseData, {
+      onConflict: 'student_id,question_id',
+    });
 
   if (error) throw error;
 };

@@ -1,0 +1,1176 @@
+/**
+ * Coaching API
+ * Handles all coaching-related operations including packages, subscriptions, and appointments
+ */
+
+import { supabase, SUPABASE_URL } from './supabase';
+
+// =====================================================
+// Types
+// =====================================================
+
+export interface CoachingPackage {
+  id: string;
+  name: string;
+  description: string | null;
+  session_count: number;
+  duration_days: number;
+  price: number;
+  is_active: boolean;
+  is_popular?: boolean;
+  features?: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StudentCoachingSubscription {
+  id: string;
+  student_id: string;
+  coach_id: string;
+  package_id: string;
+  start_date: string;
+  end_date: string;
+  remaining_sessions: number;
+  total_sessions: number;
+  status: 'active' | 'expired' | 'cancelled' | 'completed';
+  purchase_price: number;
+  created_at: string;
+  updated_at: string;
+  // Joined data
+  package?: CoachingPackage;
+  coach?: {
+    id: string;
+    full_name: string;
+    avatar_url: string | null;
+    coach_bio: string | null;
+    coach_specializations: string[] | null;
+  };
+  student?: {
+    id: string;
+    full_name: string;
+    avatar_url: string | null;
+    phone?: string | null;
+    grade?: number | null;
+  };
+  // Computed fields
+  last_appointment_date?: string | null;
+}
+
+export interface CoachingAppointment {
+  id: string;
+  subscription_id: string;
+  coach_id: string;
+  student_id: string;
+  appointment_date: string;
+  duration_minutes: number;
+  google_meet_link: string | null;
+  title: string | null;
+  description: string | null;
+  status: 'pending' | 'approved' | 'rejected' | 'completed' | 'cancelled' | 'no_show';
+  cancellation_reason: string | null;
+  coach_notes: string | null;
+  approved_at: string | null;
+  rejected_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  // Joined data
+  student?: {
+    id: string;
+    full_name: string;
+    avatar_url: string | null;
+  };
+  coach?: {
+    id: string;
+    full_name: string;
+    avatar_url: string | null;
+  };
+  subscription?: StudentCoachingSubscription;
+}
+
+export interface CoachAvailability {
+  id: string;
+  coach_id: string;
+  day_of_week: number; // 0-6, 0=Sunday
+  start_time: string; // HH:MM format
+  end_time: string;
+  is_available: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CoachProfile {
+  id: string;
+  full_name: string;
+  avatar_url: string | null;
+  is_coach: boolean;
+  coach_bio: string | null;
+  coach_specializations: string[] | null;
+  coach_hourly_rate: number | null;
+  coach_availability_timezone: string | null;
+}
+
+export interface CoachStats {
+  coach_id: string;
+  coach_name: string;
+  avatar_url: string | null;
+  coach_bio: string | null;
+  coach_specializations: string[] | null;
+  coach_hourly_rate: number | null;
+  total_students: number;
+  completed_sessions: number;
+  upcoming_sessions: number;
+  avg_rating: number | null;
+}
+
+// =====================================================
+// Coaching Packages
+// =====================================================
+
+export async function getActivePackages(): Promise<CoachingPackage[]> {
+  const { data, error } = await supabase
+    .from('coaching_packages')
+    .select('*')
+    .eq('is_active', true)
+    .order('price', { ascending: true });
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function getPackageById(packageId: string): Promise<CoachingPackage | null> {
+  const { data, error } = await supabase
+    .from('coaching_packages')
+    .select('*')
+    .eq('id', packageId)
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+// =====================================================
+// Coach Management
+// =====================================================
+
+export async function getAllCoaches(): Promise<CoachProfile[]> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, full_name, avatar_url, is_coach, coach_bio, coach_specializations, coach_hourly_rate, coach_availability_timezone')
+    .eq('is_coach', true)
+    .eq('role', 'teacher')
+    .order('full_name');
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function getCoachById(coachId: string): Promise<CoachProfile | null> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, full_name, avatar_url, is_coach, coach_bio, coach_specializations, coach_hourly_rate, coach_availability_timezone')
+    .eq('id', coachId)
+    .eq('is_coach', true)
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateCoachProfile(
+  coachId: string,
+  updates: {
+    coach_bio?: string;
+    coach_specializations?: string[];
+    coach_hourly_rate?: number;
+  }
+): Promise<void> {
+  const { error } = await supabase
+    .from('profiles')
+    .update(updates)
+    .eq('id', coachId);
+
+  if (error) throw error;
+}
+
+export async function enableCoaching(userId: string): Promise<void> {
+  const { error } = await supabase
+    .from('profiles')
+    .update({ is_coach: true })
+    .eq('id', userId);
+
+  if (error) throw error;
+}
+
+export async function getCoachStats(coachId: string): Promise<CoachStats | null> {
+  const { data, error } = await supabase
+    .from('coach_stats')
+    .select('*')
+    .eq('coach_id', coachId)
+    .single();
+
+  if (error) {
+    console.error('Error fetching coach stats:', error);
+    return null;
+  }
+  return data;
+}
+
+// =====================================================
+// Subscriptions
+// =====================================================
+
+export async function createSubscription(
+  studentId: string,
+  coachId: string,
+  packageId: string
+): Promise<StudentCoachingSubscription> {
+  // First get the package details
+  const pkg = await getPackageById(packageId);
+  if (!pkg) throw new Error('Package not found');
+
+  const startDate = new Date();
+  const endDate = new Date();
+  endDate.setDate(endDate.getDate() + pkg.duration_days);
+
+  const { data, error } = await supabase
+    .from('student_coaching_subscriptions')
+    .insert({
+      student_id: studentId,
+      coach_id: coachId,
+      package_id: packageId,
+      start_date: startDate.toISOString(),
+      end_date: endDate.toISOString(),
+      remaining_sessions: pkg.session_count,
+      total_sessions: pkg.session_count,
+      purchase_price: pkg.price,
+      status: 'active',
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function getStudentSubscriptions(studentId: string): Promise<StudentCoachingSubscription[]> {
+  const { data, error } = await supabase
+    .from('student_coaching_subscriptions')
+    .select(`
+      *,
+      package:coaching_packages(*),
+      coach:profiles!student_coaching_subscriptions_coach_id_fkey(
+        id, full_name, avatar_url, coach_bio, coach_specializations
+      )
+    `)
+    .eq('student_id', studentId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function getCoachSubscriptions(coachId: string): Promise<StudentCoachingSubscription[]> {
+  const { data, error } = await supabase
+    .from('student_coaching_subscriptions')
+    .select(`
+      *,
+      package:coaching_packages(*),
+      student:profiles!student_coaching_subscriptions_student_id_fkey(
+        id, full_name, avatar_url
+      )
+    `)
+    .eq('coach_id', coachId)
+    .in('status', ['active', 'expired'])
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  // Get last appointment date and student details for each subscription
+  if (data) {
+    const subscriptionsWithDetails = await Promise.all(
+      data.map(async (subscription) => {
+        // Get last appointment
+        const { data: lastAppointment } = await supabase
+          .from('coaching_appointments')
+          .select('appointment_date')
+          .eq('subscription_id', subscription.id)
+          .in('status', ['completed', 'approved'])
+          .order('appointment_date', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        // Get student phone and grade from students table
+        let studentPhone = null;
+        let studentGrade = null;
+        if (subscription.student?.id) {
+          const { data: studentData } = await supabase
+            .from('students')
+            .select('phone, grade')
+            .eq('user_id', subscription.student.id)
+            .maybeSingle();
+
+          if (studentData) {
+            studentPhone = studentData.phone;
+            studentGrade = studentData.grade;
+          }
+        }
+
+        return {
+          ...subscription,
+          last_appointment_date: lastAppointment?.appointment_date || null,
+          student: {
+            ...subscription.student,
+            phone: studentPhone,
+            grade: studentGrade,
+          },
+        };
+      })
+    );
+
+    return subscriptionsWithDetails;
+  }
+
+  return [];
+}
+
+export async function getActiveSubscription(
+  studentId: string,
+  coachId: string
+): Promise<StudentCoachingSubscription | null> {
+  const { data, error } = await supabase
+    .from('student_coaching_subscriptions')
+    .select('*')
+    .eq('student_id', studentId)
+    .eq('coach_id', coachId)
+    .eq('status', 'active')
+    .gt('remaining_sessions', 0)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') return null; // No rows found
+    throw error;
+  }
+  return data;
+}
+
+export async function cancelSubscription(subscriptionId: string): Promise<void> {
+  const { error } = await supabase
+    .from('student_coaching_subscriptions')
+    .update({ status: 'cancelled' })
+    .eq('id', subscriptionId);
+
+  if (error) throw error;
+}
+
+// =====================================================
+// Appointments
+// =====================================================
+
+// Coach creates appointment directly (scheduled status)
+export async function createAppointment(
+  subscriptionId: string,
+  coachId: string,
+  studentId: string,
+  appointmentData: {
+    appointment_date: string;
+    duration_minutes?: number;
+    google_meet_link?: string;
+    title?: string;
+    description?: string;
+  }
+): Promise<CoachingAppointment> {
+  const { data, error } = await supabase
+    .from('coaching_appointments')
+    .insert({
+      subscription_id: subscriptionId,
+      coach_id: coachId,
+      student_id: studentId,
+      appointment_date: appointmentData.appointment_date,
+      duration_minutes: appointmentData.duration_minutes || 60,
+      google_meet_link: appointmentData.google_meet_link,
+      title: appointmentData.title,
+      description: appointmentData.description,
+      status: 'approved',
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+// Student requests appointment (pending status)
+export async function requestAppointment(
+  subscriptionId: string,
+  coachId: string,
+  studentId: string,
+  appointmentData: {
+    appointment_date: string;
+    duration_minutes?: number;
+    title?: string;
+    description?: string;
+  }
+): Promise<CoachingAppointment> {
+  const { data, error} = await supabase
+    .from('coaching_appointments')
+    .insert({
+      subscription_id: subscriptionId,
+      coach_id: coachId,
+      student_id: studentId,
+      appointment_date: appointmentData.appointment_date,
+      duration_minutes: appointmentData.duration_minutes || 60,
+      title: appointmentData.title,
+      description: appointmentData.description,
+      status: 'pending',
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  // Send email notification to coach
+  try {
+    const [coachData, studentData] = await Promise.all([
+      supabase.from('profiles').select('full_name, email').eq('id', coachId).single(),
+      supabase.from('profiles').select('full_name, email').eq('id', studentId).single(),
+    ]);
+
+    if (coachData.data && studentData.data) {
+      const date = new Date(appointmentData.appointment_date);
+      const formattedDate = date.toLocaleDateString('tr-TR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        weekday: 'long'
+      });
+      const formattedTime = date.toLocaleTimeString('tr-TR', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+
+      await notifyCoachOfAppointmentRequest(
+        coachData.data.email,
+        coachData.data.full_name,
+        studentData.data.full_name,
+        formattedDate,
+        formattedTime
+      );
+    }
+  } catch (emailError) {
+    console.error('Failed to send notification email:', emailError);
+    // Don't fail the appointment creation if email fails
+  }
+
+  return data;
+}
+
+// Coach approves appointment
+export async function approveAppointment(
+  appointmentId: string,
+  google_meet_link?: string,
+  coach_notes?: string
+): Promise<void> {
+  // First get appointment details before updating
+  const { data: appointment } = await supabase
+    .from('coaching_appointments')
+    .select('coach_id, student_id, appointment_date')
+    .eq('id', appointmentId)
+    .single();
+
+  const { error } = await supabase
+    .from('coaching_appointments')
+    .update({
+      status: 'approved',
+      google_meet_link: google_meet_link,
+      coach_notes: coach_notes,
+      approved_at: new Date().toISOString(),
+    })
+    .eq('id', appointmentId)
+    .eq('status', 'pending');
+
+  if (error) throw error;
+
+  // Send email notification to student
+  if (appointment) {
+    try {
+      const [coachData, studentData] = await Promise.all([
+        supabase.from('profiles').select('full_name').eq('id', appointment.coach_id).single(),
+        supabase.from('profiles').select('full_name, email').eq('id', appointment.student_id).single(),
+      ]);
+
+      if (coachData.data && studentData.data) {
+        const date = new Date(appointment.appointment_date);
+        const formattedDate = date.toLocaleDateString('tr-TR', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          weekday: 'long'
+        });
+        const formattedTime = date.toLocaleTimeString('tr-TR', {
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+
+        await notifyStudentOfAppointmentApproval(
+          studentData.data.email,
+          studentData.data.full_name,
+          coachData.data.full_name,
+          formattedDate,
+          formattedTime,
+          google_meet_link
+        );
+      }
+    } catch (emailError) {
+      console.error('Failed to send notification email:', emailError);
+      // Don't fail the appointment approval if email fails
+    }
+  }
+}
+
+// Coach rejects appointment
+export async function rejectAppointment(
+  appointmentId: string,
+  coach_notes?: string
+): Promise<void> {
+  const { error } = await supabase
+    .from('coaching_appointments')
+    .update({
+      status: 'rejected',
+      coach_notes: coach_notes,
+      rejected_at: new Date().toISOString(),
+    })
+    .eq('id', appointmentId)
+    .eq('status', 'pending');
+
+  if (error) throw error;
+}
+
+export async function getCoachAppointments(
+  coachId: string,
+  options?: {
+    startDate?: string;
+    endDate?: string;
+    status?: string[];
+  }
+): Promise<CoachingAppointment[]> {
+  let query = supabase
+    .from('coaching_appointments')
+    .select(`
+      *,
+      student:profiles!coaching_appointments_student_id_fkey(
+        id, full_name, avatar_url
+      ),
+      subscription:student_coaching_subscriptions!coaching_appointments_subscription_id_fkey(
+        id,
+        remaining_sessions,
+        package:coaching_packages(name)
+      )
+    `)
+    .eq('coach_id', coachId);
+
+  if (options?.startDate) {
+    query = query.gte('appointment_date', options.startDate);
+  }
+  if (options?.endDate) {
+    query = query.lte('appointment_date', options.endDate);
+  }
+  if (options?.status) {
+    query = query.in('status', options.status);
+  }
+
+  query = query.order('appointment_date', { ascending: true });
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Error fetching coach appointments:', error);
+    throw error;
+  }
+  return data || [];
+}
+
+export async function getStudentAppointments(
+  studentId: string,
+  options?: {
+    startDate?: string;
+    endDate?: string;
+    status?: string[];
+  }
+): Promise<CoachingAppointment[]> {
+  let query = supabase
+    .from('coaching_appointments')
+    .select(`
+      *,
+      coach:profiles!coaching_appointments_coach_id_fkey(
+        id, full_name, avatar_url
+      ),
+      subscription:student_coaching_subscriptions!coaching_appointments_subscription_id_fkey(
+        id,
+        remaining_sessions,
+        package:coaching_packages(name)
+      )
+    `)
+    .eq('student_id', studentId);
+
+  if (options?.startDate) {
+    query = query.gte('appointment_date', options.startDate);
+  }
+  if (options?.endDate) {
+    query = query.lte('appointment_date', options.endDate);
+  }
+  if (options?.status) {
+    query = query.in('status', options.status);
+  }
+
+  query = query.order('appointment_date', { ascending: true });
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Error fetching student appointments:', error);
+    throw error;
+  }
+  return data || [];
+}
+
+export async function updateAppointment(
+  appointmentId: string,
+  updates: {
+    appointment_date?: string;
+    duration_minutes?: number;
+    google_meet_link?: string;
+    title?: string;
+    description?: string;
+    status?: 'pending' | 'approved' | 'rejected' | 'completed' | 'cancelled' | 'no_show';
+    cancellation_reason?: string;
+  }
+): Promise<void> {
+  const updateData: any = { ...updates };
+
+  // Set completed_at when status changes to completed
+  if (updates.status === 'completed') {
+    updateData.completed_at = new Date().toISOString();
+  }
+
+  const { error } = await supabase
+    .from('coaching_appointments')
+    .update(updateData)
+    .eq('id', appointmentId);
+
+  if (error) throw error;
+}
+
+export async function deleteAppointment(appointmentId: string): Promise<void> {
+  const { error } = await supabase
+    .from('coaching_appointments')
+    .delete()
+    .eq('id', appointmentId);
+
+  if (error) throw error;
+}
+
+// =====================================================
+// Coach Availability
+// =====================================================
+
+export async function getCoachAvailability(coachId: string): Promise<CoachAvailability[]> {
+  const { data, error } = await supabase
+    .from('coach_availability')
+    .select('*')
+    .eq('coach_id', coachId)
+    .order('day_of_week')
+    .order('start_time');
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function setCoachAvailability(
+  coachId: string,
+  availability: Omit<CoachAvailability, 'id' | 'coach_id' | 'created_at' | 'updated_at'>[]
+): Promise<void> {
+  // Delete existing availability
+  await supabase
+    .from('coach_availability')
+    .delete()
+    .eq('coach_id', coachId);
+
+  // Insert new availability
+  const { error } = await supabase
+    .from('coach_availability')
+    .insert(
+      availability.map((slot) => ({
+        coach_id: coachId,
+        ...slot,
+      }))
+    );
+
+  if (error) throw error;
+}
+
+export async function addAvailabilitySlot(
+  coachId: string,
+  slot: {
+    day_of_week: number;
+    start_time: string;
+    end_time: string;
+    is_available?: boolean;
+  }
+): Promise<void> {
+  const { error } = await supabase
+    .from('coach_availability')
+    .insert({
+      coach_id: coachId,
+      ...slot,
+    });
+
+  if (error) throw error;
+}
+
+export async function removeAvailabilitySlot(slotId: string): Promise<void> {
+  const { error } = await supabase
+    .from('coach_availability')
+    .delete()
+    .eq('id', slotId);
+
+  if (error) throw error;
+}
+
+// Alias functions for better naming
+export async function saveCoachAvailability(
+  coachId: string,
+  slot: {
+    day_of_week: number;
+    start_time: string;
+    end_time: string;
+    is_available?: boolean;
+  }
+): Promise<void> {
+  return addAvailabilitySlot(coachId, slot);
+}
+
+export async function deleteCoachAvailability(slotId: string): Promise<void> {
+  return removeAvailabilitySlot(slotId);
+}
+
+// Get available time slots for a coach within a date range
+export async function getAvailableTimeSlots(
+  coachId: string,
+  startDate: Date,
+  endDate: Date
+): Promise<{ date: string; time: string; available: boolean }[]> {
+  // Get coach availability schedule
+  const availability = await getCoachAvailability(coachId);
+
+  // Get existing appointments in the date range
+  const appointments = await getCoachAppointments(coachId, {
+    startDate: startDate.toISOString(),
+    endDate: endDate.toISOString(),
+    status: ['pending', 'approved'],
+  });
+
+  const slots: { date: string; time: string; available: boolean }[] = [];
+  const current = new Date(startDate);
+
+  while (current <= endDate) {
+    const dayOfWeek = current.getDay();
+    const dateStr = current.toISOString().split('T')[0];
+
+    // Find availability for this day of week
+    const dayAvailability = availability.filter(
+      (av) => av.day_of_week === dayOfWeek && av.is_available
+    );
+
+    dayAvailability.forEach((av) => {
+      const startHour = parseInt(av.start_time.split(':')[0]);
+      const startMinute = parseInt(av.start_time.split(':')[1]);
+      const endHour = parseInt(av.end_time.split(':')[0]);
+      const endMinute = parseInt(av.end_time.split(':')[1]);
+
+      // Create hourly slots
+      for (let hour = startHour; hour < endHour || (hour === endHour && startMinute < endMinute); hour++) {
+        const timeStr = `${hour.toString().padStart(2, '0')}:00`;
+        const slotDateTime = new Date(`${dateStr}T${timeStr}:00`);
+
+        // Check if this slot conflicts with existing appointment
+        const hasConflict = appointments.some((app) => {
+          const appDate = new Date(app.appointment_date);
+          const appEnd = new Date(appDate.getTime() + app.duration_minutes * 60000);
+          return slotDateTime >= appDate && slotDateTime < appEnd;
+        });
+
+        slots.push({
+          date: dateStr,
+          time: timeStr,
+          available: !hasConflict,
+        });
+      }
+    });
+
+    current.setDate(current.getDate() + 1);
+  }
+
+  return slots;
+}
+
+// =====================================================
+// Helper Functions
+// =====================================================
+
+export const DAY_NAMES = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+
+export function getDayName(dayOfWeek: number): string {
+  return DAY_NAMES[dayOfWeek] || '';
+}
+
+export function formatTime(time: string): string {
+  return time.substring(0, 5); // HH:MM from HH:MM:SS
+}
+
+export function formatAppointmentDate(date: string): string {
+  const d = new Date(date);
+  return d.toLocaleDateString('tr-TR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+export function isSubscriptionActive(subscription: StudentCoachingSubscription): boolean {
+  return (
+    subscription.status === 'active' &&
+    subscription.remaining_sessions > 0 &&
+    new Date(subscription.end_date) > new Date()
+  );
+}
+
+export function getSubscriptionProgress(subscription: StudentCoachingSubscription): number {
+  return Math.round(
+    ((subscription.total_sessions - subscription.remaining_sessions) / subscription.total_sessions) * 100
+  );
+}
+
+// =====================================================
+// Coach Application System
+// =====================================================
+
+export interface CoachApplication {
+  id: string;
+  teacher_id: string;
+  full_name: string;
+  email: string;
+  phone: string;
+  avatar_url: string | null;
+  experience_years: number;
+  bio: string;
+  specializations: string[];
+  hourly_rate: number | null;
+  terms_accepted: boolean;
+  terms_accepted_at: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  admin_notes: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CoachApplicationInput {
+  full_name: string;
+  email: string;
+  phone: string;
+  avatar_url?: string;
+  experience_years: number;
+  bio: string;
+  specializations: string[];
+  hourly_rate?: number;
+  terms_accepted: boolean;
+}
+
+/**
+ * Submit coach application
+ */
+export async function submitCoachApplication(
+  teacherId: string,
+  application: CoachApplicationInput
+): Promise<CoachApplication> {
+  const { data, error } = await supabase
+    .from('coach_applications')
+    .insert({
+      teacher_id: teacherId,
+      ...application,
+      terms_accepted_at: application.terms_accepted ? new Date().toISOString() : null,
+      status: 'pending',
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Get teacher's coach application
+ */
+export async function getTeacherCoachApplication(teacherId: string): Promise<CoachApplication | null> {
+  const { data, error } = await supabase
+    .from('coach_applications')
+    .select('*')
+    .eq('teacher_id', teacherId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Update coach application (only if pending)
+ */
+export async function updateCoachApplication(
+  applicationId: string,
+  updates: Partial<CoachApplicationInput>
+): Promise<void> {
+  const { error } = await supabase
+    .from('coach_applications')
+    .update({
+      ...updates,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', applicationId)
+    .eq('status', 'pending');
+
+  if (error) throw error;
+}
+
+/**
+ * Upload coach avatar to storage
+ */
+export async function uploadCoachAvatar(teacherId: string, file: File): Promise<string> {
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${teacherId}/${Date.now()}.${fileExt}`;
+
+  const { data, error } = await supabase.storage
+    .from('coach-avatars')
+    .upload(fileName, file, {
+      cacheControl: '3600',
+      upsert: true,
+    });
+
+  if (error) throw error;
+
+  const { data: { publicUrl } } = supabase.storage
+    .from('coach-avatars')
+    .getPublicUrl(data.path);
+
+  return publicUrl;
+}
+
+/**
+ * Delete coach avatar from storage
+ */
+export async function deleteCoachAvatar(avatarUrl: string): Promise<void> {
+  const path = avatarUrl.split('/coach-avatars/').pop();
+  if (!path) return;
+
+  const { error } = await supabase.storage
+    .from('coach-avatars')
+    .remove([path]);
+
+  if (error) throw error;
+}
+
+/**
+ * Get all specialization options
+ */
+export function getSpecializationOptions(): string[] {
+  return [
+    'Sınav Stratejileri',
+    'Motivasyon Koçluğu',
+    'Zaman Yönetimi',
+    'Stres Yönetimi',
+    'Kariyer Danışmanlığı',
+    'Üniversite Yerleştirme',
+    'Bölüm Seçimi',
+    'Ders Çalışma Teknikleri',
+    'Matematik',
+    'Fen Bilimleri',
+    'Türkçe-Edebiyat',
+    'Sosyal Bilimler',
+    'Yabancı Dil',
+  ];
+}
+
+// =====================================================
+// Email Notification System
+// =====================================================
+
+/**
+ * Send email using Supabase Edge Function
+ */
+async function sendEmail(to: string, subject: string, html: string): Promise<void> {
+  try {
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+      },
+      body: JSON.stringify({ to, subject, html }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to send email');
+    }
+  } catch (error) {
+    console.error('Error sending email:', error);
+    // Don't throw - email failure shouldn't block the main operation
+  }
+}
+
+/**
+ * Send email to coach when student requests appointment
+ */
+export async function notifyCoachOfAppointmentRequest(
+  coachEmail: string,
+  coachName: string,
+  studentName: string,
+  appointmentDate: string,
+  appointmentTime: string
+): Promise<void> {
+  const subject = '🔔 Yeni Randevu Talebi';
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+        .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
+        .button { display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; margin: 20px 0; }
+        .info-box { background: white; padding: 20px; border-left: 4px solid #667eea; margin: 20px 0; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>🎓 BaşarıYolu Koçluk</h1>
+        </div>
+        <div class="content">
+          <h2>Merhaba ${coachName},</h2>
+          <p>Yeni bir randevu talebiniz var!</p>
+
+          <div class="info-box">
+            <strong>📋 Talep Detayları:</strong><br><br>
+            <strong>Öğrenci:</strong> ${studentName}<br>
+            <strong>Tarih:</strong> ${appointmentDate}<br>
+            <strong>Saat:</strong> ${appointmentTime}<br>
+          </div>
+
+          <p>Talebi değerlendirmek için lütfen koçluk panelinize giriş yapın.</p>
+
+          <a href="https://basariyolum.com" class="button">Koçluk Paneline Git</a>
+
+          <p style="margin-top: 30px; color: #666; font-size: 14px;">
+            Bu e-posta BaşarıYolu platformu tarafından otomatik olarak gönderilmiştir.
+          </p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  await sendEmail(coachEmail, subject, html);
+}
+
+/**
+ * Send email to student when coach approves appointment
+ */
+export async function notifyStudentOfAppointmentApproval(
+  studentEmail: string,
+  studentName: string,
+  coachName: string,
+  appointmentDate: string,
+  appointmentTime: string,
+  meetLink?: string
+): Promise<void> {
+  const subject = '✅ Randevunuz Onaylandı!';
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+        .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
+        .button { display: inline-block; background: #10b981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; margin: 20px 0; }
+        .info-box { background: white; padding: 20px; border-left: 4px solid #10b981; margin: 20px 0; }
+        .success { color: #10b981; font-size: 48px; text-align: center; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <div class="success">✓</div>
+          <h1>Randevunuz Onaylandı!</h1>
+        </div>
+        <div class="content">
+          <h2>Merhaba ${studentName},</h2>
+          <p>Koçluk randevunuz onaylandı! 🎉</p>
+
+          <div class="info-box">
+            <strong>📋 Randevu Detayları:</strong><br><br>
+            <strong>Koç:</strong> ${coachName}<br>
+            <strong>Tarih:</strong> ${appointmentDate}<br>
+            <strong>Saat:</strong> ${appointmentTime}<br>
+          </div>
+
+          ${meetLink ? `
+          <p><strong>Toplantı Linki:</strong></p>
+          <a href="${meetLink}" class="button">Görüşmeye Katıl</a>
+          ` : ''}
+
+          <p>Randevunuza zamanında katılmayı unutmayın!</p>
+
+          <a href="https://basariyolum.com" class="button">Koçluk Paneline Git</a>
+
+          <p style="margin-top: 30px; color: #666; font-size: 14px;">
+            Bu e-posta BaşarıYolu platformu tarafından otomatik olarak gönderilmiştir.
+          </p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  await sendEmail(studentEmail, subject, html);
+}
+
+// =====================================================
+// Utility Functions
+// =====================================================
+
+/**
+ * Ensures URL has proper protocol (https:// or http://)
+ * Prevents relative URL issues in browser
+ */
+export function ensureAbsoluteUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+
+  const trimmedUrl = url.trim();
+
+  // Already has protocol
+  if (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://')) {
+    return trimmedUrl;
+  }
+
+  // Add https:// by default
+  return `https://${trimmedUrl}`;
+}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, ArrowUp, CheckCircle, Loader } from 'lucide-react';
+import { X, ArrowUp, CheckCircle, Loader, Smartphone, Shield, Apple, Check, Download } from 'lucide-react';
 import { calculateProration } from '../lib/subscriptionUpgrade';
 import { useAuth } from '../hooks/useAuth';
 
@@ -22,10 +22,9 @@ export default function UpgradeModal({
   const { user } = useAuth();
 
   const billingCycle = currentBillingCycle;
-  
+
   const [calculation, setCalculation] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
     if (isOpen && user?.id) {
@@ -35,64 +34,28 @@ export default function UpgradeModal({
 
   const loadCalculation = async () => {
     if (!user?.id) return;
-    
+
     setLoading(true);
     const calc = await calculateProration(user.id, targetPlanId, billingCycle);
     setCalculation(calc);
     setLoading(false);
   };
 
-  const handleUpgrade = async () => {
-  if (!user?.id) return;
-
-  setProcessing(true);
-
-  // ✅ DEMO MOD: Gerçek upgrade yapmadan ödeme simülasyonu
-  setTimeout(() => {
-    setProcessing(false);
-    alert(`✅ Demo Başarılı!\n\n💳 Ödeme Detayları:\nPaket: ${targetPlanName}\nTutar: ${calculation?.amountToPay.toFixed(2)}₺\n\n⚠️ Gerçek ödeme entegrasyonu eklenecek.`);
-    onClose();
-  }, 2000);
-
-  /* GERÇEK UPGRADE - Ödeme sonrası aktif olacak
-  try {
-    const result = await upgradeSubscription({
-      userId: user.id,
-      newPlanId: targetPlanId,
-      newBillingCycle: billingCycle
-    });
-
-    setProcessing(false);
-
-    if (result.success) {
-      alert('🎉 Paketiniz başarıyla yükseltildi!');
-      onSuccess();
-      onClose();
-    } else {
-      alert('❌ Hata: ' + result.error);
-    }
-  } catch (error: any) {
-    setProcessing(false);
-    alert('❌ Beklenmeyen hata: ' + error.message);
-  }
-  */
-};
-
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-t-2xl">
           <div className="flex justify-between items-start">
             <div>
               <h2 className="text-2xl font-bold mb-2 flex items-center gap-2">
-                <ArrowUp className="h-6 w-6" />
-                Paket Yükseltme
+                <Smartphone className="h-6 w-6" />
+                Paket Yükseltme - Mobil Uygulama
               </h2>
               <p className="text-blue-100">
-                {targetPlanName} paketine geçiş yapıyorsunuz
+                Paket yükseltme işlemi mobil uygulama üzerinden yapılmaktadır
               </p>
             </div>
             <button
@@ -105,11 +68,6 @@ export default function UpgradeModal({
         </div>
 
         <div className="p-6">
-          <div className="mb-4 text-center">
-            <span className="inline-block bg-blue-100 text-blue-800 px-4 py-2 rounded-lg font-semibold">
-              {billingCycle === 'monthly' ? '📅 Aylık Paket' : '📅 Yıllık Paket'}
-            </span>
-          </div>
           {/* Calculation Summary */}
           {loading ? (
             <div className="flex justify-center py-8">
@@ -117,6 +75,12 @@ export default function UpgradeModal({
             </div>
           ) : calculation ? (
             <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6 mb-6">
+              <div className="mb-4 text-center">
+                <span className="inline-block bg-blue-100 text-blue-800 px-4 py-2 rounded-lg font-semibold">
+                  {targetPlanName} • {billingCycle === 'monthly' ? '📅 Aylık Paket' : '📅 Yıllık Paket'}
+                </span>
+              </div>
+
               <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
                 <CheckCircle className="h-5 w-5 text-green-600" />
                 Fiyat Hesaplaması
@@ -169,37 +133,93 @@ export default function UpgradeModal({
             </div>
           )}
 
-          {/* Action Buttons */}
-          <div className="flex gap-3">
-            <button
-              onClick={onClose}
-              className="flex-1 px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-semibold"
-              disabled={processing}
-            >
-              İptal
-            </button>
-            <button
-              onClick={handleUpgrade}
-              disabled={!calculation || processing}
-              className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {processing ? (
-                <>
-                  <Loader className="h-5 w-5 animate-spin" />
-                  İşleniyor...
-                </>
-              ) : (
-                <>
-                  <ArrowUp className="h-5 w-5" />
-                  Paketi Yükselt
-                </>
-              )}
-            </button>
+          {/* Mobile App Info */}
+          <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-6 mb-6 border-2 border-indigo-200">
+            <h3 className="text-lg font-bold text-center text-gray-900 mb-4">
+              Paket Yükseltme İşlemi Mobil Uygulama Üzerinden Yapılmaktadır
+            </h3>
+
+            <div className="space-y-3 mb-6">
+              <div className="flex items-start gap-3 bg-white rounded-lg p-4">
+                <Shield className="h-6 w-6 text-green-600 flex-shrink-0 mt-1" />
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-1">Güvenli Ödeme</h4>
+                  <p className="text-sm text-gray-600">
+                    Ödemeleriniz Google Play ve App Store'un güvenli altyapısı üzerinden işlenir
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 bg-white rounded-lg p-4">
+                <Check className="h-6 w-6 text-green-600 flex-shrink-0 mt-1" />
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-1">Her Platformda Kullanın</h4>
+                  <p className="text-sm text-gray-600">
+                    Mobil uygulamadan yükselttiğiniz paketi hem mobil hem de web platformlarında kullanabilirsiniz
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 bg-white rounded-lg p-4">
+                <Download className="h-6 w-6 text-green-600 flex-shrink-0 mt-1" />
+                <div>
+                  <h4 className="font-semibold text-gray-900 mb-1">Anında Aktif</h4>
+                  <p className="text-sm text-gray-600">
+                    Yükseltme işleminiz tamamlandıktan sonra yeni özellikleriniz anında aktif olur
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Download Buttons */}
+            <div className="space-y-3">
+              <a
+                href="https://apps.apple.com/app/basariyolu"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-3 w-full bg-black text-white py-4 px-6 rounded-xl font-semibold hover:bg-gray-800 transition-colors"
+              >
+                <Apple className="h-6 w-6" />
+                <div className="text-left">
+                  <div className="text-xs">App Store'dan İndirin</div>
+                  <div className="text-sm font-bold">iOS Uygulamamız</div>
+                </div>
+              </a>
+
+              <a
+                href="https://play.google.com/store/apps/details?id=com.basariyolu"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-3 w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 px-6 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-colors"
+              >
+                <svg className="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.6 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.16,10.81C20.5,11.08 20.75,11.5 20.75,12C20.75,12.5 20.53,12.9 20.18,13.18L17.89,14.5L15.39,12L17.89,9.5L20.16,10.81M6.05,2.66L16.81,8.88L14.54,11.15L6.05,2.66Z" />
+                </svg>
+                <div className="text-left">
+                  <div className="text-xs">Google Play'den İndirin</div>
+                  <div className="text-sm font-bold">Android Uygulamamız</div>
+                </div>
+              </a>
+            </div>
+
+            <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-sm text-yellow-800 text-center">
+                <strong>Not:</strong> Mobil uygulamamızda oturum açtıktan sonra, paket yükseltme işlemini güvenle yapabilirsiniz.
+              </p>
+            </div>
           </div>
+
+          {/* Close Button */}
+          <button
+            onClick={onClose}
+            className="w-full px-6 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-semibold"
+          >
+            Kapat
+          </button>
 
           {/* Info Text */}
           <p className="text-xs text-gray-500 text-center mt-4">
-            Paket değişikliği anında gerçekleşir. Yeni özelliklerinize hemen erişebilirsiniz.
+            Paket değişikliği mobil uygulama üzerinden anında gerçekleşir. Yeni özelliklerinize hemen erişebilirsiniz.
           </p>
         </div>
       </div>

@@ -1,5 +1,5 @@
 ﻿import { useState } from 'react';
-import { User, Bell, Menu, X, Package, GraduationCap, Goal, Book, Sparkles } from 'lucide-react';
+import { User, Menu, X, Package, GraduationCap, Goal, Book, Sparkles, Award } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Logo from './Logo';
 
@@ -19,12 +19,10 @@ interface NavbarProps {
 const ACTION_BASE = 'inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-all duration-200 hover:shadow-sm active:scale-95';
 
 export default function Navbar({
-  user,
   onStudentParentLogin,
   onTeacherLogin,
   onInstitutionLogin,
   onInstitutionStudentAccess,
-  onLogout,
   onMenuToggle,
   onNavigateToBlog,
   onNavigateHome,
@@ -80,44 +78,14 @@ export default function Navbar({
 
   const navItems = [
     { id: 'features', label: 'Özellikler', icon: Sparkles, isRoute: true },
+    { id: 'coaching', label: 'Koçluk', icon: Award, isRoute: true },
     { id: 'pricing', label: 'Paketler', icon: Package },
     { id: 'exam-topics', label: 'ÖSYM-MEB Çıkmış Konular', icon: Goal },
-    { id: 'teacher', label: 'Öğretmenler', icon: GraduationCap },
     { id: 'blog', label: 'Blog', icon: Book },
   ];
 
-  const isAuthenticated = Boolean(user && user.id);
 
   const renderDesktopActions = () => {
-    if (isAuthenticated) {
-      return (
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            className="relative rounded-full border border-gray-200 p-2 text-gray-600 transition-all duration-200 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 active:scale-95"
-            aria-label="Bildirimler"
-          >
-            <Bell className="h-5 w-5" />
-            <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"></span>
-          </button>
-          
-          <div className="flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-4 py-2">
-            <User className="h-5 w-5 text-gray-600" />
-            <span className="max-w-[120px] truncate text-sm font-semibold text-gray-700">
-              {user.name || user.email || 'Kullanıcı'}
-            </span>
-          </div>
-          
-          <button
-            onClick={onLogout}
-            className="rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 transition-all duration-200 hover:border-red-300 hover:bg-red-100 hover:shadow-sm active:scale-95"
-          >
-            Çıkış Yap
-          </button>
-        </div>
-      );
-    }
-
     return (
       <div className="flex items-center gap-2.5">
         <button
@@ -153,44 +121,6 @@ export default function Navbar({
   };
 
   const renderMobileActions = () => {
-    if (isAuthenticated) {
-      return (
-        <div className="mt-4 space-y-3 border-t border-gray-200 pt-4 dark:border-gray-700">
-          <div className="flex items-center gap-3 rounded-xl bg-gray-50 px-4 py-3 dark:bg-gray-800">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900">
-              <User className="h-5 w-5 text-blue-600 dark:text-blue-300" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
-                {user.name || 'Kullanıcı'}
-              </p>
-              <p className="truncate text-xs text-gray-500 dark:text-gray-400">
-                {user.email || ''}
-              </p>
-            </div>
-          </div>
-          
-          <button 
-            className="flex w-full items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 transition-all hover:bg-gray-50 active:scale-[0.98] dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
-          >
-            <Bell className="h-5 w-5 text-gray-500" />
-            <span>Bildirimler</span>
-            <span className="ml-auto rounded-full bg-red-500 px-2 py-0.5 text-xs text-white">3</span>
-          </button>
-          
-          <button
-            onClick={() => {
-              onLogout();
-              setIsMobileMenuOpen(false);
-            }}
-            className="w-full rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white transition-all hover:bg-red-700 active:scale-[0.98]"
-          >
-            Çıkış Yap
-          </button>
-        </div>
-      );
-    }
-
     return (
       <div className="mt-4 space-y-2.5 border-t border-gray-200 pt-4 dark:border-gray-700">
         <button

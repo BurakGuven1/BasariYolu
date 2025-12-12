@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Mail, Lock, GraduationCap, Eye, EyeOff } from 'lucide-react';
 import { loginTeacher } from '../lib/teacherApi';
+import { useToast } from '../contexts/ToastContext';
 
 interface TeacherLoginProps {
   isOpen: boolean;
@@ -9,6 +10,7 @@ interface TeacherLoginProps {
 }
 
 export default function TeacherLogin({ isOpen, onClose, onSuccess }: TeacherLoginProps) {
+  const toast = useToast();
   const [] = useState<'teacher' | 'class'>('teacher');
   const [formData, setFormData] = useState({
     email: '',
@@ -17,25 +19,24 @@ export default function TeacherLogin({ isOpen, onClose, onSuccess }: TeacherLogi
   });
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
 
   if (!isOpen) return null;
 
   const handleTeacherLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
 
     try {
       const { data: teacher } = await loginTeacher(formData.email, formData.password);
-      
+
       onSuccess(teacher);
       onClose();
-      
+
       // Reset form
       setFormData({ email: '', password: '', classCode: '' });
+      toast.success('Başarıyla giriş yaptınız!');
     } catch (error: any) {
-      setError(error.message);
+      toast.error(error.message || 'Giriş hatası. Lütfen tekrar deneyin.');
     } finally {
       setLoading(false);
     }
@@ -45,7 +46,6 @@ export default function TeacherLogin({ isOpen, onClose, onSuccess }: TeacherLogi
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    if (error) setError(''); // Clear error when user starts typing
   };
 
   return (
@@ -67,12 +67,6 @@ export default function TeacherLogin({ isOpen, onClose, onSuccess }: TeacherLogi
             Sınıfınızı yönetmek için giriş yapın
           </p>
         </div>
-
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-red-700 text-sm">{error}</p>
-          </div>
-        )}
 
         <form onSubmit={handleTeacherLogin} className="space-y-4">
             <div>

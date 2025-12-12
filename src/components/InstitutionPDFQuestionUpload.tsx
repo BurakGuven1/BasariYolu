@@ -176,7 +176,6 @@ export default function InstitutionPDFQuestionUpload({
       setExtractedText(text);
       if (extractedImages) {
         setPageImages(extractedImages);
-        console.log(`Extracted ${extractedImages.length} page images`);
       }
 
       // Estimate cost if using AI
@@ -211,7 +210,6 @@ export default function InstitutionPDFQuestionUpload({
       setProgressMessage('Sorular sayfalara eşleştiriliyor...');
       if (pageTexts && pageTexts.length > 0) {
         questions = mapQuestionsToPages(questions, pageTexts);
-        console.log(`Mapped ${questions.length} questions to pages`);
       }
 
       // Step 4: Extract cropped images for each question
@@ -225,7 +223,6 @@ export default function InstitutionPDFQuestionUpload({
           paddingBottom: 150, // OPTIMIZED: Balanced padding for all options and content below
         });
         setQuestionImages(croppedImages);
-        console.log(`Extracted ${croppedImages.length} cropped question images`);
       } catch (cropError) {
         console.warn('Failed to extract cropped images, falling back to page images:', cropError);
         // Keep using page images as fallback
