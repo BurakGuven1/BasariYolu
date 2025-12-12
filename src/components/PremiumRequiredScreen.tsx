@@ -1,11 +1,22 @@
-import React from 'react';
-import { Smartphone, Shield, Check, Download, Apple, Lock } from 'lucide-react';
+import { Smartphone, Shield, Check, Download, Apple, Lock, LogOut } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
 
 interface PremiumRequiredScreenProps {
   userType?: 'student' | 'teacher' | 'parent' | 'institution';
 }
 
 export default function PremiumRequiredScreen({ userType = 'student' }: PremiumRequiredScreenProps) {
+  const { clearUser } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await clearUser();
+    } catch (error) {
+      console.error('Logout error:', error);
+      window.location.href = '/';
+    }
+  };
+
   const getMessage = () => {
     switch (userType) {
       case 'teacher':
@@ -128,6 +139,16 @@ export default function PremiumRequiredScreen({ userType = 'student' }: PremiumR
               <strong>Not:</strong> Mobil uygulamamızda oturum açtıktan sonra, size uygun paketi seçip güvenle satın alabilirsiniz.
               Satın aldığınız paket web platformunda da otomatik olarak aktif hale gelecektir.
             </p>
+          </div>
+
+          <div className="mt-6 flex justify-center">
+            <button
+              onClick={handleLogout}
+              className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-5 py-3 text-white shadow-sm transition hover:bg-red-700"
+            >
+              <LogOut className="h-5 w-5" />
+              <span>Çıkış Yap</span>
+            </button>
           </div>
         </div>
 

@@ -169,15 +169,15 @@ export default function InstitutionRegisterModal({
             <ul className="space-y-4 text-sm">
               <li className="flex items-start gap-3">
                 <CheckCircle2 className="mt-0.5 h-5 w-5 text-blue-100" />
-                <span>Tek panelden ogretmen, sinif ve ogrenci yonetimi</span>
+                <span>Tek panelden öğretmen, sınıf ve öğrenci yonetimi</span>
               </li>
               <li className="flex items-start gap-3">
                 <CheckCircle2 className="mt-0.5 h-5 w-5 text-blue-100" />
-                <span>Kurum logosu ile markali sinav ve rapor olusturma</span>
+                <span>Kurum logosu ile rapor olusturma</span>
               </li>
               <li className="flex items-start gap-3">
                 <CheckCircle2 className="mt-0.5 h-5 w-5 text-blue-100" />
-                <span>Aktif edildiginde soru bankasi ve veli raporlari</span>
+                <span>Aktif edildiginde veli raporları</span>
               </li>
             </ul>
 

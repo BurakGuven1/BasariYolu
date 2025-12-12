@@ -1,7 +1,6 @@
 import React, { lazy, Suspense } from 'react';
 import { useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
-import { BookOpenCheck } from 'lucide-react';
 import ErrorBoundary from './components/ErrorBoundary';
 import { useAuth } from './contexts/AppProviders';
 import { packages } from './data/packages';
@@ -48,7 +47,6 @@ const BlogDetail = lazy(() => import('./components/BlogDetail'));
 const TermsOfService = lazy(() => import('./pages/TermsOfService'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 const RefundPolicy = lazy(() => import('./pages/RefundPolicy'));
-const QuestionBankPage = lazy(() => import('./pages/QuestionBankPage'));
 const InstitutionRegisterModal = lazy(() => import('./components/InstitutionRegisterModal'));
 const InstitutionLoginModal = lazy(() => import('./components/InstitutionLoginModal'));
 const InstitutionDashboard = lazy(() => import('./components/InstitutionDashboard'));
@@ -209,17 +207,6 @@ function App() {
         description: 'BasariYolu uyeliklerinde iade surecleri ve kosullari.',
         path: '/refund-policy',
         type: 'article',
-      });
-      return;
-    }
-
-    if (location.pathname === '/institution') {
-      applySeo({
-        title: 'BasariYolu | Kurum Paneli',
-        description: 'BasariYolu kurum paneli ile ogretmen ve siniflarini tek yerden yonet, soru bankasi olustur.',
-        path: '/institution',
-        type: 'website',
-        noIndex: true,
       });
       return;
     }
@@ -409,18 +396,6 @@ function App() {
     window.scrollTo(0, 0);
   };
 
-  React.useEffect(() => {
-    if (user && location.pathname === '/' && !isInstitutionUser) {
-      navigate('/dashboard', { replace: true });
-    }
-  }, [user, location.pathname, isInstitutionUser, navigate]);
-
-  React.useEffect(() => {
-    if (!loading && !user && location.pathname === '/dashboard') {
-      navigate('/', { replace: true });
-    }
-  }, [loading, user, location.pathname, navigate]);
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -494,7 +469,6 @@ function App() {
   );
 
   const HomePageContent = () => renderHomePage();
-  const isQuestionBankAllowed = Boolean(user);
 
 
   const isBlogDetailPath = location.pathname.startsWith('/blog/') && location.pathname !== '/blog';
@@ -502,7 +476,6 @@ function App() {
     (
       location.pathname === '/' ||
       location.pathname === '/blog' ||
-      location.pathname === '/question-bank' ||
       isBlogDetailPath ||
       location.pathname === '/terms-of-service' ||
       location.pathname === '/privacy-policy' ||
@@ -530,10 +503,6 @@ function App() {
       <Route path="/ozellikler" element={<Navigate to="/features" replace />} />
       <Route path="/coaching" element={<Suspense fallback={<LoadingSpinner />}><CoachingPage /></Suspense>} />
       <Route path="/kocluk" element={<Navigate to="/coaching" replace />} />
-      <Route
-        path="/question-bank"
-        element={isQuestionBankAllowed ? <Suspense fallback={<LoadingSpinner />}><QuestionBankPage /></Suspense> : <Navigate to="/" replace />}
-      />
       <Route path="/dashboard" element={<DashboardRoute />} />
       <Route path="/institution" element={<InstitutionDashboardRoute />} />
       <Route path="/auth/callback" element={<Suspense fallback={<LoadingSpinner />}><AuthCallback /></Suspense>} />
@@ -627,16 +596,6 @@ function App() {
           />
         )}
       </Suspense>
-
-      {isQuestionBankAllowed && location.pathname !== '/question-bank' && (
-        <button
-          onClick={handleNavigateToQuestionBank}
-          className="fixed bottom-6 right-6 z-40 inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-indigo-700 active:scale-95"
-        >
-          <BookOpenCheck className="h-4 w-4" />
-          Soru Bankası
-        </button>
-      )}
     </>
   );
 

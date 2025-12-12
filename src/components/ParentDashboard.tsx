@@ -11,18 +11,10 @@ export default function ParentDashboard() {
   const [loading, setLoading] = useState(false);
   
   const { user, clearUser, setParentUser } = useAuth();
-  
-  // ✅ user.connectedStudents'tan al
+
   const children = user?.connectedStudents || [];
 
-  console.log('👨‍👩‍👧 ParentDashboard:', {
-    userId: user?.id,
-    isParent: user?.isParentLogin,
-    childrenCount: children.length
-  });
-
   const handleLogout = () => {
-    console.log('🔴 Parent logout');
     clearUser();
   };
 
